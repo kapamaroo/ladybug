@@ -92,6 +92,7 @@ char *sm_find_lost_symbol(char *id);
 data_t *reference_to_typename(char *id);
 var_t *refference_to_variable_or_enum_element(char *id);
 var_t *refference_to_record_element(var_t *v, char *id);
+sem_t *reference_to_forwarded_function(char *id);
 
 var_t *lost_var_reference();
 int enum_num_of_id(const data_t *data,const char *id);

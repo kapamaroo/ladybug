@@ -8,6 +8,7 @@
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "semantic_routines.h"
+#include "subprograms.h"
 #include "mem_reg.h"
 #include "ir.h"
 #include "err_buff.h"

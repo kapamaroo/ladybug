@@ -1,6 +1,6 @@
 TARGET = ladybug
 OBJ1 = FuncTools.o
-OBJ2 = symbol_table.o semantic_routines.o mem_reg.o ir.o err_buff.o final_code.o expressions.o expr_toolbox.o ir_toolbox.o main_app.o
+OBJ2 = symbol_table.o semantic_routines.o mem_reg.o ir.o err_buff.o final_code.o expressions.o expr_toolbox.o ir_toolbox.o main_app.o subprograms.o
 OBJ = $(OBJ1) $(OBJ2)
 OBJ_LEX = lex.yy.o
 OBJ_YACC = bison.tab.o
