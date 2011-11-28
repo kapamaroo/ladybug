@@ -1,0 +1,15 @@
+Παρασυρης Κωνσταντινος  836 koparasy@uth.gr
+Καλανδαριδης Θεοδοσης   858 thkaland@uth.gr
+Μαρουδας Μανώλης        782 emmmarou@uth.gr
+Νικολαίδου Κατερίνα     891 anikola@uth.gr
+
+
+this is an implementation of the PASCAL320 compiler 'ladybug'
+
+TODO
+> complete intermediate code generator
+> implement final code generator
+> testing, testing, testing
+> polish error messages
+> update some comments in source code
+> organize the headers a bit
