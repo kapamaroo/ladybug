@@ -17,12 +17,12 @@ void init_semantics() {
 }
 
 dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {
-//both expressions should have the same type and (l1 <= l2)
-//maybe we need one more parameter to identify if the check is for subset `limits` or for an array's dimension
+    //both expressions should have the same type and (l1 <= l2)
+    //maybe we need one more parameter to identify if the check is for subset `limits` or for an array's dimension
     dim_t *new_dim;
 
     new_dim = (dim_t*)malloc(sizeof(dim_t));
-	new_dim->first = 0;
+    new_dim->first = 0;
     new_dim->range = 1;
 
     if (!TYPE_IS_SCALAR(l1->datatype)) {
@@ -31,16 +31,16 @@ dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {
     else if (!TYPE_IS_SCALAR(l2->datatype)) {
         yyerror("ERROR: type of right dim bound not scalar");
     }
-	else if (l1->expr_is!=EXPR_HARDCODED_CONST || l2->expr_is!=EXPR_HARDCODED_CONST) {
-		yyerror("ERROR: dim bounds MUST be constants");
-	}
+    else if (l1->expr_is!=EXPR_HARDCODED_CONST || l2->expr_is!=EXPR_HARDCODED_CONST) {
+        yyerror("ERROR: dim bounds MUST be constants");
+    }
     else if (l2->ival - l1->ival + 1<=0 || l2->ival - l1->ival + 1>MAX_FIELDS) {
         yyerror("ERROR: dimension bounds are incorrect");
     }
-	else {
-		new_dim->first = l1->ival;
-		new_dim->range = l2->ival - l1->ival + 1;
-	}
+    else {
+        new_dim->first = l1->ival;
+        new_dim->range = l2->ival - l1->ival + 1;
+    }
     return new_dim;
 }
 
@@ -49,12 +49,12 @@ dim_t *make_dim_bound_from_id(char *id) {
     sem_t *sem_1;
 
     new_dim = (dim_t*)malloc(sizeof(dim_t));
-	new_dim->first = 0;
+    new_dim->first = 0;
     new_dim->range = 1;
 
     sem_1 = sm_find(id);
     if (sem_1) {
-		if (sem_1->id_is==ID_TYPEDEF && (sem_1->comp->is==TYPE_ENUM || sem_1->comp->is==TYPE_SUBSET)) {
+        if (sem_1->id_is==ID_TYPEDEF && (sem_1->comp->is==TYPE_ENUM || sem_1->comp->is==TYPE_SUBSET)) {
             if (strcmp(sem_1->comp->data_name,id)==0) {
                 //the range is the whole enumeration or subset
                 new_dim->first = sem_1->comp->enum_num[0];
@@ -83,9 +83,9 @@ dim_t *make_dim_bound_from_id(char *id) {
 var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
     //reference to array
     expr_t *relative_offset_expr;
-	expr_t *final_offset_expr;
+    expr_t *final_offset_expr;
     expr_t *cond_expr;
-	mem_t *new_mem;
+    mem_t *new_mem;
     var_t *new_var;
 
     if (!list) {
@@ -108,14 +108,14 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
                 }
                 final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
 
-				//we start from the variable's mem position and we add the offset from there
-				new_mem = (mem_t*)malloc(sizeof(mem_t));
-				new_mem->direct_register_number = v->Lvalue->direct_register_number;
-				new_mem->segment = v->Lvalue->segment;
-				new_mem->seg_offset = v->Lvalue->seg_offset;
-				new_mem->offset_expr = final_offset_expr;
-				new_mem->content_type = v->Lvalue->content_type;
-				new_mem->size = v->datatype->def_datatype->memsize;
+                //we start from the variable's mem position and we add the offset from there
+                new_mem = (mem_t*)malloc(sizeof(mem_t));
+                new_mem->direct_register_number = v->Lvalue->direct_register_number;
+                new_mem->segment = v->Lvalue->segment;
+                new_mem->seg_offset = v->Lvalue->seg_offset;
+                new_mem->offset_expr = final_offset_expr;
+                new_mem->content_type = v->Lvalue->content_type;
+                new_mem->size = v->datatype->def_datatype->memsize;
 
                 new_var = (var_t*)malloc(sizeof(var_t));
                 new_var->id_is = ID_VAR;
@@ -123,27 +123,27 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
                 new_var->name = v->name;
                 new_var->scope = v->scope;
                 new_var->Lvalue = new_mem;
-				new_var->cond_assign = cond_expr;
+                new_var->cond_assign = cond_expr;
                 return new_var;
             }
             else {
                 sprintf(str_err,"ERROR: variable '%s' is not an array",v->name);
-				yyerror(str_err);
-				return lost_var_reference(); //avoid unreal error messages
+                yyerror(str_err);
+                return lost_var_reference(); //avoid unreal error messages
             }
         }
-		else if (v->id_is==ID_LOST) {
-			return v; //avoid unreal error messages
-		}
+        else if (v->id_is==ID_LOST) {
+            return v; //avoid unreal error messages
+        }
         else {
             sprintf(str_err,"ERROR: id '%s' is not a variable",v->name);
             yyerror(str_err);
-			return lost_var_reference();
+            return lost_var_reference();
         }
     }
     else {
-		yyerror("UNEXPECTED_ERROR: 42");
-		exit(EXIT_FAILURE);
+        yyerror("UNEXPECTED_ERROR: 42");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -190,7 +190,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
 
 expr_t *make_array_refference(expr_list_t *list,data_t *data) {
     int i;
-	expr_t *l;
+    expr_t *l;
     expr_t *dim_size;
     expr_t *dim_index;
     expr_t *dim_offset;
@@ -226,14 +226,14 @@ expr_t *make_array_refference(expr_list_t *list,data_t *data) {
 
 expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
     int i;
-	int index;
-	expr_t *l;
-	expr_t *left_bound;
-	expr_t *right_bound;
-	expr_t *left_cond;
-	expr_t *right_cond;
-	expr_t *tmp_cond;
-	expr_t *total_cond;
+    int index;
+    expr_t *l;
+    expr_t *left_bound;
+    expr_t *right_bound;
+    expr_t *left_cond;
+    expr_t *right_cond;
+    expr_t *tmp_cond;
+    expr_t *total_cond;
 
     total_cond = expr_from_hardcoded_boolean(1); //TRUE
 
@@ -291,35 +291,35 @@ iter_t *make_iter_space(expr_t *l1,int step,expr_t *l3) {
         return NULL;
     }
 
-	if (l1->expr_is!=EXPR_LVAL && l1->expr_is!=EXPR_HARDCODED_CONST) {
-		yyerror("ERROR: invalid expr for left bound in iter space");
-		return NULL;
-	}
+    if (l1->expr_is!=EXPR_LVAL && l1->expr_is!=EXPR_HARDCODED_CONST) {
+        yyerror("ERROR: invalid expr for left bound in iter space");
+        return NULL;
+    }
 
-	if (l1->expr_is==EXPR_LVAL && l1->var->datatype->is!=TYPE_INT && l1->var->datatype->def_datatype->is!=TYPE_INT) {
-		yyerror("ERROR: left bound in iter space MUST be integer");
-		return NULL;
-	}
+    if (l1->expr_is==EXPR_LVAL && l1->var->datatype->is!=TYPE_INT && l1->var->datatype->def_datatype->is!=TYPE_INT) {
+        yyerror("ERROR: left bound in iter space MUST be integer");
+        return NULL;
+    }
 
-	if (l3->expr_is!=EXPR_LVAL && l3->expr_is!=EXPR_HARDCODED_CONST) {
-		yyerror("ERROR: invalid expr for right bound in iter space");
-		return NULL;
-	}
+    if (l3->expr_is!=EXPR_LVAL && l3->expr_is!=EXPR_HARDCODED_CONST) {
+        yyerror("ERROR: invalid expr for right bound in iter space");
+        return NULL;
+    }
 
-	if (l3->expr_is==EXPR_LVAL && l3->var->datatype->is!=TYPE_INT && l3->var->datatype->def_datatype->is!=TYPE_INT) {
-		yyerror("ERROR: right bound in iter space MUST be integer");
-		return NULL;
-	}
+    if (l3->expr_is==EXPR_LVAL && l3->var->datatype->is!=TYPE_INT && l3->var->datatype->def_datatype->is!=TYPE_INT) {
+        yyerror("ERROR: right bound in iter space MUST be integer");
+        return NULL;
+    }
 
-	new_iter = (iter_t*)malloc(sizeof(iter_t));
-	new_iter->start = l1;
-	new_iter->stop = l3;
-	new_iter->step = expr_from_hardcoded_int(step);
+    new_iter = (iter_t*)malloc(sizeof(iter_t));
+    new_iter->start = l1;
+    new_iter->stop = l3;
+    new_iter->step = expr_from_hardcoded_int(step);
 
-	if (l1->expr_is==EXPR_HARDCODED_CONST && l3->expr_is==EXPR_HARDCODED_CONST &&
-		new_iter->start->ival > new_iter->stop->ival) {
-		yyerror("ERROR: unreachable 'for' statement, left bound of iter_space must be less or equal to right bound");
-	}
+    if (l1->expr_is==EXPR_HARDCODED_CONST && l3->expr_is==EXPR_HARDCODED_CONST &&
+        new_iter->start->ival > new_iter->stop->ival) {
+        yyerror("ERROR: unreachable 'for' statement, left bound of iter_space must be less or equal to right bound");
+    }
 
     return new_iter;
 }
@@ -441,53 +441,53 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
         return NULL;
     }
 
-	if (l1->expr_is==EXPR_LOST && l2->expr_is==EXPR_LOST) {
-		return NULL; //both expressions had parse errors, ignore elexpr
-	}
-	//at least one expression exists, check if valid
+    if (l1->expr_is==EXPR_LOST && l2->expr_is==EXPR_LOST) {
+        return NULL; //both expressions had parse errors, ignore elexpr
+    }
+    //at least one expression exists, check if valid
 
     if (!TYPE_IS_ELEXPR_VALID(l1->datatype)) {
         sprintf(str_err,"ERROR: ignoring elexpression range because of invalid type '%s'",l1->datatype->data_name);
-		yyerror(str_err);
+        yyerror(str_err);
         return NULL;
     }
 
-	if (!TYPE_IS_ELEXPR_VALID(l2->datatype)) {
+    if (!TYPE_IS_ELEXPR_VALID(l2->datatype)) {
         sprintf(str_err,"ERROR: ignoring elexpression range because of invalid type '%s'",l2->datatype->data_name);
-		yyerror(str_err);
+        yyerror(str_err);
         return NULL;
     }
 
 
-	if (l1->datatype!=l2->datatype) {
+    if (l1->datatype!=l2->datatype) {
         yyerror("ERROR: ignoring elexpression range because bounds don't have the same type");
         return NULL;
     }
 
-	if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) { //optimization
-		if (l1->ival>l2->ival) {
-			sprintf(str_err,"WARNING: ignore invalid range %d..%d, left bound must be less or equal to right bound",l1->ival,l2->ival);
-			yyerror(str_err);
-			return NULL;
-		}
-	}
+    if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) { //optimization
+        if (l1->ival>l2->ival) {
+            sprintf(str_err,"WARNING: ignore invalid range %d..%d, left bound must be less or equal to right bound",l1->ival,l2->ival);
+            yyerror(str_err);
+            return NULL;
+        }
+    }
 
     new_elexpr = (elexpr_t*)malloc(sizeof(elexpr_t));
-	if (l1->expr_is==EXPR_LOST) {
-		new_elexpr->left = l2;
-		new_elexpr->right = l2;
-		new_elexpr->elexpr_datatype = l2->datatype;
-	}
-	else if (l2->expr_is==EXPR_LOST) {
-		new_elexpr->left = l1;
-		new_elexpr->right = l1;
-		new_elexpr->elexpr_datatype = l1->datatype;
-	}
-	else {
-		new_elexpr->left = l1;
-		new_elexpr->right = l2;
-		new_elexpr->elexpr_datatype = l1->datatype;
-	}
+    if (l1->expr_is==EXPR_LOST) {
+        new_elexpr->left = l2;
+        new_elexpr->right = l2;
+        new_elexpr->elexpr_datatype = l2->datatype;
+    }
+    else if (l2->expr_is==EXPR_LOST) {
+        new_elexpr->left = l1;
+        new_elexpr->right = l1;
+        new_elexpr->elexpr_datatype = l1->datatype;
+    }
+    else {
+        new_elexpr->left = l1;
+        new_elexpr->right = l2;
+        new_elexpr->elexpr_datatype = l1->datatype;
+    }
 
     return new_elexpr;
 }
@@ -502,13 +502,13 @@ elexpr_t *make_elexpr(expr_t *l) {
         return NULL;
     }
 
-	if (l->expr_is==EXPR_LOST) {
-		return NULL; //we had parse errors, ignore elexpr
-	}
+    if (l->expr_is==EXPR_LOST) {
+        return NULL; //we had parse errors, ignore elexpr
+    }
 
     if (!TYPE_IS_ELEXPR_VALID(l->datatype)) {
         sprintf(str_err,"ERROR: ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
-		yyerror(str_err);
+        yyerror(str_err);
         return NULL;
     }
 
@@ -530,9 +530,9 @@ expr_t *limit_from_id(char *id) {
     if (sem_1) {
         if (sem_1->id_is == ID_CONST) {
             if (sem_1->var->datatype->is==TYPE_INT) {
-				new_expr = expr_from_hardcoded_int(sem_1->var->ival);
-			}
-			else if (sem_1->var->datatype->is==TYPE_BOOLEAN) {
+                new_expr = expr_from_hardcoded_int(sem_1->var->ival);
+            }
+            else if (sem_1->var->datatype->is==TYPE_BOOLEAN) {
                 new_expr = expr_from_hardcoded_boolean(sem_1->var->ival);
             }
             else if (sem_1->var->datatype->is==TYPE_CHAR) {
@@ -540,25 +540,25 @@ expr_t *limit_from_id(char *id) {
             }
             else {
                 yyerror("ERROR: limit can't be real type");
-				new_expr = expr_from_hardcoded_int(0);
+                new_expr = expr_from_hardcoded_int(0);
             }
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             if (strcmp(sem_1->comp->data_name,id)==0) {
                 sprintf(str_err,"ERROR: limit '%s' is a typename, expected constant integer or enumeration",id);
-				yyerror(str_err);
-				new_expr = expr_from_hardcoded_int(0);
+                yyerror(str_err);
+                new_expr = expr_from_hardcoded_int(0);
             }
             else {
                 new_expr = expr_from_hardcoded_int(enum_num_of_id(sem_1->comp,id));
-				new_expr->datatype = sem_1->comp;
+                new_expr->datatype = sem_1->comp;
                 return new_expr;
             }
         }
         else {
-			sprintf(str_err,"ERROR: invalid limit '%s', expected constant integer or enumeration",id);
-			yyerror(str_err);
-			new_expr = expr_from_hardcoded_int(0);
+            sprintf(str_err,"ERROR: invalid limit '%s', expected constant integer or enumeration",id);
+            yyerror(str_err);
+            new_expr = expr_from_hardcoded_int(0);
         }
     }
     else {
@@ -567,7 +567,7 @@ expr_t *limit_from_id(char *id) {
             sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
             yyerror(str_err);
         }
-		new_expr = expr_from_hardcoded_int(0);
+        new_expr = expr_from_hardcoded_int(0);
     }
     return new_expr;
 }
@@ -580,16 +580,16 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
     if (sem_2) {
         if (sem_2->id_is == ID_CONST) {
             if (sem_2->var->datatype->is==TYPE_INT) {
-				new_expr = expr_from_signed_hardcoded_int(op,sem_2->var->ival);
+                new_expr = expr_from_signed_hardcoded_int(op,sem_2->var->ival);
             }
             else {
                 yyerror("ERROR: signed `limit` can be only integer constant");
-				new_expr = expr_from_hardcoded_int(0);
+                new_expr = expr_from_hardcoded_int(0);
             }
         }
         else {
             yyerror("ERROR: signed `limit` can be only integer constant");
-			new_expr = expr_from_hardcoded_int(0);
+            new_expr = expr_from_hardcoded_int(0);
         }
     }
     else {
@@ -598,27 +598,27 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
             sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
             yyerror(str_err);
         }
-		new_expr = expr_from_hardcoded_int(0);
+        new_expr = expr_from_hardcoded_int(0);
     }
     return new_expr;
 }
 
 data_t *reference_to_typename(char *id) {
-  sem_t *sm_1;
-  sm_1 = sm_find(id);
-  if (sm_1) {
-    if (sm_1->id_is == ID_TYPEDEF) {
-      return sm_1->comp;
+    sem_t *sm_1;
+    sm_1 = sm_find(id);
+    if (sm_1) {
+        if (sm_1->id_is == ID_TYPEDEF) {
+            return sm_1->comp;
+        }
+        yyerror("ERROR: id is not a data type");
     }
-	yyerror("ERROR: id is not a data type");
-  }
-  else {
-    if (!sm_find_lost_symbol(id)) {
-		sm_insert_lost_symbol(id);
-		sprintf(str_err,"ERROR: undeclared datatype '%s'",id);
-		yyerror(str_err);
-	}
-  }
-  return NULL; //we return NULL here because we handle differently the various cases
-  //with reference to user-defined datatypes
+    else {
+        if (!sm_find_lost_symbol(id)) {
+            sm_insert_lost_symbol(id);
+            sprintf(str_err,"ERROR: undeclared datatype '%s'",id);
+            yyerror(str_err);
+        }
+    }
+    return NULL; //we return NULL here because we handle differently the various cases
+    //with reference to user-defined datatypes
 }

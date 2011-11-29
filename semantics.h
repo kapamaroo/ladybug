@@ -41,11 +41,11 @@ struct elexpr_list_t;
  */
 typedef enum idt_t {
     ID_VAR,
-	ID_VAR_PTR,	//this variable is a pointer formal parameter of a subprogram
+    ID_VAR_PTR,	//this variable is a pointer formal parameter of a subprogram
     ID_VAR_GUARDED, //this variable controls a `for` loop statement
-	ID_LOST,	//for undeclared symbols, to avoid unreal error messages
+    ID_LOST,	//for undeclared symbols, to avoid unreal error messages
     ID_CONST,
-	ID_STRING,	//only for constant strings
+    ID_STRING,	//only for constant strings
     ID_RETURN,	//return value of func
     ID_FUNC,
     ID_PROC,
@@ -57,12 +57,12 @@ typedef enum idt_t {
 
 typedef enum expr_type_t {
     EXPR_RVAL,
-	EXPR_LVAL,
+    EXPR_LVAL,
     EXPR_HARDCODED_CONST, //only for standard types
     EXPR_STRING,    //only for hardcoded STRINGS
     EXPR_SET,
     EXPR_NULL_SET,
-	EXPR_LOST,
+    EXPR_LOST,
 } expr_type_t;
 
 typedef enum type_t {
@@ -86,7 +86,7 @@ typedef enum op_t {
     RELOP_LE,	// '<='
     RELOP_NE,	// '<>'
     RELOP_EQU,	// '='
-	RELOP_IN,	// 'in'
+    RELOP_IN,	// 'in'
     OP_SIGN, 	//dummy operator (OP_MINUS synonym), to determine when OP_MINUS is used as sign, (we ignore OP_PLUS)
     OP_PLUS,	// '+'
     OP_MINUS,	// '-'
@@ -124,11 +124,11 @@ typedef enum pass_t {
  */
 typedef struct mem_t {
     mem_seg_t segment; //global or local (stack) scope relevant
-	int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
+    int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
     int seg_offset; //variable's static relative distance from segment's start (doesn't change)
     struct expr_t *offset_expr; //dynamic code to calculate relative distance from variable's start (for arrays or records)
-	pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the addres (for pointers)
-	int size; //memory size
+    pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the addres (for pointers)
+    int size; //memory size
 } mem_t;
 
 typedef struct scope_t {
@@ -156,7 +156,7 @@ typedef struct data_t {
     int field_num; //number of: elements in record type, array dimensions, enum or subset elements
     char *field_name[MAX_FIELDS]; //enum names, record elements
     int field_offset[MAX_FIELDS]; //only for records: element's relative position from the start of the record
-	struct data_t *field_datatype[MAX_FIELDS]; //only for records: record element's datatype
+    struct data_t *field_datatype[MAX_FIELDS]; //only for records: record element's datatype
     int enum_num[MAX_FIELDS]; //only for enums and subsets: each number of field_name
     dim_t *dim[MAX_ARRAY_DIMS]; //only for arrays: array's dimensions
     int memsize; //sizeof data type in bytes
@@ -182,10 +182,10 @@ typedef struct func_t {
     char *func_name;
     int param_num; //number of parameters
     param_t *param[MAX_PARAMS];
-	mem_t *param_Lvalue[MAX_PARAMS];
+    mem_t *param_Lvalue[MAX_PARAMS];
     int stack_size; //formal parameters + return value + whatever
     int scope; //depth of declaration
-	char *label;
+    char *label;
 } func_t;
 
 /** Variables & declared Constants struct
@@ -199,9 +199,9 @@ typedef struct var_t {
     int scope; //depth of declaration
     mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by refference and we load it from here
     struct expr_t *cond_assign; //if not NULL, check this cond to assign
-	float fval; //hardcoded float value
+    float fval; //hardcoded float value
     int ival; //hardcoded int value
-	char cval; //hardcoded char value
+    char cval; //hardcoded char value
     char *cstr; //hardcoded string
 } var_t;
 
@@ -221,12 +221,12 @@ typedef struct expr_t {
     struct expr_list_t *expr_list; //for function calls
     float fval; //float value
     int ival; //int value
-	char cval; //char value
+    char cval; //char value
     char *cstr; //string constant
     struct expr_t *parent;
     struct expr_t *l1;
     struct expr_t *l2;
-	int flag_paren; //expression of priority //OBSOLETE
+    int flag_paren; //expression of priority //OBSOLETE
 } expr_t;
 
 /** Loop range in a `for` statement */

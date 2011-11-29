@@ -1,8 +1,11 @@
+/*******************************************************************/
+/*               created by kostadinos parasyris                   */
+/*This file has functions that convert strings that represent float*/
+/*or integer numbers into float or integer numbers. Its function   */
+/*has a pointer to a string as a parameter and it returns a float  */
+/*or integer value                                                 */
+/*******************************************************************/
 
-/*****************************************************created by kostadinos parasyris ******************************************************************/
-/* 		This file has functions that convert strings that represent float or integer numbers into float or integer numbers		       */
-/*		Its function has a pointer to a string as a parameter and it returns a float or integer value					       */
-/*******************************************************************************************************************************************************/
 #include "FuncTools.h"
 #include <stdio.h>
 #include <stdlib.h>

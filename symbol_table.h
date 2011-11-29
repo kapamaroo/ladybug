@@ -14,9 +14,9 @@ typedef struct idf_t {
 } idf_t;
 
 typedef struct with_stmt_scope_t {
-	data_t *type; //record type of with statement
-	struct with_stmt_scope_t *prev;
-	struct with_stmt_scope_t *next;
+    data_t *type; //record type of with statement
+    struct with_stmt_scope_t *prev;
+    struct with_stmt_scope_t *next;
 } with_stmt_scope_t;
 
 extern sem_t **sm_table;

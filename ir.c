@@ -11,7 +11,7 @@
 #include "ir_toolbox.h"
 
 #include "err_buff.h"
-
+               
 ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
 int ir_root_module_empty;
 int ir_root_module_current;
@@ -226,8 +226,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     } else if (l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET ||
                (l->expr_is==EXPR_LVAL && l->datatype->is==TYPE_SET)) { //set assignment
         if (v->datatype->is==TYPE_SET &&
-                ((l->expr_is==EXPR_LVAL && v->datatype==l->datatype) ||
-                 ((l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) && v->datatype->def_datatype==l->datatype))) {
+            ((l->expr_is==EXPR_LVAL && v->datatype==l->datatype) ||
+             ((l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) && v->datatype->def_datatype==l->datatype))) {
             new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
             new_stmt->ir_lval = calculate_lvalue(v);
             new_stmt->ir_lval2 = create_bitmap(l);
@@ -524,7 +524,7 @@ ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt) {
 
     ir_cond = new_if_stmt(cond,ir_,NULL);
     ir_cond->label = label_loop_to_cond;
-//#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
+    //#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
     //ir_cond->exit_branch_label = label_exit_branch;
 
     while_node = NULL;
@@ -588,7 +588,7 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
 
     ir_cond = new_if_stmt(total_cond,ir_body,NULL);
     ir_cond->label = label_loop_to_cond;
-//#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
+    //#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
     //ir_cond->exit_branch_label = label_exit_branch;
 
     for_node = NULL;
@@ -608,7 +608,7 @@ ir_node_t *new_with_stmt(ir_node_t *body) {
 }
 
 expr_t *new_function_call(char *id,expr_list_t *list) {
-//functions can only be called inside expressions, so this ID must be a function, its type is its return type
+    //functions can only be called inside expressions, so this ID must be a function, its type is its return type
     sem_t *sem_1;
     expr_t *new_expr;
 
@@ -741,7 +741,7 @@ ir_node_t *new_read_stmt(var_list_t *list) {
                 new_ir->ival = v->datatype->dim[0]->range;
             }
             break;
-       case ID_VAR_GUARDED:
+        case ID_VAR_GUARDED:
             sprintf(str_err,"ERROR: invalid read statement, control variable '%s' of 'for statement' is read only",v->name);
             yyerror(str_err);
             break;
