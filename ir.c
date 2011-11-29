@@ -11,7 +11,7 @@
 #include "ir_toolbox.h"
 
 #include "err_buff.h"
-               
+
 ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
 int ir_root_module_empty;
 int ir_root_module_current;
@@ -187,7 +187,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         return NULL;
     }
 
-    if (v->id_is==ID_RETURN && v->scope!=get_current_scope()) {
+    if (v->id_is==ID_RETURN && get_nesting_of_var(v)!=get_current_nesting()) {
         scope_owner = get_current_scope_owner();
         sprintf(str_err,"ERROR: assignment to '%s' which is return value of scope '%s'",v->name,scope_owner->func_name);
         yyerror(str_err);

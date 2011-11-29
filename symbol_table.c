@@ -142,6 +142,39 @@ void init_symbol_table() {
     idf_free_memory = 0; //at the beggining there is no memory
     idf_init();
 
+    /* Scope init (we should use a new function here) */
+
+    sem_main_program = sm_insert("");
+    sem_main_program->id_is = ID_PROGRAM_NAME;
+    main_program = (func_t*)malloc(sizeof(func_t));
+    main_program->func_name = sem_main_program->name;
+    sem_main_program->subprogram = main_program;
+
+    scope_stack[0].scope_type = SCOPE_MAIN;
+    scope_stack[0].scope_owner = main_program;
+    scope_stack[0].nesting = 0;
+    scope_stack[0].start_index = 0;
+    scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
+    scope_stack[0].lost_symbols_empty = MAX_LOST_SYMBOLS;
+
+    for (i=0;i<MAX_LOST_SYMBOLS;i++) {
+        scope_stack[0].lost_symbols[i] = NULL;
+    }
+
+    root_scope_with = NULL;
+    tail_scope_with = NULL;
+
+    sm_scope = 0; //main scope
+
+    for (i=1;i<MAX_SCOPE+1;i++) {
+        scope_stack[i].scope_type = SCOPE_IGNORE;
+        scope_stack[i].scope_owner = NULL;
+        scope_stack[i].nesting = i;
+        scope_stack[i].lost_symbols = NULL;
+    }
+
+    /* scope init end */
+
     usr_datatype = (data_t*)malloc(sizeof(data_t));
 
     void_datatype = (data_t*)malloc(sizeof(struct data_t));
@@ -154,7 +187,7 @@ void init_symbol_table() {
     lost_var->id_is = ID_LOST;
     lost_var->name = "V__dummy_lost_variable";
     lost_var->datatype = void_datatype;
-    lost_var->scope = get_current_scope();
+    lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
     lost_var->ival = 0;
     lost_var->fval = 0;
     lost_var->cval = 0;
@@ -167,33 +200,6 @@ void init_symbol_table() {
 
     sm_empty = MAX_SYMBOLS;
     sm_table = sm_array;
-
-    sm_scope = 0; //main scope
-
-    root_scope_with = NULL;
-    tail_scope_with = NULL;
-
-    sem_main_program = sm_insert("");
-    sem_main_program->id_is = ID_PROGRAM_NAME;
-    main_program = (func_t*)malloc(sizeof(func_t));
-    main_program->func_name = sem_main_program->name;
-    sem_main_program->subprogram = main_program;
-
-    scope_stack[0].scope_type = SCOPE_MAIN;
-    scope_stack[0].scope_owner = main_program;
-    scope_stack[0].start_index = 0;
-    scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
-    scope_stack[0].lost_symbols_empty = MAX_LOST_SYMBOLS;
-
-    for (i=0;i<MAX_LOST_SYMBOLS;i++) {
-        scope_stack[0].lost_symbols[i] = NULL;
-    }
-
-    for (i=1;i<MAX_SCOPE+1;i++) {
-        scope_stack[i].scope_type = SCOPE_IGNORE;
-        scope_stack[i].scope_owner = NULL;
-        scope_stack[i].lost_symbols = NULL;
-    }
 
     //insert the standard types
     sem_INTEGER = sm_insert("integer");
@@ -278,13 +284,14 @@ sem_t *sm_find(const char *id) {
 
 sem_t *sm_insert(const char *id) {
     //sets only the name of the symbol
+    sem_t *existing_sem;
     sem_t *new_sem;
 
-    new_sem = sm_find(id);
-    if ((!new_sem || new_sem->scope!=sm_scope || root_scope_with) && sm_empty) {
+    existing_sem = sm_find(id);
+    if ((!existing_sem || existing_sem->scope->nesting!=sm_scope || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)malloc(sizeof(sem_t));
         new_sem->name = strdup(id);
-        new_sem->scope = sm_scope;
+        new_sem->scope = &scope_stack[sm_scope];
         new_sem->index = MAX_SYMBOLS-sm_empty;
         sm_table[MAX_SYMBOLS-sm_empty] = new_sem;
         sm_empty--;
@@ -362,7 +369,13 @@ void sm_remove(char *id) {
 void start_new_scope(scope_type_t scope_type, func_t *scope_owner) {
     int i;
 
-    if (scope_type==SCOPE_IGNORE || scope_type==SCOPE_WITH_STATEMENT) {
+    //the main_scope is created in init_symbol_table()
+    //this creates scopes nested to main_program's scope
+
+    //create new scope even if symbol table is full,
+    //let the next sm_insert() handle this case
+
+    if (scope_type==SCOPE_IGNORE || scope_type==SCOPE_WITH_STATEMENT || scope_type==SCOPE_MAIN) {
         yyerror("INTERNAL_ERROR: start new scope with invalid scope flag");
         exit(EXIT_FAILURE);
     }
@@ -377,12 +390,14 @@ void start_new_scope(scope_type_t scope_type, func_t *scope_owner) {
             scope_stack[sm_scope].lost_symbols[i] = NULL;
         }
 
-        if (sm_empty==MAX_SYMBOLS) {
-            scope_stack[sm_scope].start_index = 0;
-        }
-        else {
-            scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
-        }
+        //always sm_empty!=MAX_SYMBOLS
+        //because main_program scope inserts at least the progra_name and the standard types
+        //if (sm_empty==MAX_SYMBOLS) {
+        //    scope_stack[sm_scope].start_index = 0;
+        //}
+        //else {
+        scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
+        //}
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
         printf("__start_new_scope_%d\n",sm_scope);
 #endif
@@ -414,12 +429,20 @@ void close_current_scope() {
 #endif
 }
 
-int get_current_scope() {
-    return sm_scope;
+scope_t *get_current_scope() {
+    return &scope_stack[sm_scope];
+}
+
+int get_current_nesting() {
+    return scope_stack[sm_scope].nesting;
 }
 
 func_t *get_current_scope_owner() {
     return (func_t*)(scope_stack[sm_scope].scope_owner);
+}
+
+int get_nesting_of_var(var_t *v) {
+    return v->scope->nesting;
 }
 
 void sm_clean_current_scope() {
@@ -630,6 +653,19 @@ void start_new_with_statement_scope(var_t *var) {
         tail_scope_with = root_scope_with;
     }
     else { //this is a nested with_statement
+        //check for possible conflicts between nested with_statements
+        for(with_scope=root_scope_with;with_scope;with_scope=with_scope->next) {
+            for(i=0;i<var->datatype->field_num;i++) {
+                if (check_for_id_in_datatype(with_scope->type,var->datatype->field_name[i])>=0) {
+                    sprintf(str_err,"ERROR: conflict in nested with_statement of type '%s' inside type '%s',\n\t both record datatypes have the name '%s' for element"
+                            ,var->datatype->data_name,with_scope->type->data_name,var->datatype->field_name[i]);
+                    yyerror(str_err);
+                    tail_scope_with->conflicts++;;
+                    return; //do not insert any record element, do not open new with_scope
+                }
+            }
+        }
+        //no conficts, add a new with_scope
         new_with_stmt_scope = (with_stmt_scope_t*)malloc(sizeof(with_stmt_scope_t));
         new_with_stmt_scope->prev = tail_scope_with;
         new_with_stmt_scope->next = NULL;
@@ -637,22 +673,11 @@ void start_new_with_statement_scope(var_t *var) {
         tail_scope_with = new_with_stmt_scope;
     }
 
-    //check for possible conflicts between nested with_statements
-    for(with_scope=root_scope_with;with_scope;with_scope=with_scope->next) {
-        for(i=0;i<var->datatype->field_num;i++) {
-            if (check_for_id_in_datatype(with_scope->type,var->datatype->field_name[i])>=0) {
-                sprintf(str_err,"ERROR: conflict in nested with_statement of type '%s' inside type '%s',\n\t both record datatypes have the name '%s' for element"
-                        ,var->datatype->data_name,with_scope->type->data_name,var->datatype->field_name[i]);
-                yyerror(str_err);
-                tail_scope_with->type = NULL;
-                return; //do not insert any record element
-            }
-        }
-    }
-    //no conflicts, continue
-
+    //a new with_scope just created!
+    //common actions for both cases
     //set the datatype of the with statement
     tail_scope_with->type = var->datatype;
+    tail_scope_with->conflicts = 0;
 
     //insert the record elements
     for (i=0;i<var->datatype->field_num;i++) {
@@ -664,9 +689,10 @@ void start_new_with_statement_scope(var_t *var) {
 void close_last_opened_with_statement_scope() {
     int i;
 
-    //with scopes close backwards (the last with scope closes first)
+    //with_scopes close backwards (the last with scope closes first)
+    //so we play with tail_scope_with
 
-    //reminder: recursive data types are forbidden
+    //reminder: recursive data types are forbidden (do NOT exist by language definition)
 
     if (!root_scope_with || !tail_scope_with) {
         //root_scope_with and tail_scope_with are not initialised,
@@ -675,25 +701,29 @@ void close_last_opened_with_statement_scope() {
         exit(EXIT_FAILURE);
     }
 
-    if (tail_scope_with->type) {
+    if (tail_scope_with->conflicts>0) {
+        //we are trying to close a with scope which failed to open
+        //and this is the point it should normally close
+        //so the previous with_scope has one less conflict to carry about
+        tail_scope_with->conflicts--;
+    }
+    else {
         //remove backwards to find the symbol entry faster
+        //and also the corrent symbol if there is a predefined symbol with the same name
         for (i=tail_scope_with->type->field_num-1;i>=0;i--) {
             sm_remove(tail_scope_with->type->field_name[i]);
         }
-    }
-    //else
-    //there was a conflict between nested with_statements and nothing inserted
-    //so nothing to remove, just close the with_scope
 
-    if (tail_scope_with==root_scope_with) { //the outermost with scope
-        free(tail_scope_with);
-        root_scope_with = NULL;
-        tail_scope_with = NULL;
-    }
-    else {
-        tail_scope_with = tail_scope_with->prev;
-        free(tail_scope_with->next);
-        tail_scope_with->next = NULL;
+        if (tail_scope_with==root_scope_with) { //the outermost with scope
+            free(tail_scope_with);
+            root_scope_with = NULL;
+            tail_scope_with = NULL;
+        }
+        else {
+            tail_scope_with = tail_scope_with->prev;
+            free(tail_scope_with->next);
+            tail_scope_with->next = NULL;
+        }
     }
 }
 

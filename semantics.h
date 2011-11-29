@@ -127,7 +127,7 @@ typedef struct mem_t {
     int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
     int seg_offset; //variable's static relative distance from segment's start (doesn't change)
     struct expr_t *offset_expr; //dynamic code to calculate relative distance from variable's start (for arrays or records)
-    pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the addres (for pointers)
+    pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the address (for pointers)
     int size; //memory size
 } mem_t;
 
@@ -135,6 +135,7 @@ typedef struct scope_t {
     scope_type_t scope_type; //if SCOPE_IGNORE, the start_index has no meaning
     int start_index; //for array symbol tables
     struct func_t *scope_owner;
+    int nesting;
     char **lost_symbols;
     int lost_symbols_empty;
 } scope_t;
@@ -160,7 +161,7 @@ typedef struct data_t {
     int enum_num[MAX_FIELDS]; //only for enums and subsets: each number of field_name
     dim_t *dim[MAX_ARRAY_DIMS]; //only for arrays: array's dimensions
     int memsize; //sizeof data type in bytes
-    int scope; //depth of declaration
+    scope_t *scope; //depth of declaration
 } data_t;
 
 #define TYPE_IS_STANDARD(d) (d->is==TYPE_INT || d->is==TYPE_REAL || d->is==TYPE_BOOLEAN || d->is==TYPE_CHAR)
@@ -184,7 +185,7 @@ typedef struct func_t {
     param_t *param[MAX_PARAMS];
     mem_t *param_Lvalue[MAX_PARAMS];
     int stack_size; //formal parameters + return value + whatever
-    int scope; //depth of declaration
+    scope_t *scope; //a subprogram belongs to th previous scope
     char *label;
 } func_t;
 
@@ -196,7 +197,7 @@ typedef struct var_t {
     idt_t id_is; //ID_VAR, ID_VAR_PARAM, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
     data_t *datatype;
     char *name;
-    int scope; //depth of declaration
+    scope_t *scope;
     mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by refference and we load it from here
     struct expr_t *cond_assign; //if not NULL, check this cond to assign
     float fval; //hardcoded float value
@@ -274,7 +275,7 @@ typedef struct sem_t {
     func_t *subprogram;
     data_t *comp; //composite type
     char *name;
-    int scope; //depth of declaration
+    scope_t *scope; //depth of declaration
     int index; //relative position in symbol table
     //mem_t *Lvalue;
 } sem_t;

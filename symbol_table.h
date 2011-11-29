@@ -5,8 +5,12 @@
 #include "bison.tab.h"
 
 #define MAIN_PROGRAM_SCOPE 0
-
 #define MAX_IDF 128
+
+//ARRAY implementation of symbol table
+#define MAX_SYMBOLS 256
+#define MAX_LOST_SYMBOLS 32
+extern int sm_empty;
 
 typedef struct idf_t {
     char *name;
@@ -15,6 +19,8 @@ typedef struct idf_t {
 
 typedef struct with_stmt_scope_t {
     data_t *type; //record type of with statement
+    //only if conflicts==0 it is allowed to close a with_scope, else conflicts--
+    int conflicts; //(non negative) remember how many with_scopes failed to open due to element name conflicts
     struct with_stmt_scope_t *prev;
     struct with_stmt_scope_t *next;
 } with_stmt_scope_t;
@@ -73,9 +79,12 @@ void sm_remove(char *id); //remove this symbol from the most nested scope it is 
 
 void start_new_scope(scope_type_t scope_type, func_t *scope_owner);
 void close_current_scope();
-int get_current_scope();
-func_t *get_current_scope_owner();
 void sm_clean_current_scope();
+
+scope_t *get_current_scope();
+int get_current_nesting();
+func_t *get_current_scope_owner();
+int get_nesting_of_var(var_t *v);
 
 void protect_guard_var(char *id);
 void unprotect_guard_var(char *id);
@@ -96,10 +105,5 @@ sem_t *reference_to_forwarded_function(char *id);
 
 var_t *lost_var_reference();
 int enum_num_of_id(const data_t *data,const char *id);
-
-//ARRAY implementation of symbol table
-#define MAX_SYMBOLS 256
-#define MAX_LOST_SYMBOLS 32
-extern int sm_empty;
 
 #endif
