@@ -418,7 +418,6 @@ ir_node_t *make_bitmap_inop_check(expr_t *expr_inop) {
 ir_node_t *make_dynamic_inop_check(expr_t *expr_inop) {
     int i;
     int expr_num;
-    op_t op;
 
     expr_t *element;
     expr_t *expr_set;
@@ -436,7 +435,6 @@ ir_node_t *make_dynamic_inop_check(expr_t *expr_inop) {
 
     element = expr_inop->l1;
     expr_set = expr_inop->l2;
-    op = expr_inop->l2->op;
 
     total_cond = expr_from_hardcoded_boolean(0); //dummy boolean init
     expr_num = MAX_SET_ELEM - expr_set->elexpr_list->elexpr_list_empty;
@@ -447,8 +445,9 @@ ir_node_t *make_dynamic_inop_check(expr_t *expr_inop) {
             tmp_cond = expr_relop_equ_addop_mult(left,RELOP_EQU,element);
         }
         else {
-            left_cond = expr_relop_equ_addop_mult(left,RELOP_BE,element);
-            right_cond = expr_relop_equ_addop_mult(element,RELOP_BE,right);
+            // left <= element <= right
+            left_cond = expr_relop_equ_addop_mult(left,RELOP_LE,element);
+            right_cond = expr_relop_equ_addop_mult(element,RELOP_LE,right);
             tmp_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
         }
         total_cond = expr_orop_andop_notop(total_cond,OP_OR,tmp_cond);
