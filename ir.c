@@ -187,11 +187,13 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         return NULL;
     }
 
-    if (v->id_is==ID_RETURN && get_nesting_of_var(v)!=get_current_nesting()) {
+    if (v->id_is==ID_RETURN) {
         scope_owner = get_current_scope_owner();
-        sprintf(str_err,"ERROR: assignment to '%s' which is return value of scope '%s'",v->name,scope_owner->func_name);
-        yyerror(str_err);
-        return NULL;
+        if (scope_owner->scope!=get_current_scope()) {
+            sprintf(str_err,"ERROR: assignment to '%s' which is return value of scope '%s'",v->name,scope_owner->func_name);
+            yyerror(str_err);
+            return NULL;
+        }
     }
 
     if (v->id_is == ID_VAR_GUARDED) {

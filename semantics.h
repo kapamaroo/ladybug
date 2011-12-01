@@ -135,7 +135,6 @@ typedef struct scope_t {
     scope_type_t scope_type; //if SCOPE_IGNORE, the start_index has no meaning
     int start_index; //for array symbol tables
     struct func_t *scope_owner;
-    int nesting;
     char **lost_symbols;
     int lost_symbols_empty;
 } scope_t;

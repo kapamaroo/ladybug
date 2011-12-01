@@ -82,9 +82,7 @@ void close_current_scope();
 void sm_clean_current_scope();
 
 scope_t *get_current_scope();
-int get_current_nesting();
 func_t *get_current_scope_owner();
-int get_nesting_of_var(var_t *v);
 
 void protect_guard_var(char *id);
 void unprotect_guard_var(char *id);

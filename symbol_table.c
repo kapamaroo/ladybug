@@ -152,7 +152,6 @@ void init_symbol_table() {
 
     scope_stack[0].scope_type = SCOPE_MAIN;
     scope_stack[0].scope_owner = main_program;
-    scope_stack[0].nesting = 0;
     scope_stack[0].start_index = 0;
     scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
     scope_stack[0].lost_symbols_empty = MAX_LOST_SYMBOLS;
@@ -169,7 +168,6 @@ void init_symbol_table() {
     for (i=1;i<MAX_SCOPE+1;i++) {
         scope_stack[i].scope_type = SCOPE_IGNORE;
         scope_stack[i].scope_owner = NULL;
-        scope_stack[i].nesting = i;
         scope_stack[i].lost_symbols = NULL;
     }
 
@@ -288,7 +286,7 @@ sem_t *sm_insert(const char *id) {
     sem_t *new_sem;
 
     existing_sem = sm_find(id);
-    if ((!existing_sem || existing_sem->scope->nesting!=sm_scope || root_scope_with) && sm_empty) {
+    if ((!existing_sem || existing_sem->scope!=get_current_scope() || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)malloc(sizeof(sem_t));
         new_sem->name = strdup(id);
         new_sem->scope = &scope_stack[sm_scope];
@@ -433,16 +431,8 @@ scope_t *get_current_scope() {
     return &scope_stack[sm_scope];
 }
 
-int get_current_nesting() {
-    return scope_stack[sm_scope].nesting;
-}
-
 func_t *get_current_scope_owner() {
     return (func_t*)(scope_stack[sm_scope].scope_owner);
-}
-
-int get_nesting_of_var(var_t *v) {
-    return v->scope->nesting;
 }
 
 void sm_clean_current_scope() {
