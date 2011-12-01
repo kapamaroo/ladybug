@@ -93,7 +93,6 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt);
 ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt);
 ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt);
 ir_node_t *new_with_stmt(ir_node_t *body);
-expr_t *new_function_call(char *id,expr_list_t *list);
 ir_node_t *new_procedure_call(char *id,expr_list_t *list);
 ir_node_t *new_comp_stmt(ir_node_t *body);
 //ir_node_t *new_io_statement is divided to read and write

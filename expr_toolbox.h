@@ -12,6 +12,8 @@ expr_t *expr_from_hardcoded_real(float value);
 expr_t *expr_from_hardcoded_boolean(int value);
 expr_t *expr_from_hardcoded_char(char value);
 
+expr_t *expr_from_function_call(char *id,expr_list_t *list);
+
 expr_t *expr_from_lost_int(int value);
 expr_t *expr_from_lost_boolean(int value);
 

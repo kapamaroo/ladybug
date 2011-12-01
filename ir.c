@@ -609,38 +609,6 @@ ir_node_t *new_with_stmt(ir_node_t *body) {
     return body;
 }
 
-expr_t *new_function_call(char *id,expr_list_t *list) {
-    //functions can only be called inside expressions, so this ID must be a function, its type is its return type
-    sem_t *sem_1;
-    expr_t *new_expr;
-
-    sem_1 = sm_find(id);
-    if (sem_1) {
-        //it is possible to call a subprogram before defining its body, so check for _FORWARDED_ subprograms too
-        //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
-        if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
-            //else we had parse errors
-            new_expr = expr_from_variable(sem_1->var);
-            new_expr->expr_list = list;
-            return new_expr;
-        } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            sprintf(str_err,"ERROR: invalid procedure call '%s', expected function",id);
-            yyerror(str_err);
-            return expr_from_lost_int(0); //return something to avoid unreal error messages
-        } else {
-            yyerror("ID is not a subprogram.");
-            return expr_from_lost_int(0); //return something to avoid unreal error messages
-        }
-    } else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared subprogram '%s'",id);
-            yyerror(str_err);
-        }
-        return expr_from_lost_int(0); //return something to avoid unreal error messages
-    }
-}
-
 ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
     sem_t *sem_1;
     ir_node_t *dark_init_node;
