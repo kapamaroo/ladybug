@@ -82,6 +82,10 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *ptr_deref;
     ir_node_t *dark_init_node;
     ir_node_t *new_func_call;
+    sem_t *sem_1;
+
+    //we do not handle EXPR_STRING here, strings can be only on assignments not inside expressions
+
 
     if (!ltree) {
         return NULL;
@@ -156,20 +160,8 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         return new_node;
     }
     else if (ltree->expr_is==EXPR_LVAL) {
-        sem_t *sem_1;
-        sem_1 = sm_find(ltree->var->name);
-        if (ltree->var->id_is==ID_RETURN) {
-            dark_init_node = prepare_stack_for_call(sem_1->subprogram,ltree->expr_list);
-            if (dark_init_node) {
-                new_func_call = jump_and_link_to(sem_1->subprogram->label);
-                new_func_call = link_stmt_to_stmt(new_func_call,dark_init_node);
-                return new_func_call;
-            }
-            //else parse errors
-            return NULL;
-        }
-
         if (ltree->var->Lvalue->content_type==PASS_VAL) {
+            //ID_RETURN goes in here
             //calculate the needed base address
             new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
             new_node->lval = ltree->var->Lvalue;
@@ -194,6 +186,21 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node = new_ir_node_t(NODE_ASM_LOAD);
             new_node->ir_lval = new_ASM_load_stmt;
             new_node->ir_rval = expr_tree_to_ir_tree(ltree->var->Lvalue->offset_expr);
+        }
+
+        if (ltree->var->id_is==ID_RETURN) {
+            sem_1 = sm_find(ltree->var->name);
+            dark_init_node = prepare_stack_for_call(sem_1->subprogram,ltree->expr_list);
+            if (!dark_init_node) {
+                //parse errors, omit code
+                return NULL;
+            }
+
+            new_func_call = jump_and_link_to(sem_1->subprogram->label);
+            new_func_call = link_stmt_to_stmt(new_func_call,dark_init_node);
+
+            //do NOT return here, finally we must read the return value after the actual call
+            new_node = link_stmt_to_stmt(new_node,new_func_call);
         }
 
         if (ltree->convert_to==SEM_INTEGER) {
@@ -242,7 +249,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
     //load final address with offset
     new_ir_lval = new_ir_node_t(NODE_LVAL);
     new_ir_lval->ir_lval = (ptr_deref)?ptr_deref:new_node;
-    new_ir_lval->ir_rval = expr_tree_to_ir_tree(v->Lvalue->offset_expr); //zero for ID_RETURN and ID_VAR_PARAM
+    new_ir_lval->ir_rval = expr_tree_to_ir_tree(v->Lvalue->offset_expr); //offset is NULL for ID_RETURN and ID_VAR_PTR
 
     return new_ir_lval;
 }

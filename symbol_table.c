@@ -33,7 +33,6 @@ int idf_empty = MAX_IDF;
 int idf_free_memory;  //flag for idf_init() to free the memory of the symbols because sm_insert() copied called strdup
 
 data_t *usr_datatype; //new user defined datatype
-data_t *void_datatype; //return type of procedures
 var_t *lost_var;
 
 with_stmt_scope_t *root_scope_with;
@@ -134,6 +133,7 @@ void idf_init() {
 
 void init_symbol_table() {
     int i;
+    data_t *void_datatype; //datatype of lost symbols
 
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("Initializing symbol table.. ");
@@ -150,7 +150,6 @@ void init_symbol_table() {
     main_program->func_name = sem_main_program->name;
     sem_main_program->subprogram = main_program;
 
-    scope_stack[0].scope_type = SCOPE_MAIN;
     scope_stack[0].scope_owner = main_program;
     scope_stack[0].start_index = 0;
     scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
@@ -166,7 +165,6 @@ void init_symbol_table() {
     sm_scope = 0; //main scope
 
     for (i=1;i<MAX_SCOPE+1;i++) {
-        scope_stack[i].scope_type = SCOPE_IGNORE;
         scope_stack[i].scope_owner = NULL;
         scope_stack[i].lost_symbols = NULL;
     }
@@ -364,7 +362,7 @@ void sm_remove(char *id) {
     sm_empty++;
 }
 
-void start_new_scope(scope_type_t scope_type, func_t *scope_owner) {
+void start_new_scope(func_t *scope_owner) {
     int i;
 
     //the main_scope is created in init_symbol_table()
@@ -373,13 +371,8 @@ void start_new_scope(scope_type_t scope_type, func_t *scope_owner) {
     //create new scope even if symbol table is full,
     //let the next sm_insert() handle this case
 
-    if (scope_type==SCOPE_IGNORE || scope_type==SCOPE_WITH_STATEMENT || scope_type==SCOPE_MAIN) {
-        yyerror("INTERNAL_ERROR: start new scope with invalid scope flag");
-        exit(EXIT_FAILURE);
-    }
-    else if (sm_scope<MAX_SCOPE) { //SCOPE_PROC, SCOPE_FUNC
+    if (sm_scope<MAX_SCOPE) {
         sm_scope++;
-        scope_stack[sm_scope].scope_type = scope_type;
         scope_stack[sm_scope].scope_owner = scope_owner;
         scope_stack[sm_scope].lost_symbols_empty = MAX_LOST_SYMBOLS;
         scope_stack[sm_scope].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
@@ -420,7 +413,6 @@ void close_current_scope() {
     }
     sm_clean_current_scope();
 
-    scope_stack[sm_scope].scope_type = SCOPE_IGNORE;
     sm_scope--;
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("__close_current_scope_%d\n",sm_scope);
@@ -564,6 +556,33 @@ void declare_vars(data_t* type){
 
     idf_free_memory = 1;
     idf_init();
+}
+
+void declare_formal_parameters(func_t *subprogram) {
+    int i;
+
+    sem_t *new_sem;
+    var_t *new_var;
+
+    //procedures have zero memsize so the stack_size initializes to zero for them
+    subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
+    //add space for return_value if subprogram is a function
+    subprogram->stack_size += subprogram->return_value->datatype->memsize;
+
+    //we do not put the variables in the stack here, just declare them in scope and allocate them
+    for (i=0;i<subprogram->param_num;i++) {
+        new_sem = sm_insert(subprogram->param[i]->name);
+        new_sem->id_is = ID_VAR;
+
+        new_var = (var_t*)malloc(sizeof(var_t));
+        new_var->id_is = ID_VAR;
+        new_var->datatype = subprogram->param[i]->datatype;
+        new_var->name = new_sem->name;
+        new_var->scope = new_sem->scope;
+        new_var->Lvalue = subprogram->param_Lvalue[i];
+
+        new_sem->var = new_var;
+    }
 }
 
 void sm_insert_lost_symbol(char *id) {
@@ -727,17 +746,15 @@ sem_t *reference_to_forwarded_function(char *id) {
             yyerror("ERROR: Multiple body definitions for a function");
         }
         else if (sem_2->id_is==ID_PROC) {
-            yyerror("ERROR: Multiple definition of procedure. id is a procedure not a function and is already declared");
-        }
-        else if (sem_2->id_is==ID_FORWARDED_FUNC && sem_2->id_is==ID_FORWARDED_PROC) {
-            yyerror("ERROR: id is not declared as a subprogram");
+            yyerror("ERROR: id is a procedure not a function and is already declared");
         }
         else if (sem_2->id_is==ID_FORWARDED_PROC) {
             yyerror("ERROR: id is a procedure not a function, and procedures cannot be forwarded");
         }
-        else { //everything is OK, try to open new scope
-            //try at first to open the new scope, to avoid false error messages if the function name does not exist in symbol table
-            start_new_scope(SCOPE_FUNC,sem_2->subprogram);
+        else if (sem_2->id_is!=ID_FORWARDED_FUNC) {
+            yyerror("ERROR: id is not declared as a subprogram");
+        }
+        else {
             return sem_2;
         }
     }
@@ -769,7 +786,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
                 yyerror("ERROR: the main program does not return any value");
                 return lost_var_reference();
             }
-            return sem_1->var;
+            return sem_1->subprogram->return_value;
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             //ALLOW this if only enumerations and subsets can declare an iter_space

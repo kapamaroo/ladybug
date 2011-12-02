@@ -27,6 +27,5 @@ mem_t *mem_allocate_string(char *string);
 
 mem_t *return_from_stack_lvalue(func_t *subprogram);
 void configure_stack_size_and_param_lvalues(func_t *subprogram);
-void declare_formal_parameters(func_t *subprogram);
 
 #endif

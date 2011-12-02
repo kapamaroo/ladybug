@@ -190,7 +190,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     if (v->id_is==ID_RETURN) {
         scope_owner = get_current_scope_owner();
         if (scope_owner->scope!=get_current_scope()) {
-            sprintf(str_err,"ERROR: assignment to '%s' which is return value of scope '%s'",v->name,scope_owner->func_name);
+            //v->name is the same with function's name because that's how functions return their value
+            sprintf(str_err,"ERROR: function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
             yyerror(str_err);
             return NULL;
         }
@@ -412,8 +413,10 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     }
 
     if (v->id_is==ID_RETURN) {
+        //assign and return to caller
         new_stmt = new_ir_node_t(NODE_RETURN_FUNC);
     } else {
+        //just assign
         new_stmt = new_ir_node_t(NODE_ASM_SAVE);
     }
     new_stmt->ir_lval = new_ir_lval;

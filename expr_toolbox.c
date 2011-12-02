@@ -43,7 +43,7 @@ expr_t *expr_from_variable(var_t *v) {
     l->l1 = NULL;
     l->l2 = NULL;
     l->op = OP_IGNORE;
-    l->expr_is = EXPR_LVAL; //ID_VAR or ID_VAR_PARAM or ID_VAR_GUARDED or ID_RETURN or ID_CONST or ID_LOST
+    l->expr_is = EXPR_LVAL; //ID_VAR or ID_VAR_PTR or ID_VAR_GUARDED or ID_RETURN or ID_CONST or ID_LOST
     l->ival = v->ival; //for int ID_CONST
     l->fval = v->fval; //for real ID_CONST
     l->cval = v->cval; //for char ID_CONST
@@ -83,7 +83,7 @@ expr_t *expr_from_STRING(char *id) {
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
     new_expr->expr_is = EXPR_STRING;
-    new_expr->datatype = void_datatype; //FIXME
+    new_expr->datatype = SEM_CHAR; //we have STRING only in assign and write statements
     new_expr->cstr = id; //no sdtrdup here, flex allocates memory
     new_expr->var = dummy_var;
     return new_expr;

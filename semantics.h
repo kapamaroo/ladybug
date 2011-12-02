@@ -99,14 +99,6 @@ typedef enum op_t {
     OP_NOT		// 'not'
 } op_t;
 
-typedef enum scope_type_t {
-    SCOPE_IGNORE,
-    SCOPE_MAIN,
-    SCOPE_FUNC,
-    SCOPE_PROC,
-    SCOPE_WITH_STATEMENT,
-} scope_type_t;
-
 typedef enum mem_seg_t {
     MEM_GLOBAL,
     MEM_STACK,
@@ -132,9 +124,8 @@ typedef struct mem_t {
 } mem_t;
 
 typedef struct scope_t {
-    scope_type_t scope_type; //if SCOPE_IGNORE, the start_index has no meaning
     int start_index; //for array symbol tables
-    struct func_t *scope_owner;
+    struct func_t *scope_owner; //if scope_owner is NULL, the struct is inactive
     char **lost_symbols;
     int lost_symbols_empty;
 } scope_t;
@@ -177,23 +168,12 @@ typedef struct param_t {
     data_t *datatype; //type of each parameter
 } param_t;
 
-typedef struct func_t {
-    data_t *return_datatype;
-    char *func_name;
-    int param_num; //number of parameters
-    param_t *param[MAX_PARAMS];
-    mem_t *param_Lvalue[MAX_PARAMS];
-    int stack_size; //formal parameters + return value + whatever
-    scope_t *scope; //a subprogram belongs to th previous scope
-    char *label;
-} func_t;
-
 /** Variables & declared Constants struct
  * We use the var_t struct to represent both variables
  * and declared constants in the symbol table.
  */
 typedef struct var_t {
-    idt_t id_is; //ID_VAR, ID_VAR_PARAM, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
+    idt_t id_is; //ID_VAR, ID_VAR_PTR, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
     data_t *datatype;
     char *name;
     scope_t *scope;
@@ -204,6 +184,17 @@ typedef struct var_t {
     char cval; //hardcoded char value
     char *cstr; //hardcoded string
 } var_t;
+
+typedef struct func_t {
+    var_t *return_value;
+    char *func_name;
+    int param_num; //number of parameters
+    param_t *param[MAX_PARAMS];
+    mem_t *param_Lvalue[MAX_PARAMS];
+    int stack_size; //formal parameters + return value + whatever
+    scope_t *scope; //a subprogram belongs to the previous scope
+    char *label;
+} func_t;
 
 /** Expressions struct
  * we work with `datatype` element of struct expr_t when we

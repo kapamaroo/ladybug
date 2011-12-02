@@ -62,20 +62,12 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
 }
 
 void subprogram_init(sem_t *sem_sub) {
-    //DO NOT OPEN A NEW SCOPE HERE!!
-    //put the formal parameters of subprogram in the symbol table
-    //the scope of this subprogram is already openned after the
-    //sub_header declaration.
-    //also DO NOT CLOSE the subprogram's scope here
+    func_t *subprogram;
 
     if (!sem_sub) {
-        //name of subprogram didn't inserted to symbol table
-        //an error message is printed by sm_insert()
-        //we must return. we are going to get lot's of unreal
-        //error messages afterwards, ...abord compiling
-        //FIXME
         return;
     }
+
     if (sem_sub->id_is==ID_PROC || sem_sub->id_is==ID_FUNC) {
         //Multiple body definitions for a subprogram are forbidden
         //for more information see the comments in semantics.h
@@ -89,10 +81,12 @@ void subprogram_init(sem_t *sem_sub) {
         exit(EXIT_FAILURE);
     }
 
-    //if (sem_sub->id_is)
-
-    declare_formal_parameters(sem_sub->subprogram);
-    new_module(sem_sub->subprogram);
+    subprogram = sem_sub->subprogram;
+    //now is time to get_current_scope()
+    subprogram->return_value->scope = get_current_scope();
+    start_new_scope(subprogram);
+    declare_formal_parameters(subprogram); //declare them inside the new scope
+    new_module(subprogram);
 }
 
 void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
@@ -109,7 +103,7 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
         body = link_stmt_to_stmt(ir_return,body);
     }
 
-    close_current_scope(); //now close the scope of subprogram
+    close_current_scope();
 
     link_stmt_to_tree(body);
     return_to_previous_module();
@@ -121,31 +115,28 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
 
     //function name belongs to current scope
     sem_2 = sm_insert(id);
-    //open new scope after the declaration of the function and before the creation of the return_value variable (to get the new scope)
     if (sem_2) {
         sem_2->id_is = ID_FORWARDED_FUNC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->func_name = sem_2->name;
-        sem_2->subprogram->return_datatype = return_type;
+        //sem_2->subprogram->return_datatype = return_type;
 
         if (!list) {
             yyerror("ERROR: functions must have at least one parameter.");
             //continue to avoid false error messages
         }
 
-        configure_formal_parameters(list,sem_2->subprogram);
-        configure_stack_size_and_param_lvalues(sem_2->subprogram);
-        start_new_scope(SCOPE_FUNC,sem_2->subprogram);
-
-        //only for functions
-        //use the `var` element from the `sem_t` struct to reffer to the return value of the function
         return_value = (var_t*)malloc(sizeof(var_t));
         return_value->id_is = ID_RETURN;
         return_value->datatype = return_type;
         return_value->name = sem_2->name;
-        return_value->scope = get_current_scope();
+        //do not get_current_scope() here, we are still in caller's scope, wait for subprogram_init()
+        //return_value->scope = get_current_scope();
         return_value->Lvalue = return_from_stack_lvalue(sem_2->subprogram);
-        sem_2->var = return_value;
+        sem_2->subprogram->return_value = return_value;
+
+        configure_formal_parameters(list,sem_2->subprogram);
+        configure_stack_size_and_param_lvalues(sem_2->subprogram);
 
     }
     else { //sem_2==NULL
@@ -159,18 +150,16 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
     sem_t *sem_2;
 
     sem_2  = sm_insert(id);
-    //open new scope after the declaration of the procedure
     if (sem_2) {
         //do something with formal parameters
 
         sem_2->id_is = ID_FORWARDED_PROC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->func_name = sem_2->name;
-        sem_2->subprogram->return_datatype = void_datatype; //we could have it NULL but this is more generall
+        sem_2->subprogram->return_value = NULL;
 
         configure_formal_parameters(list,sem_2->subprogram);
         configure_stack_size_and_param_lvalues(sem_2->subprogram);
-        start_new_scope(SCOPE_PROC,sem_2->subprogram);
     }
     else { //sem_2==NULL
         //if the id is used before, an error is printed by sm_insert.
@@ -181,7 +170,6 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
 
 void forward_subprogram_declaration(sem_t *subprogram) {
     if (subprogram) {
-        close_current_scope();
         if (subprogram->id_is!=ID_FORWARDED_FUNC) {
             yyerror("ERROR: only functions can be forwarded");
         }

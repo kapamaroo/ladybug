@@ -175,10 +175,6 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
                 exit(EXIT_FAILURE);
             }
         }
-        else if (l->datatype==void_datatype) {
-            //EXPR_LOST and EXPR_STRING have void_datatype
-            return 0;
-        }
         else {
             sprintf(str_err,"ERROR: reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
             yyerror(str_err);

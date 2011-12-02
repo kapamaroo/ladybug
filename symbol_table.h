@@ -50,8 +50,6 @@ extern idf_t *idf_table[MAX_IDF];
 extern data_t *idf_data_type;
 extern int idf_empty;
 
-extern data_t *void_datatype;
-
 void idf_init();
 idf_t *idf_find(const char *id);
 int idf_insert(char *id);
@@ -77,7 +75,7 @@ sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL 
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
 void sm_remove(char *id); //remove this symbol from the most nested scope it is found
 
-void start_new_scope(scope_type_t scope_type, func_t *scope_owner);
+void start_new_scope(func_t *scope_owner);
 void close_current_scope();
 void sm_clean_current_scope();
 
@@ -92,6 +90,7 @@ void close_last_opened_with_statement_scope();
 
 void declare_consts(char *id,expr_t *l);
 void declare_vars(data_t *type);
+void declare_formal_parameters(func_t *subprogram);
 
 void sm_insert_lost_symbol(char *id);
 char *sm_find_lost_symbol(char *id);

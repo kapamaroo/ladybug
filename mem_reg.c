@@ -72,7 +72,7 @@ mem_t *return_from_stack_lvalue(func_t *subprogram) {
     new_mem->segment = MEM_STACK;
     new_mem->seg_offset = STACK_RETURN_VALUE_OFFSET;
     new_mem->content_type = PASS_VAL;
-    new_mem->size = subprogram->return_datatype->memsize;
+    new_mem->size = subprogram->return_value->datatype->memsize;
 
     return new_mem;
 }
@@ -83,7 +83,11 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
 
     //procedures have zero memsize so the stack_size initializes to zero for them
     subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
-    subprogram->stack_size += subprogram->return_datatype->memsize; //add space for possible return value (for function calls)
+
+    if (subprogram->return_value) {
+        //add space for return_value if subprogram is a function call
+        subprogram->stack_size += subprogram->return_value->datatype->memsize;
+    }
 
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
@@ -109,31 +113,5 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
         }
 
         subprogram->param_Lvalue[i] = new_mem;
-    }
-}
-
-void declare_formal_parameters(func_t *subprogram) {
-    int i;
-
-    sem_t *new_sem;
-    var_t *new_var;
-
-    //procedures have zero memsize so the stack_size initializes to zero for them
-    subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
-    subprogram->stack_size += subprogram->return_datatype->memsize; //add space for possible return value (for function calls)
-
-    //we do not put the variables in the stack here, just declare them in scope and allocate them
-    for (i=0;i<subprogram->param_num;i++) {
-        new_sem = sm_insert(subprogram->param[i]->name);
-        new_sem->id_is = ID_VAR;
-
-        new_var = (var_t*)malloc(sizeof(var_t));
-        new_var->id_is = ID_VAR;
-        new_var->datatype = subprogram->param[i]->datatype;
-        new_var->name = new_sem->name;
-        new_var->scope = new_sem->scope;
-        new_var->Lvalue = subprogram->param_Lvalue[i];
-
-        new_sem->var = new_var;
     }
 }
