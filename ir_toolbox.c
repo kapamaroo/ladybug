@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "semantics.h"
+#include "scope.h"
 #include "symbol_table.h"
 #include "ir.h"
 #include "ir_toolbox.h"

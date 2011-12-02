@@ -2,8 +2,8 @@
 
 #include "build_flags.h"
 #include "semantics.h"
+#include "scope.h"
 #include "symbol_table.h"
-#include "semantic_routines.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "mem_reg.h"

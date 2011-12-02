@@ -3,6 +3,7 @@
 
 #include "build_flags.h"
 #include "subprograms.h"
+#include "scope.h"
 #include "symbol_table.h"
 #include "mem_reg.h"
 #include "err_buff.h"

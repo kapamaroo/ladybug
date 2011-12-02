@@ -2,6 +2,7 @@
 #define _SUBPROGRAMS_H
 
 #include "semantics.h"
+#include "symbol_table.h"
 #include "ir.h"
 #include "bison.tab.h"
 

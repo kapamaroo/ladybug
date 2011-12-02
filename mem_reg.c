@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "build_flags.h"
+#include "scope.h"
 #include "symbol_table.h"
 #include "mem_reg.h"
 

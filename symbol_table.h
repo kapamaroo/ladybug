@@ -1,10 +1,8 @@
 #ifndef _SYMBOL_TABLE_H
-#define SYMBOL_TABLE_H
+#define _SYMBOL_TABLE_H
 
 #include "semantics.h"
-#include "bison.tab.h"
 
-#define MAIN_PROGRAM_SCOPE 0
 #define MAX_IDF 128
 
 //ARRAY implementation of symbol table
@@ -12,25 +10,23 @@
 #define MAX_LOST_SYMBOLS 32
 extern int sm_empty;
 
+typedef struct sem_t {
+    idt_t id_is;
+    var_t *var;
+    func_t *subprogram;
+    data_t *comp; //composite type
+    char *name;
+    scope_t *scope; //depth of declaration
+    int index; //relative position in symbol table
+    //mem_t *Lvalue;
+} sem_t;
+
 typedef struct idf_t {
     char *name;
     int ival; //used for enum type
 } idf_t;
 
-typedef struct with_stmt_scope_t {
-    data_t *type; //record type of with statement
-    //only if conflicts==0 it is allowed to close a with_scope, else conflicts--
-    int conflicts; //(non negative) remember how many with_scopes failed to open due to element name conflicts
-    struct with_stmt_scope_t *prev;
-    struct with_stmt_scope_t *next;
-} with_stmt_scope_t;
-
 extern sem_t **sm_table;
-extern int sm_scope;
-extern scope_t scope_stack[MAX_SCOPE+1];
-//scope 0 is the scope of the main program and if the
-//symbol table is an array, it is the first element
-//scope_stack[n] points to the first element of n-th scope
 
 extern sem_t *sem_main_program;
 extern func_t *main_program;
@@ -75,18 +71,8 @@ sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL 
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
 void sm_remove(char *id); //remove this symbol from the most nested scope it is found
 
-void start_new_scope(func_t *scope_owner);
-void close_current_scope();
-void sm_clean_current_scope();
-
-scope_t *get_current_scope();
-func_t *get_current_scope_owner();
-
 void protect_guard_var(char *id);
 void unprotect_guard_var(char *id);
-
-void start_new_with_statement_scope(var_t *var);
-void close_last_opened_with_statement_scope();
 
 void declare_consts(char *id,expr_t *l);
 void declare_vars(data_t *type);

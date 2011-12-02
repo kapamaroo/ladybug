@@ -14,21 +14,17 @@
 #define MAX_PARAMS 128
 #define MAX_SET_ELEM 128
 //main program's scope is 0
-#define MAX_SCOPE 10
 #define MAX_ARRAY_DIMS 8
 #define MAX_EXPR_LIST (MAX_PARAMS>MAX_ARRAY_DIMS?MAX_PARAMS:MAX_ARRAY_DIMS)
 #define MAX_VAR_LIST MAX_EXPR_LIST
 #define MAX_SUBPROGRAMS_IN_SCOPE MAX_EXPR_LIST
 
 //some structs contain elements of a struct that is declared later, so this keeps the compiler happy
-struct data_t;
-//struct var_t;
 struct expr_t;
 struct func_t;
 struct elexpr_list_t;
-//struct sem_t;
 
-/** info `struct idt_t`
+/** info `enum idt_t`
  * when a sub_header is declared it is marked as
  * ID_FORWARDED_FUNC or ID_FORWARDED_PROC for functions
  * and procedures respectively. They become ID_FUNC or
@@ -55,16 +51,6 @@ typedef enum idt_t {
     ID_PROGRAM_NAME
 } idt_t;
 
-typedef enum expr_type_t {
-    EXPR_RVAL,
-    EXPR_LVAL,
-    EXPR_HARDCODED_CONST, //only for standard types
-    EXPR_STRING,    //only for hardcoded STRINGS
-    EXPR_SET,
-    EXPR_NULL_SET,
-    EXPR_LOST,
-} expr_type_t;
-
 typedef enum type_t {
     TYPE_VOID,
     TYPE_INT,
@@ -78,50 +64,20 @@ typedef enum type_t {
     TYPE_SET,
 } type_t;
 
-typedef enum op_t {
-    OP_IGNORE,
-    RELOP_B,	// '>'
-    RELOP_BE,	// '>='
-    RELOP_L,	// '<'
-    RELOP_LE,	// '<='
-    RELOP_NE,	// '<>'
-    RELOP_EQU,	// '='
-    RELOP_IN,	// 'in'
-    OP_SIGN, 	//dummy operator (OP_MINUS synonym), to determine when OP_MINUS is used as sign, (we ignore OP_PLUS)
-    OP_PLUS,	// '+'
-    OP_MINUS,	// '-'
-    OP_MULT,	// '*'
-    OP_RDIV,	// '/'
-    OP_DIV,	// 'div'
-    OP_MOD,	// 'mod'
-    OP_AND,	// 'and'
-    OP_OR,		// 'or'
-    OP_NOT		// 'not'
-} op_t;
-
 typedef enum mem_seg_t {
     MEM_GLOBAL,
     MEM_STACK,
     MEM_REGISTER,	//for formal parameters only
 } mem_seg_t;
 
-typedef enum pass_t {
-    PASS_VAL,
-    PASS_REF,
-} pass_t;
-
-/** Mem_t struct
- * `offset_expr` element's type is expr_t but this
- * struct is defined later
+/** Dimension of array types
+ * `datatype` element's type is data_t, but this struct is declared later
  */
-typedef struct mem_t {
-    mem_seg_t segment; //global or local (stack) scope relevant
-    int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
-    int seg_offset; //variable's static relative distance from segment's start (doesn't change)
-    struct expr_t *offset_expr; //dynamic code to calculate relative distance from variable's start (for arrays or records)
-    pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the address (for pointers)
-    int size; //memory size
-} mem_t;
+typedef struct dim_t {
+    int first;
+    int range;
+    int relative_distance; //number of elements between 2 indexes of the same dimension
+} dim_t;
 
 typedef struct scope_t {
     int start_index; //for array symbol tables
@@ -129,16 +85,6 @@ typedef struct scope_t {
     char **lost_symbols;
     int lost_symbols_empty;
 } scope_t;
-
-/** Dimension of array types
- * `datatype` element's type is data_t, but this struct
- * is declared later
- */
-typedef struct dim_t {
-    int first;
-    int range;
-    int relative_distance; //number of elements between 2 indexes of the same dimension
-} dim_t;
 
 typedef struct data_t {
     type_t is;
@@ -162,15 +108,25 @@ typedef struct data_t {
 #define TYPE_IS_SUBSET_VALID(d) (d->is==TYPE_INT || d->is==TYPE_CHAR || d->is==TYPE_ENUM)
 #define TYPE_IS_STRING(d) (d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
 
-typedef struct param_t {
-    char *name; //name of each parameter
-    pass_t pass_mode;
-    data_t *datatype; //type of each parameter
-} param_t;
+typedef enum pass_t {
+    PASS_VAL,
+    PASS_REF,
+} pass_t;
+
+/** Mem_t struct
+ * `offset_expr` element's type is expr_t but this  struct is defined later
+ */
+typedef struct mem_t {
+    mem_seg_t segment; //global or local (stack) scope relevant
+    int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
+    int seg_offset; //variable's static relative distance from segment's start (doesn't change)
+    struct expr_t *offset_expr; //dynamic code to calculate relative distance from variable's start (for arrays or records)
+    pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the address (for pointers)
+    int size; //memory size
+} mem_t;
 
 /** Variables & declared Constants struct
- * We use the var_t struct to represent both variables
- * and declared constants in the symbol table.
+ * We use the var_t struct to represent both variables and declared constants in the symbol table.
  */
 typedef struct var_t {
     idt_t id_is; //ID_VAR, ID_VAR_PTR, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
@@ -185,6 +141,23 @@ typedef struct var_t {
     char *cstr; //hardcoded string
 } var_t;
 
+typedef struct var_list_t {
+    var_t *var_list[MAX_VAR_LIST];
+    int var_list_empty;
+    int all_var_num; //the supposed number of variables
+} var_list_t;
+
+typedef struct param_t {
+    char *name; //name of each parameter
+    pass_t pass_mode;
+    data_t *datatype; //type of each parameter
+} param_t;
+
+typedef struct param_list_t {
+    param_t *param[MAX_PARAMS];
+    int param_empty;
+} param_list_t;
+
 typedef struct func_t {
     var_t *return_value;
     char *func_name;
@@ -195,6 +168,37 @@ typedef struct func_t {
     scope_t *scope; //a subprogram belongs to the previous scope
     char *label;
 } func_t;
+
+typedef enum op_t {
+    OP_IGNORE,
+    RELOP_B,	// '>'
+    RELOP_BE,	// '>='
+    RELOP_L,	// '<'
+    RELOP_LE,	// '<='
+    RELOP_NE,	// '<>'
+    RELOP_EQU,	// '='
+    RELOP_IN,	// 'in'
+    OP_SIGN, 	//dummy operator (OP_MINUS synonym), to determine when OP_MINUS is used as sign, (we ignore OP_PLUS)
+    OP_PLUS,	// '+'
+    OP_MINUS,	// '-'
+    OP_MULT,	// '*'
+    OP_RDIV,	// '/'
+    OP_DIV,	// 'div'
+    OP_MOD,	// 'mod'
+    OP_AND,	// 'and'
+    OP_OR,		// 'or'
+    OP_NOT		// 'not'
+} op_t;
+
+typedef enum expr_type_t {
+    EXPR_RVAL,
+    EXPR_LVAL,
+    EXPR_HARDCODED_CONST, //only for standard types
+    EXPR_STRING,    //only for hardcoded STRINGS
+    EXPR_SET,
+    EXPR_NULL_SET,
+    EXPR_LOST,
+} expr_type_t;
 
 /** Expressions struct
  * we work with `datatype` element of struct expr_t when we
@@ -220,6 +224,12 @@ typedef struct expr_t {
     int flag_paren; //expression of priority //OBSOLETE
 } expr_t;
 
+typedef struct expr_list_t {
+    expr_t *expr_list[MAX_EXPR_LIST];
+    int expr_list_empty;
+    int all_expr_num; //the supposed number of expressions
+} expr_list_t;
+
 /** Loop range in a `for` statement */
 typedef struct iter_t {
     struct expr_t *start;
@@ -234,18 +244,6 @@ typedef struct elexpr_t {
     data_t *elexpr_datatype;
 } elexpr_t;
 
-typedef struct expr_list_t {
-    expr_t *expr_list[MAX_EXPR_LIST];
-    int expr_list_empty;
-    int all_expr_num; //the supposed number of expressions
-} expr_list_t;
-
-typedef struct var_list_t {
-    var_t *var_list[MAX_VAR_LIST];
-    int var_list_empty;
-    int all_var_num; //the supposed number of variables
-} var_list_t;
-
 typedef struct elexpr_list_t {
     expr_type_t elexpr_list_usage;
     elexpr_t *elexpr_list[MAX_SET_ELEM];
@@ -253,21 +251,5 @@ typedef struct elexpr_list_t {
     int all_elexpr_num;
     data_t *elexpr_list_datatype;
 } elexpr_list_t;
-
-typedef struct param_list_t {
-    param_t *param[MAX_PARAMS];
-    int param_empty;
-} param_list_t;
-
-typedef struct sem_t {
-    idt_t id_is;
-    var_t *var;
-    func_t *subprogram;
-    data_t *comp; //composite type
-    char *name;
-    scope_t *scope; //depth of declaration
-    int index; //relative position in symbol table
-    //mem_t *Lvalue;
-} sem_t;
 
 #endif

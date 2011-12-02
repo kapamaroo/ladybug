@@ -5,17 +5,15 @@
 #include "build_flags.h"
 #include "semantics.h"
 #include "symbol_table.h"
+#include "scope.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
-#include "semantic_routines.h"
 #include "subprograms.h"
 #include "mem_reg.h"
 #include "ir.h"
 #include "err_buff.h"
 #include "final_code.h"
 #include "main_app.h"
-
-//int op;
 
 int yylex(void);
 void yyerror(const char *msg);
@@ -372,7 +370,6 @@ int main(int argc, char *argv[]) {
   int status;
 
   init_symbol_table();
-  init_semantics();
   init_ir();
   init_err_buff();
 
