@@ -15,36 +15,36 @@
 #include "final_code.h"
 #include "main_app.h"
 
-int yylex(void);
-void yyerror(const char *msg);
-extern FILE *yyin;
+    int yylex(void);
+    void yyerror(const char *msg);
+    extern FILE *yyin;
 
-%}
+    %}
 
 %union
-{
-  struct expr_t *expr;
-  struct elexpr_t *elexpr;
-  struct data_t *type;
-  struct var_t *var;
-  struct func_t *subprogram;
-  struct sem_t *info;
-  struct iter_t *iter_space;
-  struct dim_t *dim;
-  struct ir_node_t *ir_node;
+ {
+     struct expr_t *expr;
+     struct elexpr_t *elexpr;
+     struct data_t *type;
+     struct var_t *var;
+     struct func_t *subprogram;
+     struct sem_t *info;
+     struct iter_t *iter_space;
+     struct dim_t *dim;
+     struct ir_node_t *ir_node;
 
-  struct expr_list_t *expr_list;
-  struct var_list_t *var_list;
-  struct elexpr_list_t *elexpr_list;
-  struct param_list_t *param_list;
+     struct expr_list_t *expr_list;
+     struct var_list_t *var_list;
+     struct elexpr_list_t *elexpr_list;
+     struct param_list_t *param_list;
 
-  enum pass_t pass_mode;
-  enum op_t op; //operator ID
+     enum pass_t pass_mode;
+     enum op_t op; //operator ID
 
-  char *str;
-  float fval; //float value
-  int ival; //int value
-  char cval; //char value
+     char *str;
+     float fval; //float value
+     int ival; //int value
+     char cval; //char value
 }
 
 %token PROGRAM
@@ -89,7 +89,7 @@ extern FILE *yyin;
 %token <cval> CCONST
 %token <str> STRING
 
-  //operands
+ //operands
 %token LBRACK RBRACK
 %nonassoc <op> INOP RELOP EQU
 %left <op> ADDOP OROP
@@ -97,15 +97,15 @@ extern FILE *yyin;
 %nonassoc <op> NOTOP
 %left DOT LBRACK RBRACK LPAREN RPAREN
 
-  //%token COMMENT_LINE
+ //%token COMMENT_LINE
 %token ERROR_EOF_IN_STRING
 %token ERROR_EOF_IN_COMMENT
 
 %type <var> variable
 %type <var> read_item
 
-//%type <subprogram> subprogram
-//%type <subprogram> subprograms
+ //%type <subprogram> subprogram
+ //%type <subprogram> subprograms
 
 %type <iter_space> iter_space
 %type <pass_mode> pass
@@ -151,9 +151,9 @@ extern FILE *yyin;
 %%
 
 program: header declarations subprograms comp_statement DOT {
-  link_stmt_to_tree($4);
-  generate_final_code();
-}
+    link_stmt_to_tree($4);
+    generate_final_code();
+ }
 ;
 
 header: PROGRAM ID SEMI {set_main_program_name($2);}//scope for main program is set by the symbol table init function
@@ -367,53 +367,54 @@ write_item: expression
 #if LEX_MAIN == 0
 
 int main(int argc, char *argv[]) {
-  int status;
+    int status;
 
-  init_symbol_table();
-  init_ir();
-  init_err_buff();
+    init_symbol_table();
+    init_scope();
+    init_ir();
+    init_err_buff();
 
-  if (argc>1) {
-    if (argc!=2) {
-      printf("Ignoring multiple arguments\n"); //FIXME parse all the arguments
+    if (argc>1) {
+        if (argc!=2) {
+            printf("Ignoring multiple arguments\n"); //FIXME parse all the arguments
+        }
+        yyin = fopen(argv[argc-1],"r");
+        if (!yyin) {
+            perror(NULL);
+            exit(EXIT_FAILURE);
+        }
+        status = yyparse();
+        fclose(yyin);
     }
-    yyin = fopen(argv[argc-1],"r");
-    if (!yyin) {
-      perror(NULL);
-      exit(EXIT_FAILURE);
+    else {
+        help();
+        exit(EXIT_FAILURE);
     }
-    status = yyparse();
-    fclose(yyin);
-  }
-  else {
-    help();
-    exit(EXIT_FAILURE);
-  }
 
-  switch (status) {
-  case 0: exit(EXIT_SUCCESS);
-  case 1:
-  case 2:
-  default: exit(EXIT_FAILURE);
-  }
+    switch (status) {
+    case 0: exit(EXIT_SUCCESS);
+    case 1:
+    case 2:
+    default: exit(EXIT_FAILURE);
+    }
 }
 
 void yyerror(const char *msg) {
-  err_num++;
+    err_num++;
 
-  printf("%s\n",msg);
+    printf("%s\n",msg);
 
 #if LOG_TO_FILE == 1
-  fprintf(log_file,"%s\n",msg);
+    fprintf(log_file,"%s\n",msg);
 #endif
 
-  if (ERR_NUM_LIMIT>0 && err_num >= ERR_NUM_LIMIT) {
-    printf("ERROR: So many errors, abord parsing.\n");
+    if (ERR_NUM_LIMIT>0 && err_num >= ERR_NUM_LIMIT) {
+        printf("ERROR: So many errors, abord parsing.\n");
 #if LOG_TO_FILE == 1
-    fprintf(log_file,"ERROR: So many errors, abord parsing.\n");
+        fprintf(log_file,"ERROR: So many errors, abord parsing.\n");
 #endif
-    exit(EXIT_FAILURE);
-  }
+        exit(EXIT_FAILURE);
+    }
 }
 
 #endif
