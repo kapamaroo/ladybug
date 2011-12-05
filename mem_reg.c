@@ -65,19 +65,6 @@ mem_t *mem_allocate_string(char *string) {
     return m;
 }
 
-mem_t *return_from_stack_lvalue(func_t *subprogram) {
-    mem_t *new_mem;
-
-    new_mem = (mem_t*)malloc(sizeof(mem_t));
-    new_mem->offset_expr = NULL;
-    new_mem->segment = MEM_STACK;
-    new_mem->seg_offset = STACK_RETURN_VALUE_OFFSET;
-    new_mem->content_type = PASS_VAL;
-    new_mem->size = subprogram->return_value->datatype->memsize;
-
-    return new_mem;
-}
-
 void configure_stack_size_and_param_lvalues(func_t *subprogram) {
     int i;
     mem_t *new_mem;

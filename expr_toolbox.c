@@ -24,13 +24,13 @@ expr_t *expr_from_variable(var_t *v) {
             l->datatype = v->datatype; //if enum, set the enumeration type
         }
         else if (v->datatype->is==TYPE_REAL) {
-            l = expr_from_hardcoded_real(v->ival);
+            l = expr_from_hardcoded_real(v->fval);
         }
         else if (v->datatype->is==TYPE_CHAR) {
-            l = expr_from_hardcoded_char(v->ival);
+            l = expr_from_hardcoded_char(v->cval);
         }
         else if (v->datatype->is==TYPE_BOOLEAN) {
-            l = expr_from_hardcoded_boolean(v->ival);
+            l = expr_from_hardcoded_boolean(v->cval);
         }
         else {
             yyerror("UNEXPECTED_ERROR: 38");
@@ -39,28 +39,26 @@ expr_t *expr_from_variable(var_t *v) {
         return l;
     }
 
+    if (v->id_is==ID_LOST) {
+        return expr_from_lost_int(0);
+    }
+
     l = (expr_t*)malloc(sizeof(expr_t));
     l->parent = l;
     l->l1 = NULL;
     l->l2 = NULL;
     l->op = OP_IGNORE;
-    l->expr_is = EXPR_LVAL; //ID_VAR or ID_VAR_PTR or ID_VAR_GUARDED or ID_RETURN or ID_CONST or ID_LOST
-    l->ival = v->ival; //for int ID_CONST
-    l->fval = v->fval; //for real ID_CONST
-    l->cval = v->cval; //for char ID_CONST
+    l->expr_is = EXPR_LVAL; //ID_VAR ID_VAR_GUARDED or ID_RETURN
     l->cstr = NULL;
     l->var = v;
     l->datatype = v->datatype;
     l->convert_to = NULL;
 
-    if (v->id_is==ID_VAR || v->id_is==ID_VAR_PTR) {
+    if (v->id_is==ID_VAR) {
         if (v->datatype->is==TYPE_SUBSET) {
             l->datatype = v->datatype->def_datatype; //integer,char,boolean, or enumeration
         }
         //arrays and record types are allowed only for asignments
-    }
-    else if (v->id_is==ID_LOST) {
-        l->expr_is = EXPR_LOST;
     }
 
     return l;
@@ -85,7 +83,7 @@ expr_t *expr_from_STRING(char *id) {
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
     new_expr->expr_is = EXPR_STRING;
-    new_expr->datatype = SEM_CHAR; //we have STRING only in assign and write statements
+    new_expr->datatype = VIRTUAL_STRING_DATATYPE;
     new_expr->cstr = id; //no sdtrdup here, flex allocates memory
     new_expr->var = dummy_var;
     return new_expr;
@@ -119,7 +117,7 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
         if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
             //else we had parse errors
-            new_expr = expr_from_variable(sem_1->var);
+            new_expr = expr_from_variable(sem_1->subprogram->return_value);
             new_expr->expr_list = list;
             return new_expr;
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
@@ -508,7 +506,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
     }
 
     if (v) {
-        if (v->id_is==ID_VAR || v->id_is==ID_VAR_PTR) {
+        if (v->id_is==ID_VAR) {
             if (v->datatype->is==TYPE_ARRAY) {
                 if (valid_expr_list_for_array_reference(v->datatype,list)) {
                     relative_offset_expr = make_array_refference(list,v->datatype);

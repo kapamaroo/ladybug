@@ -83,9 +83,20 @@ void subprogram_init(sem_t *sem_sub) {
     }
 
     subprogram = sem_sub->subprogram;
+
     //now is time to get_current_scope()
-    subprogram->return_value->scope = get_current_scope();
     start_new_scope(subprogram);
+
+    //standard independent stack size
+    subprogram->stack_size = STACK_INIT_SIZE;
+
+    if (sem_sub->id_is==ID_FORWARDED_FUNC) {
+        //add space for return_value if subprogram is a function
+        subprogram->stack_size += subprogram->return_value->datatype->memsize;
+
+        subprogram->return_value->scope = get_current_scope();
+    }
+
     declare_formal_parameters(subprogram); //declare them inside the new scope
     new_module(subprogram);
 }
@@ -100,9 +111,10 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
     }
     else if (subprogram->id_is == ID_FORWARDED_PROC) {
         subprogram->id_is = ID_PROC;
-        ir_return = new_ir_node_t(NODE_RETURN_PROC);
-        body = link_stmt_to_stmt(ir_return,body);
     }
+
+    ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
+    body = link_stmt_to_stmt(ir_return,body);
 
     close_current_scope();
 
@@ -113,6 +125,7 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
 sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) {
     sem_t *sem_2;
     var_t *return_value;
+    mem_t *new_mem;
 
     //function name belongs to current scope
     sem_2 = sm_insert(id);
@@ -133,7 +146,15 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         return_value->name = sem_2->name;
         //do not get_current_scope() here, we are still in caller's scope, wait for subprogram_init()
         //return_value->scope = get_current_scope();
-        return_value->Lvalue = return_from_stack_lvalue(sem_2->subprogram);
+
+	new_mem = (mem_t*)malloc(sizeof(mem_t));
+	new_mem->offset_expr = NULL;
+	new_mem->segment = MEM_STACK;
+	new_mem->seg_offset = STACK_RETURN_VALUE_OFFSET;
+	new_mem->content_type = PASS_VAL;
+	new_mem->size = return_value->datatype->memsize;
+
+        return_value->Lvalue = new_mem;
         sem_2->subprogram->return_value = return_value;
 
         configure_formal_parameters(list,sem_2->subprogram);

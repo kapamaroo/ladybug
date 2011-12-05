@@ -12,8 +12,7 @@ typedef enum ir_node_type_t {
     NODE_BRANCH,
     NODE_JUMP_LINK,	        //jump and link
     NODE_JUMP,		        //jump only
-    NODE_RETURN_FUNC,           //assign return value and return controll to caller
-    NODE_RETURN_PROC,           //return control to caller
+    NODE_RETURN_SUBPROGRAM,      //return control to caller
     NODE_INPUT_INT,
     NODE_INPUT_REAL,
     NODE_INPUT_BOOLEAN,         //set non zero values as true
@@ -86,7 +85,6 @@ void check_for_return_value(func_t *subprogram,ir_node_t *body);
 ir_node_t *new_ir_node_t(ir_node_type_t node_type);
 void link_stmt_to_tree(ir_node_t *new_node);
 ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent);
-ir_node_t *link_stmt_to_stmt_anyway(ir_node_t *child,ir_node_t *parent);
 
 ir_node_t *new_assign_stmt(var_t *v, expr_t *l);
 ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt);

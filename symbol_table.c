@@ -26,6 +26,8 @@ sem_t *sem_REAL;
 sem_t *sem_BOOLEAN;
 sem_t *sem_CHAR;
 
+data_t *VIRTUAL_STRING_DATATYPE;
+
 idf_t *idf_table[MAX_IDF];
 data_t *idf_data_type;
 int idf_empty = MAX_IDF;
@@ -200,6 +202,12 @@ void init_symbol_table() {
     sem_BOOLEAN->comp->memsize = MEM_SIZEOF_BOOLEAN;
     sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
 
+    //(d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
+    VIRTUAL_STRING_DATATYPE = (data_t*)malloc(sizeof(data_t));
+    VIRTUAL_STRING_DATATYPE->is = TYPE_ARRAY;
+    VIRTUAL_STRING_DATATYPE->field_num = 1;
+    VIRTUAL_STRING_DATATYPE->def_datatype = SEM_CHAR;
+
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("OK\n");
 #endif
@@ -288,11 +296,7 @@ void sm_remove(char *id) {
     case ID_RETURN:
     case ID_VAR:
         //INFO: do not remove the lvalue, it is used from the ir.c //BUG FIXED
-        //free(symbol->var->Lvalue);
-        //do not break here
-    case ID_VAR_PTR:
         free(symbol->var);
-        //do not free the Lvalue, we need it for subprogram calls
         break;
     case ID_LOST:
     case ID_PROGRAM_NAME:
@@ -441,11 +445,6 @@ void declare_formal_parameters(func_t *subprogram) {
     sem_t *new_sem;
     var_t *new_var;
 
-    //procedures have zero memsize so the stack_size initializes to zero for them
-    subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
-    //add space for return_value if subprogram is a function
-    subprogram->stack_size += subprogram->return_value->datatype->memsize;
-
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
         new_sem = sm_insert(subprogram->param[i]->name);
@@ -548,7 +547,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
 
     sem_1 = sm_find(id);
     if (sem_1) {
-        if (sem_1->id_is==ID_VAR || sem_1->id_is==ID_VAR_PTR || sem_1->id_is==ID_CONST) {
+        if (sem_1->id_is==ID_VAR || sem_1->id_is==ID_CONST) {
             return sem_1->var;
         }
         else if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
@@ -604,7 +603,7 @@ var_t *refference_to_record_element(var_t *v, char *id) {
     mem_t *new_mem;
 
     if (v) {
-        if (v->id_is==ID_VAR || v->id_is==ID_VAR_PTR) {
+        if (v->id_is==ID_VAR) {
             if (v->datatype->is==TYPE_RECORD) {
                 elem_num = check_for_id_in_datatype(v->datatype,id);
                 if (elem_num>=0) {

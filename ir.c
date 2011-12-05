@@ -22,6 +22,9 @@ var_t *ll;	//left result
 var_t *rr;	//right result
 var_t *x;	//protected result
 
+ir_node_t *expand_array_assign(var_t *v,expr_t *l);
+ir_node_t *expand_record_assign(var_t *v,expr_t *l);
+
 void init_ir() {
     int i;
 
@@ -106,14 +109,7 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->jump_label = NULL;
     new_node->exit_branch_label = NULL;
     new_node->lval = NULL;
-
-    if (node_type==NODE_RETURN_FUNC || node_type==NODE_RETURN_PROC) {
-        new_node->return_point = 1;
-    }
-    else {
-        new_node->return_point = 0;
-    }
-
+    new_node->return_point = 0;
     return new_node;
 }
 
@@ -129,24 +125,15 @@ void link_stmt_to_tree(ir_node_t *new_node) {
 ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
     //return the head of the linked list
     if (parent && child) {
-        if (parent->last_stmt->return_point) {
-            yyerror("WARNING: ommiting dead code after control return");
-            return parent;
-        }
-        parent->last_stmt->next_stmt = child;
-        child->prev_stmt = parent->last_stmt;
-        parent->last_stmt = child->last_stmt;
-        return parent;
-    } else if (!parent) {
-        return child;
-    } else {
-        return parent;
-    }
-}
+        //if (parent->last_stmt->return_point) {
+        //      yyerror("WARNING: ommiting dead code after control return");
+        //      return parent;
+        //  }
 
-ir_node_t *link_stmt_to_stmt_anyway(ir_node_t *child,ir_node_t *parent) {
-    //return the head of the linked list
-    if (parent && child) {
+        //if child's return_point is not set, propagate the parent's return_point value
+        if (child->last_stmt->return_point==0) {
+            child->last_stmt->return_point = parent->last_stmt->return_point;
+        }
         parent->last_stmt->next_stmt = child;
         child->prev_stmt = parent->last_stmt;
         parent->last_stmt = child->last_stmt;
@@ -181,7 +168,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         return NULL;
     }
 
-    if (v->id_is != ID_RETURN && v->id_is != ID_VAR && v->id_is!=ID_VAR_PTR) {
+    if (v->id_is != ID_RETURN && v->id_is != ID_VAR && v->id_is!=ID_VAR_GUARDED) {
         sprintf(str_err,"ERROR: trying to assign to symbol '%s' which is not a variable",v->name);
         yyerror(str_err);
         return NULL;
@@ -189,7 +176,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 
     if (v->id_is==ID_RETURN) {
         scope_owner = get_current_scope_owner();
-        if (scope_owner->scope!=get_current_scope()) {
+        if (scope_owner->return_value->scope!=get_current_scope()) {
             //v->name is the same with function's name because that's how functions return their value
             sprintf(str_err,"ERROR: function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
             yyerror(str_err);
@@ -203,224 +190,96 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         return NULL;
     }
 
-    if (v->id_is==ID_VAR_PTR && v->Lvalue->content_type==PASS_REF && l->expr_is!=EXPR_LVAL) {
-        sprintf(str_err,"ERROR: incompatible assignment by reference to parameter '%s'",v->name);
-        yyerror(str_err);
-        return NULL;
-    }
-
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
-        sprintf(str_err,"ERROR: invalid assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
+        sprintf(str_err,"ERROR: assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
 
-    if (l->expr_is==EXPR_STRING) { //string assignment
-        if (TYPE_IS_STRING(v->datatype)) {
-            //strings terminate with 0, copy until array is full
-            new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
-            new_stmt->ir_lval = calculate_lvalue(v);
-            new_stmt->ir_lval2 = calculate_lvalue(l->var);
-            return new_stmt;
-        } else {
-            yyerror("ERROR: invalid string assignment");
-            return NULL;
-        }
-    } else if (l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET ||
-               (l->expr_is==EXPR_LVAL && l->datatype->is==TYPE_SET)) { //set assignment
-        if (v->datatype->is==TYPE_SET &&
-            ((l->expr_is==EXPR_LVAL && v->datatype==l->datatype) ||
-             ((l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) && v->datatype->def_datatype==l->datatype))) {
-            new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
-            new_stmt->ir_lval = calculate_lvalue(v);
-            new_stmt->ir_lval2 = create_bitmap(l);
-            return new_stmt;
-        } else {
-            if (v->id_is==ID_RETURN) {
-                yyerror("ERROR: incompatible assignment to return value, expected expression of standard type");
-            } else {
-                sprintf(str_err,"ERROR: incompatible type assignment to '%s'",v->name);
-                yyerror(str_err);
-            }
-            return NULL;
-        }
-    } else { //normal assignment with EXPR_RVAL or EXPR_LVAL or EXPR_HARDCODED_CONST
-        switch (v->datatype->is) {
-        case TYPE_INT:
-        case TYPE_REAL:
-        case TYPE_BOOLEAN:
-        case TYPE_CHAR:
-            if (v->datatype->is==TYPE_REAL) {
-                l->convert_to = SEM_REAL;
-            } else if (v->datatype->is==TYPE_INT) {
-                //chars and booleans are represented as integers
-                l->convert_to = SEM_INTEGER;
-            } else if (v->datatype->is==TYPE_CHAR) {
-#warning INFO: allow the next only if we can assign scalar types to chars
-                //v->cond_assign = make_ASCII_bound_checks(v,l);
-            }
-            break;
-        case TYPE_ENUM: //enumerations are integers
-            //assign for enumerations
-#warning INFO: allow the next only if we can assign scalar types to enumerations
-            //v->cond_assign = make_enum_subset_bound_checks(v,l);
-            break;
-        case TYPE_SUBSET:
-            v->cond_assign = make_enum_subset_bound_checks(v,l);
-            break;
-        case TYPE_SET:
-            yyerror("ERROR: assignment to type of set with a non set expression");
-            return NULL;
-            break;
-        case TYPE_ARRAY:
-            if (v->datatype==l->datatype) {
-                //expression is EXPR_LVAL here
-                //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
-                new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
-                new_stmt->ir_lval = calculate_lvalue(v);
-                new_stmt->ir_lval2 = calculate_lvalue(l->var);
-            } else {
-                //expression is EXPR_LVAL here
-                var_t *dummy_var_array;
-                mem_t *dummy_mem_array;
-
-                var_t *dummy_var_l;
-                mem_t *dummy_mem_l;
-
-                expr_t *dummy_expr;
-
-                int i;
-                int elem_offset_num;
-
-                elem_offset_num = v->datatype->dim[0]->relative_distance*v->datatype->dim[0]->range*v->datatype->def_datatype->memsize;
-                new_stmt = NULL;
-                for(i=0; i<elem_offset_num; i+=v->datatype->def_datatype->memsize) {
-                    dummy_mem_array = (mem_t*)malloc(sizeof(mem_t));
-                    dummy_mem_array->content_type = v->Lvalue->content_type;
-                    dummy_mem_array->direct_register_number = v->Lvalue->direct_register_number;
-                    dummy_mem_array->seg_offset = v->Lvalue->seg_offset;
-                    dummy_mem_array->segment = v->Lvalue->segment;
-                    dummy_mem_array->size = v->datatype->def_datatype->memsize;
-                    dummy_mem_array->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
-
-                    dummy_var_array = (var_t*)malloc(sizeof(var_t));
-                    dummy_var_array->id_is = ID_VAR;
-                    dummy_var_array->datatype = v->datatype->def_datatype;
-                    dummy_var_array->name = "__internal_dummy_variable_for_array_assignment__";
-                    dummy_var_array->scope = v->scope;
-                    dummy_var_array->cond_assign = NULL;
-                    dummy_var_array->Lvalue = dummy_mem_array;
-
-                    dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
-                    dummy_mem_l->content_type = l->var->Lvalue->content_type;
-                    dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
-                    dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
-                    dummy_mem_l->segment = l->var->Lvalue->segment;
-                    dummy_mem_l->size = l->var->datatype->def_datatype->memsize;
-                    dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
-
-                    dummy_var_l = (var_t*)malloc(sizeof(var_t));
-                    dummy_var_l->id_is = ID_VAR;
-                    dummy_var_l->datatype = l->var->datatype->def_datatype;
-                    dummy_var_l->name = "__internal_dummy_variable_for_array_assignment__";
-                    dummy_var_l->scope = l->var->scope;
-                    dummy_var_l->cond_assign = NULL;
-                    dummy_var_l->Lvalue = dummy_mem_l;
-
-                    dummy_expr = (expr_t*)malloc(sizeof(expr_t));
-                    dummy_expr->expr_is = EXPR_LVAL;
-                    dummy_expr->datatype = dummy_var_l->datatype;
-                    dummy_expr->var = dummy_var_l;
-
-                    new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_array,dummy_expr),new_stmt);
-                }
-            }
-            return new_stmt;
-        case TYPE_RECORD:
-            if (v->datatype==l->datatype) {
-                //expression is EXPR_LVAL here
-                //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
-                new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
-                new_stmt->ir_lval = calculate_lvalue(v);
-                new_stmt->ir_lval2 = calculate_lvalue(l->var);
-            } else {
-                //expression is EXPR_LVAL here
-                var_t *dummy_var_record;
-                mem_t *dummy_mem_record;
-
-                var_t *dummy_var_l;
-                mem_t *dummy_mem_l;
-
-                expr_t *dummy_expr;
-
-                int i;
-                new_stmt = NULL;
-                for(i=0; i<v->datatype->field_num; i++) {
-                    dummy_mem_record = (mem_t*)malloc(sizeof(mem_t));
-                    dummy_mem_record->content_type = v->Lvalue->content_type;
-                    dummy_mem_record->direct_register_number = v->Lvalue->direct_register_number;
-                    dummy_mem_record->seg_offset = v->Lvalue->seg_offset;
-                    dummy_mem_record->segment = v->Lvalue->segment;
-                    dummy_mem_record->size = v->datatype->field_datatype[i]->memsize;
-                    dummy_mem_record->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(v->datatype->field_offset[i]));
-
-                    dummy_var_record = (var_t*)malloc(sizeof(var_t));
-                    dummy_var_record->id_is = ID_VAR;
-                    dummy_var_record->datatype = v->datatype->field_datatype[i];
-                    dummy_var_record->name = "__internal_dummy_variable_for_record_assignment__";
-                    dummy_var_record->scope = v->scope;
-                    dummy_var_record->cond_assign = NULL;
-                    dummy_var_record->Lvalue = dummy_mem_record;
-
-                    dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
-                    dummy_mem_l->content_type = l->var->Lvalue->content_type;
-                    dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
-                    dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
-                    dummy_mem_l->segment = l->var->Lvalue->segment;
-                    dummy_mem_l->size = l->var->datatype->field_datatype[i]->memsize;
-                    dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(l->var->datatype->field_offset[i]));
-
-                    dummy_var_l = (var_t*)malloc(sizeof(var_t));
-                    dummy_var_l->id_is = ID_VAR;
-                    dummy_var_l->datatype = l->var->datatype->field_datatype[i];
-                    dummy_var_l->name = "__internal_dummy_variable_for_record_assignment__";
-                    dummy_var_l->scope = l->var->scope;
-                    dummy_var_l->cond_assign = NULL;
-                    dummy_var_l->Lvalue = dummy_mem_l;
-
-                    dummy_expr = (expr_t*)malloc(sizeof(expr_t));
-                    dummy_expr->expr_is = EXPR_LVAL;
-                    dummy_expr->datatype = dummy_var_l->datatype;
-                    dummy_expr->var = dummy_var_l;
-
-                    new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_record,dummy_expr),new_stmt);
-                }
-            }
-            return new_stmt;
-        case TYPE_VOID: //keep the compiler happy
-            return NULL;
-        }
+    if (TYPE_IS_STRING(v->datatype)) {
+        //strings terminate with 0, copy until array is full
+        new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
+        new_stmt->ir_lval = calculate_lvalue(v);
+        new_stmt->ir_lval2 = calculate_lvalue(l->var);
+        return new_stmt;
     }
+
+    switch (v->datatype->is) {
+    case TYPE_INT:
+        if (l->datatype->is!=TYPE_INT) {
+	    l->convert_to = SEM_INTEGER;
+        }
+        break;
+    case TYPE_REAL:
+        if (l->datatype->is!=TYPE_REAL) {
+	    l->convert_to = SEM_REAL;
+        }
+        break;
+    case TYPE_BOOLEAN:
+        if (l->datatype->is!=TYPE_BOOLEAN) {
+	    yyerror("ERROR: assignment to boolean with nonboolean datatype");
+	    return NULL;
+        }
+        break;
+    case TYPE_CHAR:
+        if (l->datatype->is!=TYPE_CHAR) {
+#warning INFO: allow the next only if we can assign scalar types to chars
+            //v->cond_assign = make_ASCII_bound_checks(v,l);
+        }
+        break;
+    case TYPE_ENUM:
+        //enumerations are integers
+        //assign for enumerations
+#warning INFO: allow the next only if we can assign scalar types to enumerations
+        //v->cond_assign = make_enum_subset_bound_checks(v,l);
+        break;
+    case TYPE_SUBSET:
+        v->cond_assign = make_enum_subset_bound_checks(v,l);
+        break;
+    case TYPE_SET:
+        new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
+        new_stmt->ir_lval = calculate_lvalue(v);
+        new_stmt->ir_lval2 = create_bitmap(l);
+        return new_stmt;
+    case TYPE_ARRAY:
+        if (v->datatype==l->datatype) {
+	    //explicit datatype match, optimize: use memcopy
+	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
+	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
+	    new_stmt->ir_lval = calculate_lvalue(v);
+	    new_stmt->ir_lval2 = calculate_lvalue(l->var);
+        } else {
+	    new_stmt = expand_array_assign(v,l);
+        }
+        return new_stmt;
+    case TYPE_RECORD:
+        if (v->datatype==l->datatype) {
+	    //explicit datatype match, optimize: use memcopy
+	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
+	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
+	    new_stmt->ir_lval = calculate_lvalue(v);
+	    new_stmt->ir_lval2 = calculate_lvalue(l->var);
+        } else {
+	    new_stmt = expand_record_assign(v,l);
+        }
+        return new_stmt;
+    case TYPE_VOID: //keep the compiler happy
+        return NULL;
+    }
+
+    /**** some common assign actions */
 
     //calculate lval for assignment
     new_ir_lval = calculate_lvalue(v);
+    new_ir_rval = expr_tree_to_ir_tree(l);
 
-    //calculate rval for assignment
-    if (v->id_is==ID_VAR_PTR && v->Lvalue->content_type==PASS_REF) {
-        new_ir_rval = calculate_lvalue(l->var);
-    } else {
-        new_ir_rval = expr_tree_to_ir_tree(l);
-    }
-
-    if (v->id_is==ID_RETURN) {
-        //assign and return to caller
-        new_stmt = new_ir_node_t(NODE_RETURN_FUNC);
-    } else {
-        //just assign
-        new_stmt = new_ir_node_t(NODE_ASM_SAVE);
-    }
+    new_stmt = new_ir_node_t(NODE_ASM_SAVE);
     new_stmt->ir_lval = new_ir_lval;
     new_stmt->ir_rval = new_ir_rval;
+
+    if (v->id_is==ID_RETURN) {
+        new_stmt->return_point = 1;
+    }
 
     if (v->cond_assign) {
         //we must do some checks before the assignment, convert to branch node
@@ -433,19 +292,18 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_node_t *if_node;
     ir_node_t *jump_exit_branch;
-    ir_node_t *body;
-    ir_node_t *ir_dummy_label;
+    ir_node_t *ir_exit_if;
 
     char *label_enter_branch;
     char *label_exit_branch;
-    char *label_false;
+    char *label_true;
 
     if (!cond) {
         yyerror("UNEXPECTED_ERROR: 63-1");
         exit(EXIT_FAILURE);
     }
 
-    if (cond->datatype->is!=TYPE_BOOLEAN && !true_stmt && !false_stmt) {
+    if (cond->datatype->is!=TYPE_BOOLEAN || !true_stmt) {
         //parse errors or empty if statement, ignore statement
         return NULL;
     }
@@ -463,42 +321,50 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
     label_enter_branch = new_label_unique("ifbranch");
     label_exit_branch = new_label_exit_branch(label_enter_branch);
+    ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
+    ir_exit_if->label = label_exit_branch;
 
-    //there is at least one of the true_stmt and false_stmt
     if_node = new_ir_node_t(NODE_BRANCH);
     //if_node->label = label_enter_branch; //we do not need a label here, maybe the while or the for statement need it
-    if_node->exit_branch_label = label_exit_branch;
 
-    ir_dummy_label = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_dummy_label->label = label_exit_branch;
+    //we implement branches by checking the !cond, see below
+    cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
+    if_node->ir_rval = expr_tree_to_ir_tree(cond);
 
-    body = NULL;
     if (true_stmt && false_stmt) {
-        label_false = new_label_false(label_enter_branch);
-        if_node->exit_branch_label = label_false; //if !cond goto false stmt
-        false_stmt->label = label_false;
-        jump_exit_branch = new_ir_node_t(NODE_JUMP);
+        /* pseudo assembly
+           if !cond goto: TRUE_STMT
+           FALSE_STMT
+           goto: EXIT_LABEL
+           TRUE_STMT
+           EXIT_LABEL
+        */
+
+        label_true = new_label_true(label_enter_branch);
+        true_stmt->label = label_true;
+        if_node->exit_branch_label = label_true;
+
+	jump_exit_branch = new_ir_node_t(NODE_JUMP);
         jump_exit_branch->jump_label = label_exit_branch;
+        false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
 
-        if (true_stmt->last_stmt->return_point && false_stmt->last_stmt->return_point) {
-            ir_dummy_label->return_point = 1;
-        }
-
-        false_stmt = link_stmt_to_stmt(false_stmt,jump_exit_branch);
-        body = link_stmt_to_stmt_anyway(true_stmt,false_stmt);
-
-    } else if (true_stmt) {
-        body = link_stmt_to_stmt(true_stmt,body);
-        ir_dummy_label->return_point = 1;
-    } else { //there is only the false_stmt, invert the condition
-        cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
-        body = link_stmt_to_stmt(false_stmt,body);
+	//propagate return_point to the last statement
+	if (true_stmt->last_stmt->return_point && false_stmt->last_stmt->return_point) {
+            ir_exit_if->return_point = 1;
+	}
+    } else {
+        // only true_stmt
+        /* pseudo assembly
+           if !cond goto: EXIT_LABEL
+           TRUE_STMT
+           EXIT_LABEL
+        */
+        if_node->exit_branch_label = label_exit_branch;
     }
 
-    body = link_stmt_to_stmt_anyway(ir_dummy_label,body);
-
-    if_node->ir_rval = expr_tree_to_ir_tree(cond);
-    if_node = link_stmt_to_stmt(body,if_node);
+    true_stmt = link_stmt_to_stmt(ir_exit_if,true_stmt); //true_stmt always exists
+    if_node = link_stmt_to_stmt(false_stmt,if_node); //this ignores false_stmt if  NULL
+    if_node = link_stmt_to_stmt(true_stmt,if_node);
 
     return if_node;
 }
@@ -686,7 +552,6 @@ ir_node_t *new_read_stmt(var_list_t *list) {
         v = list->var_list[i];
         switch (v->id_is) {
         case ID_VAR:
-        case ID_VAR_PTR:
             d = v->datatype;
             ir_result_lval = calculate_lvalue(v);
             if (d->is==TYPE_INT) {
@@ -843,4 +708,115 @@ ir_node_t *jump_to(char *jump_label) {
     new_jump_link = new_ir_node_t(NODE_JUMP);
     new_jump_link->jump_label = jump_label;
     return new_jump_link;
+}
+
+ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
+    //expression is EXPR_LVAL here
+    var_t *dummy_var_array;
+    mem_t *dummy_mem_array;
+
+    var_t *dummy_var_l;
+    mem_t *dummy_mem_l;
+
+    expr_t *dummy_expr;
+
+    int i;
+    int elem_offset_num;
+
+    ir_node_t *new_stmt;
+
+    elem_offset_num = v->datatype->dim[0]->relative_distance*v->datatype->dim[0]->range*v->datatype->def_datatype->memsize;
+    new_stmt = NULL;
+    for(i=0; i<elem_offset_num; i+=v->datatype->def_datatype->memsize) {
+        dummy_mem_array = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_array->content_type = v->Lvalue->content_type;
+        dummy_mem_array->direct_register_number = v->Lvalue->direct_register_number;
+        dummy_mem_array->seg_offset = v->Lvalue->seg_offset;
+        dummy_mem_array->segment = v->Lvalue->segment;
+        dummy_mem_array->size = v->datatype->def_datatype->memsize;
+        dummy_mem_array->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
+
+        dummy_var_array = (var_t*)malloc(sizeof(var_t));
+        dummy_var_array->id_is = ID_VAR;
+        dummy_var_array->datatype = v->datatype->def_datatype;
+        dummy_var_array->name = "__internal_dummy_variable_for_array_assignment__";
+        dummy_var_array->scope = v->scope;
+        dummy_var_array->cond_assign = NULL;
+        dummy_var_array->Lvalue = dummy_mem_array;
+
+        dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_l->content_type = l->var->Lvalue->content_type;
+        dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
+        dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
+        dummy_mem_l->segment = l->var->Lvalue->segment;
+        dummy_mem_l->size = l->var->datatype->def_datatype->memsize;
+        dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
+
+        dummy_var_l = (var_t*)malloc(sizeof(var_t));
+        dummy_var_l->id_is = ID_VAR;
+        dummy_var_l->datatype = l->var->datatype->def_datatype;
+        dummy_var_l->name = "__internal_dummy_variable_for_array_assignment__";
+        dummy_var_l->scope = l->var->scope;
+        dummy_var_l->cond_assign = NULL;
+        dummy_var_l->Lvalue = dummy_mem_l;
+
+        dummy_expr = expr_from_variable(dummy_var_l);
+
+        new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_array,dummy_expr),new_stmt);
+    }
+    return new_stmt;
+}
+
+ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
+    var_t *dummy_var_record;
+    mem_t *dummy_mem_record;
+
+    var_t *dummy_var_l;
+    mem_t *dummy_mem_l;
+
+    expr_t *dummy_expr;
+
+    int i;
+
+    ir_node_t *new_stmt;
+
+    new_stmt = NULL;
+    for(i=0; i<v->datatype->field_num; i++) {
+        dummy_mem_record = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_record->content_type = v->Lvalue->content_type;
+        dummy_mem_record->direct_register_number = v->Lvalue->direct_register_number;
+        dummy_mem_record->seg_offset = v->Lvalue->seg_offset;
+        dummy_mem_record->segment = v->Lvalue->segment;
+        dummy_mem_record->size = v->datatype->field_datatype[i]->memsize;
+        dummy_mem_record->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(v->datatype->field_offset[i]));
+
+        dummy_var_record = (var_t*)malloc(sizeof(var_t));
+        dummy_var_record->id_is = ID_VAR;
+        dummy_var_record->datatype = v->datatype->field_datatype[i];
+        dummy_var_record->name = "__internal_dummy_variable_for_record_assignment__";
+        dummy_var_record->scope = v->scope;
+        dummy_var_record->cond_assign = NULL;
+        dummy_var_record->Lvalue = dummy_mem_record;
+
+        dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_l->content_type = l->var->Lvalue->content_type;
+        dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
+        dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
+        dummy_mem_l->segment = l->var->Lvalue->segment;
+        dummy_mem_l->size = l->var->datatype->field_datatype[i]->memsize;
+        dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(l->var->datatype->field_offset[i]));
+
+        dummy_var_l = (var_t*)malloc(sizeof(var_t));
+        dummy_var_l->id_is = ID_VAR;
+        dummy_var_l->datatype = l->var->datatype->field_datatype[i];
+        dummy_var_l->name = "__internal_dummy_variable_for_record_assignment__";
+        dummy_var_l->scope = l->var->scope;
+        dummy_var_l->cond_assign = NULL;
+        dummy_var_l->Lvalue = dummy_mem_l;
+
+        dummy_expr = expr_from_variable(dummy_var_l);
+
+        new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_record,dummy_expr),new_stmt);
+    }
+    return new_stmt;
 }

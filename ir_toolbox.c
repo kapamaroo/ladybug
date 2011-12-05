@@ -85,13 +85,13 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *new_func_call;
     sem_t *sem_1;
 
-    //we do not handle EXPR_STRING here, strings can be only on assignments not inside expressions
+    //we do not handle EXPR_STRING here, strings can be only on assignments (not inside expressions)
 
-
-    if (!ltree) {
+    if (!ltree || ltree->expr_is==EXPR_LOST) {
         return NULL;
     }
-    else if (ltree->expr_is==EXPR_RVAL) {
+
+    if (ltree->expr_is==EXPR_RVAL) {
         if (ltree->op==RELOP_IN) {
             //operator 'in' applies only to one set, see expr_distribute_inop_to_set() in expr_toolbox.c
             if (ltree->l2->expr_is==EXPR_LVAL) {
@@ -150,17 +150,18 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         new_node->fval = ltree->fval;
         return new_node;
     }
-    else if ((ltree->expr_is==EXPR_LVAL && ltree->datatype->is==TYPE_SET) || ltree->expr_is==EXPR_SET || ltree->expr_is==EXPR_NULL_SET) {
+    else if (ltree->expr_is==EXPR_SET || ltree->expr_is==EXPR_NULL_SET) {
         //convert to bitmap, this set goes for assignment
-        if (ltree->expr_is==EXPR_LVAL) {
-            //we handle differently the lvalue sets, see new_assignment() in ir.c
-            printf("UNEXPECTED_ERROR:72-1");
-            exit(EXIT_FAILURE);
-        }
         new_node = create_bitmap(ltree);
         return new_node;
     }
     else if (ltree->expr_is==EXPR_LVAL) {
+        if (ltree->datatype->is==TYPE_SET) {
+	    //we handle differently the lvalue sets, see new_assignment() in ir.c
+            printf("UNEXPECTED_ERROR:72-1");
+            exit(EXIT_FAILURE);
+        }
+
         if (ltree->var->Lvalue->content_type==PASS_VAL) {
             //ID_RETURN goes in here
             //calculate the needed base address
@@ -172,6 +173,21 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_ASM_load_stmt->ir_lval = new_node;
             new_ASM_load_stmt->ir_rval = expr_tree_to_ir_tree(ltree->var->Lvalue->offset_expr);
             new_node = new_ASM_load_stmt;
+
+	    if (ltree->var->id_is==ID_RETURN) {
+                sem_1 = sm_find(ltree->var->name);
+                dark_init_node = prepare_stack_for_call(sem_1->subprogram,ltree->expr_list);
+                if (!dark_init_node) {
+                    //parse errors, omit code
+                    return NULL;
+                }
+
+                new_func_call = jump_and_link_to(sem_1->subprogram->label);
+                new_func_call = link_stmt_to_stmt(new_func_call,dark_init_node);
+
+                //finally we must read the return value after the actual call
+                new_node = link_stmt_to_stmt(new_node,new_func_call);
+	    }
         }
         else { //PASS_REF (only for formal parameters inside subprograms)
             //calculate the reference address
@@ -189,21 +205,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node->ir_rval = expr_tree_to_ir_tree(ltree->var->Lvalue->offset_expr);
         }
 
-        if (ltree->var->id_is==ID_RETURN) {
-            sem_1 = sm_find(ltree->var->name);
-            dark_init_node = prepare_stack_for_call(sem_1->subprogram,ltree->expr_list);
-            if (!dark_init_node) {
-                //parse errors, omit code
-                return NULL;
-            }
-
-            new_func_call = jump_and_link_to(sem_1->subprogram->label);
-            new_func_call = link_stmt_to_stmt(new_func_call,dark_init_node);
-
-            //do NOT return here, finally we must read the return value after the actual call
-            new_node = link_stmt_to_stmt(new_node,new_func_call);
-        }
-
         if (ltree->convert_to==SEM_INTEGER) {
             convert_node = new_ir_node_t(NODE_ASM_CONVERT_TO_INT);
             convert_node->ir_rval = new_node;
@@ -215,9 +216,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             return convert_node;
         }
         return new_node;
-    }
-    else if (ltree->expr_is==EXPR_LOST) {
-        return NULL;
     }
     else {
         yyerror("UNEXPECTED_ERROR: 99-2");
@@ -240,7 +238,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
     new_node->lval = v->Lvalue;
 
     ptr_deref = NULL;
-    if (v->id_is!=ID_VAR_PTR && v->Lvalue->content_type==PASS_REF) {
+    if (v->Lvalue->content_type==PASS_REF) {
         //load the final address
         ptr_deref = new_ir_node_t(NODE_ASM_LOAD);
         ptr_deref->ir_lval = new_node;
@@ -250,7 +248,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
     //load final address with offset
     new_ir_lval = new_ir_node_t(NODE_LVAL);
     new_ir_lval->ir_lval = (ptr_deref)?ptr_deref:new_node;
-    new_ir_lval->ir_rval = expr_tree_to_ir_tree(v->Lvalue->offset_expr); //offset is NULL for ID_RETURN and ID_VAR_PTR
+    new_ir_lval->ir_rval = expr_tree_to_ir_tree(v->Lvalue->offset_expr); //offset is NULL for ID_RETURN
 
     return new_ir_lval;
 }
@@ -302,10 +300,16 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 
     int i;
 
-    if (subprogram->param_num!=0 && list==NULL) {
+    if (!list && subprogram->param_num!=0) {
 #if BISON_DEBUG_LEVEL >= 1
         yyerror("ERROR: null expr_list for subprogram call (debugging info)");
 #endif
+        return NULL;
+    }
+
+    if (list->all_expr_num != subprogram->param_num) {
+        sprintf(str_err,"ERROR: invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
+        yyerror(str_err);
         return NULL;
     }
 
@@ -315,7 +319,13 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
         for (i=0;i<subprogram->param_num;i++) {
             tmp_assign = NULL;
 
-            tmp_var->id_is = ID_VAR_PTR;
+            if (list->expr_list[i]->expr_is==EXPR_LOST) {
+                //parse errors
+                free(tmp_var);
+                return NULL;
+            }
+
+            tmp_var->id_is = ID_VAR;
             tmp_var->datatype = subprogram->param[i]->datatype;
             tmp_var->name = subprogram->param[i]->name;
             tmp_var->scope = get_current_scope();
@@ -324,57 +334,45 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 
             el_datatype = list->expr_list[i]->datatype;
 
-            if (list->expr_list[i]->expr_is==EXPR_LOST) {
-                //parse errors
-                free(tmp_var);
-                return NULL;
-            }
-
             if (subprogram->param[i]->pass_mode==PASS_REF) {
                 //accept only lvalues
-                if (list->expr_list[i]->expr_is==EXPR_LVAL) {
-                    if (el_datatype != subprogram->param[i]->datatype) {
-                        free(tmp_var);
-                        return NULL;
-                    }
-                    if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
-                        sprintf(str_err,"ERROR: guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
-                        yyerror(str_err);
-                        free(tmp_var);
-                        return NULL;
-                    }
-                    tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
-                }
-                else {
+                if (list->expr_list[i]->expr_is!=EXPR_LVAL) {
                     sprintf(str_err,"ERROR: parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
+                    yyerror(str_err);
+                    free(tmp_var);
+                    return NULL;
+                }
+
+                if (el_datatype != subprogram->param[i]->datatype) {
+                    free(tmp_var);
+                    return NULL;
+                }
+
+                if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
+                    sprintf(str_err,"ERROR: guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
                     yyerror(str_err);
                     free(tmp_var);
                     return NULL;
                 }
             }
             else { //PASS_VAL
-                //accept anything, if it's not rvalue we pass it;s address
+                //accept anything, if it's not rvalue we pass it's address
                 if (TYPE_IS_COMPOSITE(el_datatype)) {
                     yyerror("ERROR: arrays, records and set datatypes can only be passed by refference");
                     free(tmp_var);
                     return NULL;
                 }
-                tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
             }
+#warning "if errors, new_assign_stmt() leaks memory"
+	    tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
             new_stack_init_node = link_stmt_to_stmt(tmp_assign,new_stack_init_node);
         }
         free(tmp_var);
         return new_stack_init_node;
     }
-    else if (list->all_expr_num == subprogram->param_num) {
-        //some expressions are invalid, but their number is correct, this avoids some unreal error messages afterwards
-        return NULL;
-    }
-    else {
-        sprintf(str_err,"ERROR: invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
-        yyerror(str_err);
-        return NULL;
-    }
+
+    //some expressions are invalid, but their number is correct, avoid some unreal error messages afterwards
+    return NULL;
 }
 
 var_t *new_normal_variable_from_guarded(var_t *guarded) {
@@ -710,9 +708,13 @@ ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set) {
 int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
     int i;
 
+    //explicit datatype matching
     if (vd==ld) {
-        //enumerations, sets, standard types
-        //which must be of the same datatype
+        return 1;
+    }
+
+    //compatible datatype matching
+    if (TYPE_IS_STRING(vd) && TYPE_IS_STRING(ld)) {
         return 1;
     }
     else if (TYPE_IS_ARITHMETIC(vd) && TYPE_IS_ARITHMETIC(ld)) {
@@ -723,6 +725,13 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
     }
     else if (vd->is==ld->is && vd->is==TYPE_ARRAY) {
         return check_assign_similar_comp_datatypes(vd->def_datatype,ld->def_datatype);
+    }
+    else if (vd->is==TYPE_SET) {
+        //do not recurse here, we want only explicit datatype matching
+        if (vd->def_datatype==ld) {
+            return 1;
+        }
+        return 0;
     }
     else if (vd->is==ld->is && vd->is==TYPE_RECORD) {
         if (vd->field_num==ld->field_num) {

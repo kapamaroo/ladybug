@@ -37,7 +37,6 @@ struct elexpr_list_t;
  */
 typedef enum idt_t {
     ID_VAR,
-    ID_VAR_PTR,	//this variable is a pointer formal parameter of a subprogram
     ID_VAR_GUARDED, //this variable controls a `for` loop statement
     ID_LOST,	//for undeclared symbols, to avoid unreal error messages
     ID_CONST,
@@ -106,7 +105,7 @@ typedef struct data_t {
 #define TYPE_IS_COMPOSITE(d) (d->is==TYPE_ARRAY || d->is==TYPE_RECORD || d->is==TYPE_SET)
 #define TYPE_IS_ELEXPR_VALID(d) (d->is==TYPE_CHAR || d->is==TYPE_BOOLEAN || d->is==TYPE_ENUM || d->is==TYPE_SUBSET)
 #define TYPE_IS_SUBSET_VALID(d) (d->is==TYPE_INT || d->is==TYPE_CHAR || d->is==TYPE_ENUM)
-#define TYPE_IS_STRING(d) (d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
+#define TYPE_IS_STRING(d) (d==VIRTUAL_STRING_DATATYPE || (d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR))
 
 typedef enum pass_t {
     PASS_VAL,
@@ -129,7 +128,7 @@ typedef struct mem_t {
  * We use the var_t struct to represent both variables and declared constants in the symbol table.
  */
 typedef struct var_t {
-    idt_t id_is; //ID_VAR, ID_VAR_PTR, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
+    idt_t id_is; //ID_VAR, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
     data_t *datatype;
     char *name;
     scope_t *scope;
@@ -186,8 +185,8 @@ typedef enum op_t {
     OP_DIV,	// 'div'
     OP_MOD,	// 'mod'
     OP_AND,	// 'and'
-    OP_OR,		// 'or'
-    OP_NOT		// 'not'
+    OP_OR,     	// 'or'
+    OP_NOT     	// 'not'
 } op_t;
 
 typedef enum expr_type_t {

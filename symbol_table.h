@@ -37,6 +37,8 @@ extern sem_t *sem_REAL;
 extern sem_t *sem_BOOLEAN;
 extern sem_t *sem_CHAR;
 
+extern data_t *VIRTUAL_STRING_DATATYPE;
+
 #define SEM_INTEGER (sem_INTEGER->comp)
 #define SEM_REAL (sem_REAL->comp)
 #define SEM_BOOLEAN (sem_BOOLEAN->comp)
