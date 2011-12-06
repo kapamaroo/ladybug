@@ -297,6 +297,7 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 
     data_t *el_datatype;
     var_t *tmp_var;
+    expr_t *expr_lval;
 
     int i;
 
@@ -344,6 +345,8 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                 }
 
                 if (el_datatype != subprogram->param[i]->datatype) {
+                    sprintf(str_err,"ERROR: assign to formal parameter of datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
+                    yyerror(str_err);
                     free(tmp_var);
                     return NULL;
                 }
@@ -354,6 +357,20 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                     free(tmp_var);
                     return NULL;
                 }
+
+                //first take the segment offset (does not change)
+                expr_lval = expr_from_hardcoded_int(list->expr_list[i]->var->Lvalue->seg_offset);
+
+                //now add the offset_expr (if any)
+                if (list->expr_list[i]->var->Lvalue->offset_expr) {
+                    if (el_datatype!=SEM_INTEGER) {
+                        //sanity check
+                        yyerror("INTERNAL ERROR: offset_expr MUST be integer");
+                        exit(EXIT_FAILURE);
+                    }
+                    expr_lval = expr_relop_equ_addop_mult(expr_lval,OP_PLUS,list->expr_list[i]->var->Lvalue->offset_expr);
+                }
+                tmp_assign = new_assign_stmt(tmp_var,expr_lval);
             }
             else { //PASS_VAL
                 //accept anything, if it's not rvalue we pass it's address
@@ -362,9 +379,10 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                     free(tmp_var);
                     return NULL;
                 }
+                tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
             }
 #warning "if errors, new_assign_stmt() leaks memory"
-	    tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
+
             new_stack_init_node = link_stmt_to_stmt(tmp_assign,new_stack_init_node);
         }
         free(tmp_var);
