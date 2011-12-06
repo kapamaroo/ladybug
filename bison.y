@@ -152,7 +152,7 @@
 
 program: header declarations subprograms comp_statement DOT {
     link_stmt_to_tree($4);
-    generate_final_code();
+    //generate_final_code();
  }
 ;
 
