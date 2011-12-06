@@ -52,7 +52,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
          (l1->expr_is==EXPR_LVAL && l1->datatype->is==TYPE_SET)) &&
         (l2->expr_is==EXPR_SET || l2->expr_is==EXPR_NULL_SET ||
          (l2->expr_is==EXPR_LVAL && l2->datatype->is==TYPE_SET))) {
-        //both expressions are sets, cheack for valit operator
+        //both expressions are sets, check for valid operator
         switch (op) {
         case OP_PLUS:
         case OP_MINUS:
