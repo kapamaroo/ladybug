@@ -329,14 +329,14 @@ if_tail: ELSE statement {$$ = $2;}
 while_statement: WHILE expression {check_if_boolean($2);} DO statement {$$ = new_while_stmt($2,$5);}
 ;
 
-for_statement: FOR ID ASSIGN iter_space DO {protect_guard_var($2);} statement {$$ = new_for_stmt($2,$4,$7);}
+for_statement: FOR ID ASSIGN iter_space DO {protect_guard_var($2);} statement {$$ = new_for_stmt($2,$4,$7);unprotect_guard_var($2);}
 ;
 
 iter_space: expression TO expression {$$ = make_iter_space($1,1,$3);}
 | expression DOWNTO expression {$$ = make_iter_space($1,-1,$3);}
 ;
 
-with_statement: WITH variable DO {start_new_with_statement_scope($2);} statement {$$ = new_with_stmt($5);}
+with_statement: WITH variable DO {start_new_with_statement_scope($2);} statement {$$ = new_with_stmt($5); close_last_opened_with_statement_scope();}
 ;
 
 subprogram_call: ID {$$ = new_procedure_call($1,NULL);}

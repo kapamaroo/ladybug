@@ -114,22 +114,12 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
 }
 
 void link_stmt_to_tree(ir_node_t *new_node) {
-    if (ir_root->last_stmt->return_point) {
-        yyerror("WARNING: ommiting dead code after control return");
-        return;
-    }
-
     link_stmt_to_stmt(new_node,ir_root);
 }
 
 ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
     //return the head of the linked list
     if (parent && child) {
-        //if (parent->last_stmt->return_point) {
-        //      yyerror("WARNING: ommiting dead code after control return");
-        //      return parent;
-        //  }
-
         //if child's return_point is not set, propagate the parent's return_point value
         if (child->last_stmt->return_point==0) {
             child->last_stmt->return_point = parent->last_stmt->return_point;
@@ -168,7 +158,13 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         return NULL;
     }
 
-    if (v->id_is != ID_RETURN && v->id_is != ID_VAR && v->id_is!=ID_VAR_GUARDED) {
+    if (v->id_is == ID_VAR_GUARDED) {
+        sprintf(str_err,"ERROR: forbidden assignment to '%s' which controls a `for` statement",v->name);
+        yyerror(str_err);
+        return NULL;
+    }
+
+    if (v->id_is != ID_RETURN && v->id_is != ID_VAR) {
         sprintf(str_err,"ERROR: trying to assign to symbol '%s' which is not a variable",v->name);
         yyerror(str_err);
         return NULL;
@@ -182,12 +178,6 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
             yyerror(str_err);
             return NULL;
         }
-    }
-
-    if (v->id_is == ID_VAR_GUARDED) {
-        sprintf(str_err,"ERROR: forbidden assignment to '%s' which controls a `for` statement",v->name);
-        yyerror(str_err);
-        return NULL;
     }
 
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
@@ -438,15 +428,12 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     for_node = new_while_stmt(total_cond,true_stmt);
     for_node = link_stmt_to_stmt(for_node,dark_init_for);
 
-    unprotect_guard_var(guard_var);
     return for_node;
 }
 
 ir_node_t *new_with_stmt(ir_node_t *body) {
     //if the variable is a record return the body of the statement
     //the body is a comp_statement
-
-    close_last_opened_with_statement_scope();
     return body;
 }
 
