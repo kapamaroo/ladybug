@@ -371,35 +371,25 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
 ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt) {
     ir_node_t *while_node;
-    ir_node_t *ir_cond;
-    ir_node_t *ir_;
     ir_node_t *jump_loop_branch;
-
-    char *label_enter_branch;
-    char *label_loop_to_cond;
-    //char *label_exit_branch;
 
     if (!cond || !true_stmt) {
         //parse errors or empty while statement, ignore statement
         return NULL;
     }
 
-    label_enter_branch = new_label_unique("whilebranch");
-    label_loop_to_cond = label_enter_branch;
-    //label_exit_branch = new_label_exit_branch(label_enter_branch);
+    /* pseudo assembly
+       LABEL_ENTER
+       new_if_stmt(cond,true_stmt);
+     */
 
     jump_loop_branch = new_ir_node_t(NODE_JUMP);
-    jump_loop_branch->jump_label = label_loop_to_cond;
+    jump_loop_branch->jump_label = new_label_unique("whilebranch");
 
-    ir_ = link_stmt_to_stmt(jump_loop_branch,true_stmt);
+    true_stmt = link_stmt_to_stmt(jump_loop_branch,true_stmt);
 
-    ir_cond = new_if_stmt(cond,ir_,NULL);
-    ir_cond->label = label_loop_to_cond;
-    //#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
-    //ir_cond->exit_branch_label = label_exit_branch;
-
-    while_node = NULL;
-    while_node = link_stmt_to_stmt(ir_cond,while_node);
+    while_node = new_if_stmt(cond,true_stmt,NULL);
+    while_node->label = jump_loop_branch->jump_label;
 
     return while_node;
 }
@@ -409,18 +399,10 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     var_t *var_from_guarded;
 
     ir_node_t *dark_init_for;
-    ir_node_t *ir_cond;
-    ir_node_t *ir_body;
     ir_node_t *dark_cond_step; //append this to true_stmt
-    ir_node_t *jump_loop_branch;
     ir_node_t *for_node;
 
-    char *label_enter_branch;
-    char *label_loop_to_cond;
-    //char *label_exit_branch;
-
     expr_t *expr_guard;
-    expr_t *expr_normal_from_guard;
     expr_t *expr_step;
     expr_t *left_cond;
     expr_t *right_cond;
@@ -433,38 +415,28 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
         return NULL;
     }
 
-    label_enter_branch = new_label_unique("forbranch");
-    label_loop_to_cond = new_label_loop_to_cond(label_enter_branch);
-    //label_exit_branch = new_label_exit_branch(label_enter_branch);
+    /* pseudo assembly
+       INIT_FOR
+       new_while_stmt(total_cond,true_stmt);
+     */
 
     var_from_guarded = new_normal_variable_from_guarded(sem_guard->var);
-    expr_normal_from_guard = expr_from_variable(var_from_guarded);
+    expr_guard = expr_from_variable(var_from_guarded);
 
-    expr_guard = expr_from_variable(sem_guard->var);
     left_cond = expr_relop_equ_addop_mult(range->start,RELOP_LE,expr_guard);
     right_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
     total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
 
     dark_init_for = new_assign_stmt(var_from_guarded,range->start);
-    dark_init_for->label = label_enter_branch;
+    dark_init_for->label = new_label_unique("forbranch");
 
-    expr_step = expr_relop_equ_addop_mult(expr_normal_from_guard,OP_PLUS,range->step);
-    dark_cond_step = new_assign_stmt(sem_guard->var,expr_step);
+    expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
+    dark_cond_step = new_assign_stmt(expr_guard->var,expr_step);
 
-    jump_loop_branch = new_ir_node_t(NODE_JUMP);
-    jump_loop_branch->jump_label = label_loop_to_cond;
+    true_stmt = link_stmt_to_stmt(dark_cond_step,true_stmt);
 
-    ir_body = link_stmt_to_stmt(dark_cond_step,true_stmt);
-    ir_body = link_stmt_to_stmt(jump_loop_branch,true_stmt);
-
-    ir_cond = new_if_stmt(total_cond,ir_body,NULL);
-    ir_cond->label = label_loop_to_cond;
-    //#warning INFO: the next works ONLY because one of the false_stmt,true_stmt is NULL
-    //ir_cond->exit_branch_label = label_exit_branch;
-
-    for_node = NULL;
-    for_node = link_stmt_to_stmt(dark_init_for,for_node);
-    for_node = link_stmt_to_stmt(ir_cond,for_node);
+    for_node = new_while_stmt(total_cond,true_stmt);
+    for_node = link_stmt_to_stmt(for_node,dark_init_for);
 
     unprotect_guard_var(guard_var);
     return for_node;
