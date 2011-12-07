@@ -316,7 +316,12 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 
     if (MAX_EXPR_LIST - list->expr_list_empty == subprogram->param_num) {
         new_stack_init_node = NULL;
+
         tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
+        tmp_var->id_is = ID_VAR;
+        tmp_var->scope = get_current_scope();
+        tmp_var->cond_assign = NULL;
+
         for (i=0;i<subprogram->param_num;i++) {
             tmp_assign = NULL;
 
@@ -326,12 +331,9 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                 return NULL;
             }
 
-            tmp_var->id_is = ID_VAR;
             tmp_var->datatype = subprogram->param[i]->datatype;
             tmp_var->name = subprogram->param[i]->name;
-            tmp_var->scope = get_current_scope();
             tmp_var->Lvalue = subprogram->param_Lvalue[i];
-            tmp_var->cond_assign = NULL;
 
             el_datatype = list->expr_list[i]->datatype;
 
@@ -370,7 +372,15 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                     }
                     expr_lval = expr_relop_equ_addop_mult(expr_lval,OP_PLUS,list->expr_list[i]->var->Lvalue->offset_expr);
                 }
+
+                //mark temporarily the lvalue as PASS_VAL, in order for the new_assign_stmt() to work properly
+                //this is a very ugly way of doing things :( //FIXME
+                subprogram->param_Lvalue[i]->content_type = PASS_VAL;
+
                 tmp_assign = new_assign_stmt(tmp_var,expr_lval);
+
+                //restore the PASS_REF content_type
+                subprogram->param_Lvalue[i]->content_type = PASS_REF;
             }
             else { //PASS_VAL
                 //accept anything, if it's not rvalue we pass it's address
@@ -381,7 +391,7 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                 }
                 tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
             }
-#warning "if errors, new_assign_stmt() leaks memory"
+#warning "if errors, we leak memory"
 
             new_stack_init_node = link_stmt_to_stmt(tmp_assign,new_stack_init_node);
         }

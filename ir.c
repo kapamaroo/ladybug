@@ -284,10 +284,6 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
     ir_node_t *jump_exit_branch;
     ir_node_t *ir_exit_if;
 
-    char *label_enter_branch;
-    char *label_exit_branch;
-    char *label_true;
-
     if (!cond) {
         yyerror("UNEXPECTED_ERROR: 63-1");
         exit(EXIT_FAILURE);
@@ -301,21 +297,16 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
     if (cond->expr_is==EXPR_HARDCODED_CONST) {
         //ignore if statement, we already know the result
         if (cond->ival) {
-            //TRUE
-            return true_stmt;
+            return true_stmt;  //TRUE
         } else {
-            //FALSE
-            return false_stmt;
+            return false_stmt; //FALSE
         }
     }
 
-    label_enter_branch = new_label_unique("ifbranch");
-    label_exit_branch = new_label_exit_branch(label_enter_branch);
     ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_exit_if->label = label_exit_branch;
+    ir_exit_if->label = new_label_unique("IF_EXIT");
 
     if_node = new_ir_node_t(NODE_BRANCH);
-    //if_node->label = label_enter_branch; //we do not need a label here, maybe the while or the for statement need it
 
     //we implement branches by checking the !cond, see below
     cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
@@ -330,12 +321,10 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
            EXIT_LABEL
         */
 
-        label_true = new_label_true(label_enter_branch);
-        true_stmt->label = label_true;
-        if_node->exit_branch_label = label_true;
+        true_stmt->label = new_label_unique("TRUE_STMT");
+        if_node->exit_branch_label = true_stmt->label;
 
-	jump_exit_branch = new_ir_node_t(NODE_JUMP);
-        jump_exit_branch->jump_label = label_exit_branch;
+	jump_exit_branch = jump_to(ir_exit_if->label);
         false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
 
 	//propagate return_point to the last statement
@@ -349,11 +338,11 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
            TRUE_STMT
            EXIT_LABEL
         */
-        if_node->exit_branch_label = label_exit_branch;
+        if_node->exit_branch_label = ir_exit_if->label;
     }
 
     true_stmt = link_stmt_to_stmt(ir_exit_if,true_stmt); //true_stmt always exists
-    if_node = link_stmt_to_stmt(false_stmt,if_node); //this ignores false_stmt if  NULL
+    if_node = link_stmt_to_stmt(false_stmt,if_node);     //this ignores false_stmt if  NULL
     if_node = link_stmt_to_stmt(true_stmt,if_node);
 
     return if_node;
@@ -373,9 +362,7 @@ ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt) {
        new_if_stmt(cond,true_stmt);
      */
 
-    jump_loop_branch = new_ir_node_t(NODE_JUMP);
-    jump_loop_branch->jump_label = new_label_unique("whilebranch");
-
+    jump_loop_branch = jump_to(new_label_unique("WHILE_ENTER"));
     true_stmt = link_stmt_to_stmt(jump_loop_branch,true_stmt);
 
     while_node = new_if_stmt(cond,true_stmt,NULL);
@@ -418,7 +405,7 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
 
     dark_init_for = new_assign_stmt(var_from_guarded,range->start);
-    dark_init_for->label = new_label_unique("forbranch");
+    dark_init_for->label = new_label_unique("FOR_ENTER");
 
     expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
     dark_cond_step = new_assign_stmt(expr_guard->var,expr_step);
@@ -476,7 +463,7 @@ ir_node_t *new_comp_stmt(ir_node_t *body) {
 
 /** Assume that read and write statements have meaning only for standard types and STRINGS
  * these are the only serializeable datatypes
- * booleans are considered integers here and we must check their value after we read them
+ * booleans are considered chars here and we must check their value after we read them
  * chars are considered STRINGS of size 1
  */
 ir_node_t *new_read_stmt(var_list_t *list) {
@@ -488,30 +475,42 @@ ir_node_t *new_read_stmt(var_list_t *list) {
     var_t *v;
     data_t *d;
 
-    //print every possible error
+    //print every possible error (if any) before returning NULL
     for(i=0;i<MAX_VAR_LIST-list->var_list_empty;i++) {
         v = list->var_list[i];
-        if (!TYPE_IS_STANDARD(v->datatype) && !TYPE_IS_STRING(v->datatype)) {
-            if (v->id_is!=ID_LOST) {
-                sprintf(str_err,"ERROR: read statement can only read standard types and strings,'%s' of type '%s'",v->name,v->datatype->data_name);
-                yyerror(str_err);
-            }
-            error = 1;
+        if (v->id_is==ID_LOST) {
+            error++;
+        } else if (v->id_is==ID_VAR_GUARDED) {
+            sprintf(str_err,"ERROR: in read, control variable '%s' of 'for statement' is read only",v->name);
+            yyerror(str_err);
+            error++;
+        } else if (v->id_is==ID_CONST) {
+            sprintf(str_err,"ERROR: in read, trying to change constant '%s'",v->name);
+            yyerror(str_err);
+            error++;
+        } else if (v->id_is==ID_RETURN) {
+            sprintf(str_err,"ERROR: in read, return value '%s' can be set only with assignment",v->name);
+            yyerror(str_err);
+            error++;
+        } else if (!TYPE_IS_STANDARD(v->datatype) && !TYPE_IS_STRING(v->datatype)) {
+            sprintf(str_err,"ERROR: in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->data_name);
+            yyerror(str_err);
+            error++;
         }
     }
 
     if (error) {
-        //including EXPR_LOST
         return NULL;
     }
 
+    //we are error free here!
     read_stmt = NULL;
     for(i=0;i<MAX_VAR_LIST-list->var_list_empty;i++) {
         new_ir = NULL;
         v = list->var_list[i];
+        d = v->datatype;
         switch (v->id_is) {
         case ID_VAR:
-            d = v->datatype;
             ir_result_lval = calculate_lvalue(v);
             if (d->is==TYPE_INT) {
                 new_ir = new_ir_node_t(NODE_INPUT_INT);
@@ -530,40 +529,20 @@ ir_node_t *new_read_stmt(var_list_t *list) {
                 new_ir = new_ir_node_t(NODE_INPUT_CHAR);
                 new_ir->ir_lval = ir_result_lval;
             }
-            else {
-                //STRING
-                //STRINGS only have one dimension
+            else if (TYPE_IS_STRING(d)) {
                 new_ir = new_ir_node_t(NODE_INPUT_STRING);
                 new_ir->ir_lval = ir_result_lval;
                 new_ir->ival = v->datatype->dim[0]->range;
+            } else {
+                yyerror("UNEXPECTED_ERROR: 44-42");
+                exit(EXIT_FAILURE);
             }
+            new_ir = link_stmt_to_stmt(new_ir,read_stmt);
             break;
-        case ID_VAR_GUARDED:
-            sprintf(str_err,"ERROR: invalid read statement, control variable '%s' of 'for statement' is read only",v->name);
-            yyerror(str_err);
-            break;
-        case ID_CONST:
-            sprintf(str_err,"ERROR: invalid read staetment, trying to change constant '%s'",v->name);
-            yyerror(str_err);
-            break;
-        case ID_RETURN:
-            sprintf(str_err,"ERROR: invalid read statement, trying to set return value '%s', return values can be returned only with assignment",v->name);
-            yyerror(str_err);
-            break;
-        case ID_LOST:
-            //ignore this error
-            break;
-        case ID_STRING:
-        case ID_FUNC:
-        case ID_PROC:
-        case ID_FORWARDED_FUNC:
-        case ID_FORWARDED_PROC:
-        case ID_TYPEDEF:
-        case ID_PROGRAM_NAME:
+        default:
             yyerror("UNEXPECTED_ERROR: 44-44");
             exit(EXIT_FAILURE);
         }
-        new_ir = link_stmt_to_stmt(new_ir,read_stmt);
     }
     return read_stmt;
 }
@@ -573,70 +552,58 @@ ir_node_t *new_write_stmt(expr_list_t *list) {
     int error=0;
     ir_node_t *new_ir;
     ir_node_t *write_stmt;
-    ir_node_t *ir_result_lval;
     expr_t *l;
     data_t *d;
 
     //print every possible error
     for(i=0;i<MAX_EXPR_LIST-list->expr_list_empty;i++) {
         l = list->expr_list[i];
-        if (!TYPE_IS_STANDARD(l->datatype) && l->expr_is!=EXPR_STRING && l->expr_is==EXPR_LVAL && !TYPE_IS_STRING(l->datatype)) {
-            //take in mind the lvalue STRINGS too
-            if (l->expr_is==EXPR_LVAL) {
-                sprintf(str_err,"ERROR: write statement can only print standard types and strings, '%s' of type '%s'",l->var->name,l->var->datatype->data_name);
-                yyerror(str_err);
-            }
-            else if (l->expr_is!=EXPR_LOST) {
-                sprintf(str_err,"ERROR: write statement can only print standard types and strings");
-                yyerror(str_err);
-            }
-            //else EXPR_LOST
-            error = 1;
+        if (l->expr_is==EXPR_LOST) {
+            error++;
+        }
+        else if (l->expr_is==EXPR_SET || EXPR_NULL_SET) {
+            sprintf(str_err,"ERROR: in write, can only print standard types or strings, this is a set");
+            yyerror(str_err);
+            error++;
+        }
+        else if (!TYPE_IS_STANDARD(l->datatype) && l->expr_is!=EXPR_STRING) {
+            //EXPR_RVAL, EXPR_HARDCODED_CONST, EXPR_LVAL, EXPR_STRING
+            sprintf(str_err,"ERROR: in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->data_name);
+            yyerror(str_err);
+            error++;
         }
     }
 
     if (error) {
-        //including EXPR_LOST
         return NULL;
     }
 
+    //we are error free here!
     write_stmt = NULL;
     for(i=0;i<MAX_EXPR_LIST-list->expr_list_empty;i++) {
         new_ir = NULL;
         l = list->expr_list[i];
-        if (l->expr_is==EXPR_STRING || (l->expr_is==EXPR_LVAL && TYPE_IS_STRING(l->datatype))) {
-            //STRING
-            //STRINGS only have one dimension
+        if (l->expr_is==EXPR_STRING) {
             new_ir = new_ir_node_t(NODE_OUTPUT_STRING);
             new_ir->ir_lval = calculate_lvalue(l->var);
         }
         else if (l->expr_is==EXPR_RVAL || l->expr_is==EXPR_HARDCODED_CONST || l->expr_is==EXPR_LVAL) {
             d = l->datatype;
 
-            ir_result_lval = NULL;
-            if (l->expr_is==EXPR_LVAL) {
-                ir_result_lval = calculate_lvalue(l->var);
-            }
-
             if (d->is==TYPE_INT) {
                 new_ir = new_ir_node_t(NODE_OUTPUT_INT);
-                new_ir->ir_lval = ir_result_lval;
                 new_ir->ir_rval = expr_tree_to_ir_tree(l);
             }
             else if (d->is==TYPE_REAL) {
                 new_ir = new_ir_node_t(NODE_OUTPUT_REAL);
-                new_ir->ir_lval = ir_result_lval;
                 new_ir->ir_rval = expr_tree_to_ir_tree(l);
             }
             else if (d->is==TYPE_BOOLEAN) {
-                //read int and check the value
                 new_ir = new_ir_node_t(NODE_OUTPUT_BOOLEAN);
-                new_ir->ir_lval = ir_result_lval;
                 new_ir->ir_rval = expr_tree_to_ir_tree(l);
             }
             else if (d->is==TYPE_CHAR) {
                 new_ir = new_ir_node_t(NODE_OUTPUT_CHAR);
-                new_ir->ir_lval = ir_result_lval;
                 new_ir->ir_rval = expr_tree_to_ir_tree(l);
             }
             else {
