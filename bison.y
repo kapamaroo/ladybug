@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <libgen.h>
+
 #include "build_flags.h"
 #include "semantics.h"
 #include "symbol_table.h"
@@ -18,7 +20,9 @@
     int yylex(void);
     void yyerror(const char *msg);
     extern FILE *yyin;
+    extern int yylineno;
 
+    char *current_file;
     %}
 
 %union
@@ -383,6 +387,7 @@ int main(int argc, char *argv[]) {
             perror(NULL);
             exit(EXIT_FAILURE);
         }
+        current_file = basename(argv[argc-1]);
         status = yyparse();
         fclose(yyin);
     }
@@ -402,7 +407,7 @@ int main(int argc, char *argv[]) {
 void yyerror(const char *msg) {
     err_num++;
 
-    printf("%s\n",msg);
+    printf("%s:%d: %s\n",current_file,yylineno,msg);
 
 #if LOG_TO_FILE == 1
     fprintf(log_file,"%s\n",msg);
