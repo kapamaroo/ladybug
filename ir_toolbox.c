@@ -497,94 +497,98 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     ir_node_t *bitmap1;
     ir_node_t *bitmap2;
     ir_node_t *ir_final;
-    //	ir_node_t *tmp_node;
 
-    if (!expr_set) {
+    if (!expr_set || expr_set->expr_is==EXPR_LOST) {
         yyerror("UNEXPECTED_ERROR: 72-1");
         exit(EXIT_FAILURE);
     }
 
-    expr_set = normalize_expr_set(expr_set);
+    if (expr_set->expr_is==EXPR_LVAL && expr_set->datatype->is==TYPE_SET) {
+        return calculate_lvalue(expr_set->var);
+    }
 
-    if (!(expr_set->expr_is==EXPR_LVAL && expr_set->datatype->is==TYPE_SET) &&
-        expr_set->expr_is!=EXPR_NULL_SET && expr_set->expr_is!=EXPR_SET) {
-        yyerror("UNEXPECTED_ERROR: 72-3");
+    if (expr_set->expr_is==EXPR_NULL_SET) {
+        ir_final = new_ir_node_t(NODE_INIT_NULL_SET);
+        ir_final->ir_lval = calculate_lvalue(x);
+    }
+
+    if (expr_set->expr_is!=EXPR_SET) {
+        yyerror("UNEXPECTED_ERROR: 72-2");
         exit(EXIT_FAILURE);
     }
 
-    if (expr_set->parent==expr_set->parent) {
-        //this is the root of the tree
+    normalize_expr_set(expr_set);
 
-        op = expr_set->op;
+    op = expr_set->op;
 
-        //check first if the set is basic
-        if (op==OP_IGNORE) {
-            //result goes to x
-            return create_basic_bitmap(x,expr_set);
-        }
-        //call the bitmap_generator
-
-        //run left subtree
-        bitmap1 = bitmap_generator(ll,expr_set->l1);
-
-        //swap (lr,x)
-        tmp = x;
-        x = ll;
-        ll = tmp;
-
-        //run right subtree
-        bitmap2 = bitmap_generator(rr,expr_set->l2);
-
-        //swap (lr,x)
-        tmp = x;
-        x = ll;
-        ll = tmp;
-
+    //check first if the set is basic
+    if (op==OP_IGNORE) {
         //result goes to x
-        //tmp_node = NULL;
-        if (op==OP_PLUS) {
-            new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
-            new_ASM_binary->ir_lval = calculate_lvalue(ll);
-            new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-            new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-            return new_ASM_binary;
-        }
-        else if (op==OP_MINUS) {
-            //should never reach here, we cannod assign an expression of set datatype
-            yyerror("UNEXPECTED_ERROR: 71-1");
-            exit(EXIT_FAILURE);
-            /*
-              tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
-              tmp_node->ir_lval = calculate_lvalue(rr);
-              tmp_node->ir_lval_dest = calculate_lvalue(rr);
-              new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-              new_ASM_binary->ir_lval = calculate_lvalue(lr);
-              new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-              new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-              return new_ASM_binary;
-            */
-        }
-        else if (op==OP_MULT) {
-            new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-            new_ASM_binary->ir_lval = calculate_lvalue(ll);
-            new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-            new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-            return new_ASM_binary;
-        }
-        else {
-            yyerror("UNEXPECTED_ERROR: 71-2");
-            exit(EXIT_FAILURE);
-        }
-
-        ir_final = NULL;
-        ir_final = link_stmt_to_stmt(bitmap1,ir_final);
-        ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-        //ir_final = link_stmt_to_stmt(tmp_node,ir_final); //maybe tmp_node is NULL, it is ignored
-        ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+        //in this case the bitmap_generator() calls immediately the create_basic_bitmap()
+        //but we want the later to be known only from the bitmap_generator()
+        return bitmap_generator(x,expr_set);
     }
 
-    yyerror("UNEXPECTED_ERROR: 71-3");
-    exit(EXIT_FAILURE);
+    //else
+    //call the bitmap_generator for the child sets
+
+    //run left subtree
+    bitmap1 = bitmap_generator(ll,expr_set->l1);
+
+    //swap (lr,x)
+    tmp = x;
+    x = ll;
+    ll = tmp;
+
+    //run right subtree
+    bitmap2 = bitmap_generator(rr,expr_set->l2);
+
+    //swap (lr,x)
+    tmp = x;
+    x = ll;
+    ll = tmp;
+
+    //result goes to x
+    if (op==OP_PLUS) {
+        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
+        new_ASM_binary->ir_lval = calculate_lvalue(ll);
+        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+        new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
+        return new_ASM_binary;
+    }
+    else if (op==OP_MINUS) {
+        //should never reach here, we cannot assign an expression of set datatype
+        yyerror("UNEXPECTED_ERROR: 71-1");
+        exit(EXIT_FAILURE);
+        /*
+          tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
+          tmp_node->ir_lval = calculate_lvalue(rr);
+          tmp_node->ir_lval_dest = calculate_lvalue(rr);
+          new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
+          new_ASM_binary->ir_lval = calculate_lvalue(lr);
+          new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+          new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
+          return new_ASM_binary;
+        */
+    }
+    else if (op==OP_MULT) {
+        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
+        new_ASM_binary->ir_lval = calculate_lvalue(ll);
+        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+        new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
+        return new_ASM_binary;
+    }
+    else {
+        yyerror("UNEXPECTED_ERROR: 71-2 :bad operator in create_bitmap()");
+        exit(EXIT_FAILURE);
+    }
+
+    ir_final = NULL;
+    ir_final = link_stmt_to_stmt(bitmap1,ir_final);
+    ir_final = link_stmt_to_stmt(bitmap2,ir_final);
+    ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+
+    return ir_final;
 }
 
 ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
@@ -604,132 +608,115 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
     if (op==OP_IGNORE) {
         return create_basic_bitmap(factory,expr_set);
     }
-    else {
-        tmp_node = NULL;
-        //first the left bitmap (left child)
-        bitmap1 = bitmap_generator(ll,expr_set->l1);
 
-        //swap (lr,x), protect lr
-        tmp = x;
-        x = ll;
-        ll = tmp;
+    //first the left bitmap (left child)
+    bitmap1 = bitmap_generator(ll,expr_set->l1);
 
-        bitmap2 = bitmap_generator(rr,expr_set->l2);
+    //swap (lr,x), protect lr
+    tmp = x;
+    x = ll;
+    ll = tmp;
 
-        //swap (lr,x), restore lr
-        tmp = x;
-        x = ll;
-        ll = tmp;
+    bitmap2 = bitmap_generator(rr,expr_set->l2);
 
-        if (op==OP_PLUS) {
-            new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
-            new_ASM_binary->ir_lval = calculate_lvalue(ll);
-            new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-            new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
-        }
-        else if (op==OP_MINUS) {
-            tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
-            tmp_node->ir_lval = calculate_lvalue(rr);
-            tmp_node->ir_lval_dest = calculate_lvalue(rr);
-            new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-            new_ASM_binary->ir_lval = calculate_lvalue(ll);
-            new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-            new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
-        }
-        else if (op==OP_MULT) {
-            new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-            new_ASM_binary->ir_lval = calculate_lvalue(ll);
-            new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-            new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
-        }
+    //swap (lr,x), restore lr
+    tmp = x;
+    x = ll;
+    ll = tmp;
 
-        ir_final = NULL;
-        ir_final = link_stmt_to_stmt(bitmap1,ir_final);
-        ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-        ir_final = link_stmt_to_stmt(tmp_node,ir_final); //if tmp_node is NULL, it is ignored
-        ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+    if (op==OP_PLUS) {
+        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
+        new_ASM_binary->ir_lval = calculate_lvalue(ll);
+        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
+    }
+    else if (op==OP_MINUS) {
+        tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
+        tmp_node->ir_lval = calculate_lvalue(rr);
+        tmp_node->ir_lval_dest = calculate_lvalue(rr);
+        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
+        new_ASM_binary->ir_lval = calculate_lvalue(ll);
+        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
+
+        new_ASM_binary = link_stmt_to_stmt(new_ASM_binary,tmp_node);
+    }
+    else if (op==OP_MULT) {
+        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
+        new_ASM_binary->ir_lval = calculate_lvalue(ll);
+        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
+        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
     }
 
-    yyerror("UNEXPECTED_ERROR: make_bitmap() __recursion");
-    exit(EXIT_FAILURE);
+    tmp_node = new_ir_node_t(NODE_LVAL);
+    tmp_node->ir_lval = calculate_lvalue(factory);
+
+    ir_final = link_stmt_to_stmt(bitmap1,ir_final);
+    ir_final = link_stmt_to_stmt(bitmap2,ir_final);
+    ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+
+    ir_final = link_stmt_to_stmt(tmp_node,ir_final);
+
+    return ir_final;
 }
 
 ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set) {
     //return the lvalue which contains the new bitmap
     int i;
     ir_node_t *ir_final;
+    ir_node_t *ir_bitmap;
     ir_node_t *tmp_node;
 
-    expr_t *normalized_left;
-    expr_t *normalized_right;
     expr_t *norm_base;
     expr_t *left;
     expr_t *right;
-    ir_node_t *dark_init_node;
+
+    ir_bitmap = new_ir_node_t(NODE_LVAL);
 
     if (expr_set->expr_is==EXPR_LVAL) {
-        //load from memory
-        return calculate_lvalue(expr_set->var);
+        ir_bitmap->ir_lval = calculate_lvalue(expr_set->var);
+        return ir_bitmap;
     }
+
+    ir_bitmap->ir_lval = calculate_lvalue(factory);
 
     //init NULL set, every time
     ir_final = new_ir_node_t(NODE_INIT_NULL_SET);
-    ir_final->lval = factory->Lvalue;
+    ir_final->ir_lval = calculate_lvalue(factory);
 
     if (expr_set->expr_is==EXPR_SET) {
-        if (!TYPE_IS_STANDARD(expr_set->datatype)) {
-            //elements are enumerations, normalize them
-            norm_base = expr_from_hardcoded_int(expr_set->datatype->enum_num[0]);
-            for(i=0;i<MAX_SET_ELEM-expr_set->elexpr_list->elexpr_list_empty;i++) {
-                left = expr_set->elexpr_list->elexpr_list[i]->left;
-                right = expr_set->elexpr_list->elexpr_list[i]->right;
+        //elements are enumerations, normalize them
+        norm_base = expr_from_hardcoded_int(expr_set->datatype->enum_num[0]);
+        for(i=0;i<MAX_SET_ELEM-expr_set->elexpr_list->elexpr_list_empty;i++) {
+            left = expr_set->elexpr_list->elexpr_list[i]->left;
+            right = expr_set->elexpr_list->elexpr_list[i]->right;
 
-                if (left==right) {
-                    //one element
-                    normalized_left = expr_relop_equ_addop_mult(left,OP_MINUS,norm_base);
-                    dark_init_node = expr_tree_to_ir_tree(normalized_left);
-                    tmp_node = new_ir_node_t(NODE_ADD_ELEM_TO_SET);
-                    tmp_node->ir_rval = dark_init_node;
-                }
-                else {
-                    //range of elements
-                    tmp_node = new_ir_node_t(NODE_ADD_ELEM_RANGE_TO_SET);
-
-                    normalized_left = expr_relop_equ_addop_mult(left,OP_MINUS,norm_base);
-                    dark_init_node = expr_tree_to_ir_tree(normalized_left);
-                    tmp_node->ir_rval = dark_init_node;
-
-                    normalized_right = expr_relop_equ_addop_mult(right,OP_MINUS,norm_base);
-                    dark_init_node = expr_tree_to_ir_tree(normalized_right);
-                    tmp_node->ir_rval2 = dark_init_node;
-                }
-                ir_final = link_stmt_to_stmt(tmp_node,ir_final);
+            if (!TYPE_IS_STANDARD(expr_set->datatype)) {
+                //enumeration or subset
+                //normalize left (we always need left)
+                left = expr_relop_equ_addop_mult(left,OP_MINUS,norm_base);
+                //normalize right
+                right = expr_relop_equ_addop_mult(right,OP_MINUS,norm_base);
             }
-        }
-        else {
-            //elements are char or boolean
-            for(i=0;i<MAX_SET_ELEM-expr_set->elexpr_list->elexpr_list_empty;i++) {
-                left = expr_set->elexpr_list->elexpr_list[i]->left;
-                right = expr_set->elexpr_list->elexpr_list[i]->right;
 
-                if (left==right) {
-                    //one element
-                    tmp_node = new_ir_node_t(NODE_ADD_ELEM_TO_SET);
-                    tmp_node->ir_rval = expr_tree_to_ir_tree(left);
-                }
-                else {
-                    //range of elements
-                    tmp_node = new_ir_node_t(NODE_ADD_ELEM_RANGE_TO_SET);
-                    tmp_node->ir_rval = expr_tree_to_ir_tree(left);
-                    tmp_node->ir_rval2 = expr_tree_to_ir_tree(right);
-                }
-                ir_final = link_stmt_to_stmt(tmp_node,ir_final);
+            if (left==right) {
+                //one element, use left
+                tmp_node = new_ir_node_t(NODE_ADD_ELEM_TO_SET);
+                tmp_node->ir_rval = expr_tree_to_ir_tree(left);
             }
+            else {
+                //range of elements
+                tmp_node = new_ir_node_t(NODE_ADD_ELEM_RANGE_TO_SET);
+                tmp_node->ir_rval = expr_tree_to_ir_tree(left);
+                tmp_node->ir_rval2 = expr_tree_to_ir_tree(right);
+            }
+
+            tmp_node->ir_lval = calculate_lvalue(factory);
+            ir_final = link_stmt_to_stmt(tmp_node,ir_final);
         }
     }
 
-    tmp_node = calculate_lvalue(factory);
-    ir_final = link_stmt_to_stmt(tmp_node,ir_final);
+    ir_final = link_stmt_to_stmt(ir_bitmap,ir_final);
     return ir_final;
 }
 
