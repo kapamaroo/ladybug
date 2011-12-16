@@ -59,12 +59,11 @@ typedef struct ir_node_t {
 
     struct ir_node_t *ir_rval;	//first rvalue to use, (conditions inside branch nodes are rvalues)
     struct ir_node_t *ir_rval2;	//second rvalue to use
-    struct ir_node_t *ir_cond;  //the condition expression for branch statements (if, for, while) and for bound checks in assignments
-    struct ir_node_t *ir_lval_dest;	//destitation address, (for special node types)
+    struct ir_node_t *ir_cond;  //(if, for, while), bound checks, and memcopy //FIXME
+    struct ir_node_t *ir_lval_dest;	//for TYPESET nodes we need one more lvalue;
 
     char *label;               //the label of the node
-    char *jump_label;          //if not NULL, jump to this label. only for NODE_JUMP_LINK and NODE_JUMP
-    char *exit_branch_label;   //nex statement of branch stement
+    char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
 
     mem_t *lval; //used only from load immediate
     int ival;	 //hardcoded int

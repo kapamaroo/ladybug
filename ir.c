@@ -107,7 +107,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->next_stmt = NULL;
     new_node->label = NULL;
     new_node->jump_label = NULL;
-    new_node->exit_branch_label = NULL;
     new_node->lval = NULL;
     new_node->return_point = 0;
     return new_node;
@@ -137,8 +136,6 @@ ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
 
 ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     ir_node_t *new_stmt;
-    ir_node_t *new_ir_lval;
-    ir_node_t *new_ir_rval;
 
     func_t *scope_owner;
 
@@ -259,13 +256,9 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 
     /**** some common assign actions */
 
-    //calculate lval for assignment
-    new_ir_lval = calculate_lvalue(v);
-    new_ir_rval = expr_tree_to_ir_tree(l);
-
     new_stmt = new_ir_node_t(NODE_ASM_SAVE);
-    new_stmt->ir_lval = new_ir_lval;
-    new_stmt->ir_rval = new_ir_rval;
+    new_stmt->ir_lval = calculate_lvalue(v);
+    new_stmt->ir_rval = expr_tree_to_ir_tree(l);
 
     if (v->id_is==ID_RETURN) {
         new_stmt->return_point = 1;
@@ -310,7 +303,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
     //we implement branches by checking the !cond, see below
     cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
-    if_node->ir_rval = expr_tree_to_ir_tree(cond);
+    if_node->ir_cond = expr_tree_to_ir_tree(cond);
 
     if (true_stmt && false_stmt) {
         /* pseudo assembly
@@ -322,7 +315,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
         */
 
         true_stmt->label = new_label_unique("TRUE_STMT");
-        if_node->exit_branch_label = true_stmt->label;
+        if_node->jump_label = true_stmt->label;
 
 	jump_exit_branch = jump_to(ir_exit_if->label);
         false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
@@ -338,7 +331,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
            TRUE_STMT
            EXIT_LABEL
         */
-        if_node->exit_branch_label = ir_exit_if->label;
+        if_node->jump_label = ir_exit_if->label;
     }
 
     true_stmt = link_stmt_to_stmt(ir_exit_if,true_stmt); //true_stmt always exists
