@@ -87,13 +87,8 @@ void subprogram_init(sem_t *sem_sub) {
     //now is time to get_current_scope()
     start_new_scope(subprogram);
 
-    //standard independent stack size
-    subprogram->stack_size = STACK_INIT_SIZE;
-
     if (sem_sub->id_is==ID_FORWARDED_FUNC) {
-        //add space for return_value if subprogram is a function
-        subprogram->stack_size += subprogram->return_value->datatype->memsize;
-
+        //now is the time to set the corrent scope of return_value
         subprogram->return_value->scope = get_current_scope();
     }
 
@@ -149,7 +144,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
 
 	new_mem = (mem_t*)malloc(sizeof(mem_t));
 	new_mem->offset_expr = NULL;
-	new_mem->segment = MEM_STACK;
+        new_mem->segment = MEM_STACK;
 	new_mem->seg_offset = STACK_RETURN_VALUE_OFFSET;
 	new_mem->content_type = PASS_VAL;
 	new_mem->size = return_value->datatype->memsize;
@@ -157,6 +152,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         return_value->Lvalue = new_mem;
         sem_2->subprogram->return_value = return_value;
 
+        //call them last
         configure_formal_parameters(list,sem_2->subprogram);
         configure_stack_size_and_param_lvalues(sem_2->subprogram);
 
