@@ -73,7 +73,7 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
     subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
 
     if (subprogram->return_value) {
-        //add space for return_value if subprogram is a function call
+        //add space for return_value if subprogram is a function
         subprogram->stack_size += subprogram->return_value->datatype->memsize;
     }
 
@@ -85,6 +85,8 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
         if (i<MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS) {
             new_mem->segment = MEM_REGISTER;
             new_mem->direct_register_number = i;
+            new_mem->seg_offset = 0;
+            new_mem->size = 0;
         }
         else {
             new_mem->segment = MEM_STACK;
