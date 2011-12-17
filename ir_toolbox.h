@@ -23,13 +23,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree);
 ir_node_t *calculate_lvalue(var_t *v);
 var_t *new_normal_variable_from_guarded(var_t *guarded);
 
-ir_node_t *create_bitmap(expr_t *expr_set);
-ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set);
-ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set);
-
-ir_node_t *make_bitmap_inop_check(expr_t *expr_inop);
-ir_node_t *make_dynamic_inop_check(expr_t *expr_inop);
-
 int check_assign_similar_comp_datatypes(data_t* vd,data_t *ld);
 
 #endif
