@@ -9,18 +9,13 @@
 #include "mem_reg.h"
 #include "ir.h"
 #include "ir_toolbox.h"
-
+#include "bitmap.h"
 #include "err_buff.h"
 
 ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
 int ir_root_module_empty;
 int ir_root_module_current;
 ir_node_t *ir_root;
-
-data_t datatype_max_sizeof_set; //array of chars with 16 elements (max size of sets in bytes)
-var_t *ll;	//left result
-var_t *rr;	//right result
-var_t *x;	//protected result
 
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
@@ -38,33 +33,7 @@ void init_ir() {
     ir_root_module_current = 0;
     ir_root = ir_root_module[0];
 
-    //init bitmap_factory, do NOT put this datatype in symbol table
-    datatype_max_sizeof_set.is = TYPE_ARRAY;
-    datatype_max_sizeof_set.def_datatype = SEM_CHAR;
-    datatype_max_sizeof_set.data_name = "__internal_bitmap_factory_datatype__";
-    datatype_max_sizeof_set.memsize = 16*MEM_SIZEOF_CHAR; //we use only this
-
-    //these go to gp (we are in main scope)
-    ll = (var_t*)malloc(sizeof(var_t));
-    ll->id_is = ID_VAR;
-    ll->name = "__internal_bitmap_ll_";
-    ll->datatype = &datatype_max_sizeof_set;
-    ll->scope = 0; //we don't use it
-    ll->Lvalue = mem_allocate_symbol(&datatype_max_sizeof_set);
-
-    rr = (var_t*)malloc(sizeof(var_t));
-    rr->id_is = ID_VAR;
-    rr->name = "__internal_bitmap_rr__";
-    rr->datatype = &datatype_max_sizeof_set;
-    rr->scope = 0; //we don't use it
-    rr->Lvalue = mem_allocate_symbol(&datatype_max_sizeof_set);
-
-    x = (var_t*)malloc(sizeof(var_t));
-    x->id_is = ID_VAR;
-    x->name = "__internal_bitmap_x__";
-    x->datatype = &datatype_max_sizeof_set;
-    x->scope = 0; //we don't use it
-    x->Lvalue = mem_allocate_symbol(&datatype_max_sizeof_set);
+    init_bitmap();
 }
 
 void new_module(func_t *subprogram) {
