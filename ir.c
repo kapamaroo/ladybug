@@ -99,9 +99,15 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->node_type = node_type;
 
     new_node->ir_lval = NULL;
+    new_node->ir_lval2 = NULL;
     new_node->ir_rval = NULL;
     new_node->ir_rval2 = NULL;
+
     new_node->ir_cond = NULL;
+    new_node->address = NULL;
+    new_node->offset = NULL;
+    new_node->ir_lval_dest = NULL;
+
     new_node->prev_stmt = new_node;
     new_node->last_stmt = new_node;
     new_node->next_stmt = NULL;

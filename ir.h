@@ -26,13 +26,13 @@ typedef enum ir_node_type_t {
     NODE_ASM_CONVERT_TO_INT,	//if it is neccessary
     NODE_ASM_CONVERT_TO_REAL,	//if it is neccessary
     NODE_ASM_MEMCOPY,		//for assignment of identical arrays and records
-    NODE_ASM_LOAD,		//load a lvalue, (converts a lvalue to rvalue), with offset (if any)
+    NODE_ASM_LOAD,		//load a NODE_LVAL or NODE_HARDCODED_LVAL
     NODE_ASM_SAVE,		//assign statement
     NODE_TYPEOF_SET_AND,	//AND for sets (operator *,OP_MULT)
     NODE_TYPEOF_SET_OR,	        //OR for sets (operator +,OP_PLUS), inverts the bits
     NODE_TYPEOF_SET_NOT,	//NOT for sets (operator -,OP_MINUS)
-    NODE_LVAL,			//calculate adderss is in a register, with offset (if any)
-    NODE_HARDCODED_LVAL,	//immediate calculation of memory address, no offsets here
+    NODE_LVAL,			//memory address with possible offset
+    NODE_HARDCODED_LVAL,	//immediate memory address, with possible offset
     NODE_RVAL,
     NODE_HARDCODED_RVAL,
     NODE_INIT_NULL_SET,
@@ -57,17 +57,23 @@ typedef struct ir_node_t {
     struct ir_node_t *ir_lval;	//first lvalue to use
     struct ir_node_t *ir_lval2;	//second lvalue to use
 
-    struct ir_node_t *ir_rval;	//first rvalue to use, (conditions inside branch nodes are rvalues)
+    struct ir_node_t *ir_rval;	//first rvalue to use
     struct ir_node_t *ir_rval2;	//second rvalue to use
-    struct ir_node_t *ir_cond;  //(if, for, while), bound checks, and memcopy //FIXME
+
+    struct ir_node_t *ir_cond;  //(if, for, while), bound checks
+
     struct ir_node_t *ir_lval_dest;	//for TYPESET nodes we need one more lvalue;
+
+    struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_ASM_LOAD reads it
+    struct ir_node_t *offset;  //NODE_ASM_LOAD adds this to *address
 
     char *label;               //the label of the node
     char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
 
-    mem_t *lval; //used only from load immediate
+    mem_t *lval; //used only from load immediate (this should be removed at some point and we should use the *address)
     int ival;	 //hardcoded int
     float fval;	 //hardcoded real
+    char cval;   //hardcoded char
 } ir_node_t;
 
 //we convert sets to bitmaps here, we need two places in memory
