@@ -17,7 +17,7 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list);
 expr_t *expr_from_lost_int(int value);
 expr_t *expr_from_lost_boolean(int value);
 
-expr_t *normalize_expr_set(expr_t *expr_set);
+void normalize_expr_set(expr_t *expr_set);
 expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set);
 
 char *op_literal(op_t op);
@@ -27,7 +27,6 @@ void make_type_definition(char *id, data_t *type);
 
 dim_t *make_dim_bound_from_id(char *id);
 dim_t *make_dim_bounds(expr_t *l1,expr_t *l2);
-var_t *refference_to_array_element(var_t *v, expr_list_t *list);
 
 int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list);
 expr_t *make_array_refference(expr_list_t *list,data_t *data);

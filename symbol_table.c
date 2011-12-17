@@ -594,6 +594,71 @@ var_t *refference_to_variable_or_enum_element(char *id) {
     }
 }
 
+var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
+    //reference to array
+    expr_t *relative_offset_expr;
+    expr_t *final_offset_expr;
+    expr_t *cond_expr;
+    mem_t *new_mem;
+    var_t *new_var;
+
+    if (!list) {
+#if BISON_DEBUG_LEVEL >= 1
+        yyerror("UNEXPECTED_ERROR: null expr_list for array refference (debugging info)");
+#endif
+        exit(EXIT_FAILURE);
+    }
+
+    if (v) {
+        if (v->id_is==ID_VAR) {
+            if (v->datatype->is==TYPE_ARRAY) {
+                if (valid_expr_list_for_array_reference(v->datatype,list)) {
+                    relative_offset_expr = make_array_refference(list,v->datatype);
+                    cond_expr = make_array_bound_check(list,v->datatype);
+                }
+                else {
+                    relative_offset_expr = expr_from_hardcoded_int(0);
+                    cond_expr = expr_from_hardcoded_boolean(0);
+                }
+                final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
+
+                //we start from the variable's mem position and we add the offset from there
+                new_mem = (mem_t*)malloc(sizeof(mem_t));
+                new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(mem_t));
+                new_mem->offset_expr = final_offset_expr;
+                new_mem->size = v->datatype->def_datatype->memsize;
+
+                new_var = (var_t*)malloc(sizeof(var_t));
+                new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+                //new_var->id_is = ID_VAR;
+                new_var->datatype = v->datatype->def_datatype;
+                //new_var->name = v->name;
+                //new_var->scope = v->scope;
+                new_var->Lvalue = new_mem;
+                new_var->cond_assign = cond_expr;
+                return new_var;
+            }
+            else {
+                sprintf(str_err,"ERROR: variable '%s' is not an array",v->name);
+                yyerror(str_err);
+                return lost_var_reference(); //avoid unreal error messages
+            }
+        }
+        else if (v->id_is==ID_LOST) {
+            return v; //avoid unreal error messages
+        }
+        else {
+            sprintf(str_err,"ERROR: id '%s' is not a variable",v->name);
+            yyerror(str_err);
+            return lost_var_reference();
+        }
+    }
+    else {
+        yyerror("UNEXPECTED_ERROR: 42");
+        exit(EXIT_FAILURE);
+    }
+}
+
 var_t *refference_to_record_element(var_t *v, char *id) {
     //this is a struct, we take ID's type
     int elem_num;
@@ -611,12 +676,9 @@ var_t *refference_to_record_element(var_t *v, char *id) {
                     offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
                     final_expr_offset = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,offset_expr);
 
-                    new_mem = (mem_t*)malloc(sizeof(struct mem_t));
-                    new_mem->direct_register_number = v->Lvalue->direct_register_number;
-                    new_mem->segment = v->Lvalue->segment;
-                    new_mem->seg_offset = v->Lvalue->seg_offset;
+                    new_mem = (mem_t*)malloc(sizeof(mem_t));
+                    new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(struct mem_t));
                     new_mem->offset_expr = final_expr_offset;
-                    new_mem->content_type = v->Lvalue->content_type;
                     new_mem->size = v->datatype->field_datatype[elem_num]->memsize;
 
                     new_var = (var_t*)malloc(sizeof(var_t));

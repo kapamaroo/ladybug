@@ -375,7 +375,7 @@ int check_if_boolean(expr_t *l) {
     return 0;
 }
 
-expr_t * normalize_expr_set(expr_t* expr_set){
+void normalize_expr_set(expr_t* expr_set){
     expr_t *new_expr;
     expr_t *tmp1;
     expr_t *tmp2;
@@ -388,18 +388,44 @@ expr_t * normalize_expr_set(expr_t* expr_set){
     op_t op;
     expr_t *l2;
 
+    //we have only EXPR_SET here, see create_bitmap() in ir_toolbox.c
+    //and op is OP_PLUS, OP_MINUS, OP_MULT
+    //OP_IGNORE here means a set in a leaf node (end of recursion)
+
+    //transform set from (a+b)*(c-d)
+    //              to   a*c -a*d + b*c -b*d
+
+    if (!expr_set) {
+        return;
+    }
+
     l1 = expr_set->l1;
     op = expr_set->op;
     l2 = expr_set->l2;
 
-    if (op==OP_IGNORE || op==OP_PLUS || op==OP_MINUS) {
-        return expr_set;
+    if (op==OP_IGNORE) {
+        //nothing to do
+        return;
     }
-    else if (op==OP_MULT) {
-        if ((l1->op==OP_MULT && l2->op==OP_MULT) || (l1->op==OP_IGNORE && l2->op==OP_IGNORE)) {
-            return expr_set;
+
+    if (op==OP_MULT) {
+        if (l1->op==OP_IGNORE && l2->op==OP_IGNORE) {
+            return;
         }
-        else if ((l1->op!=OP_MULT && l1->op!=OP_IGNORE) && (l2->op!=OP_MULT && l2->op!=OP_IGNORE)) {
+
+        if (l1->op==OP_IGNORE) {
+            tmp1 = expr_muldivandop(l1,op,l2->l1);
+            tmp2 = expr_muldivandop(l1,op,l2->l2);
+            expr_set = expr_relop_equ_addop_mult(tmp1,l2->op,tmp2);
+        }
+
+        if (l2->op==OP_IGNORE) {
+            tmp1 = expr_muldivandop(l1->l1,op,l2);
+            tmp2 = expr_muldivandop(l1->l2,op,l2);
+            expr_set = expr_relop_equ_addop_mult(tmp1,l1->op,tmp2);
+        }
+
+        if ((l1->op!=OP_MULT && l1->op!=OP_IGNORE) && (l2->op!=OP_MULT && l2->op!=OP_IGNORE)) {
             tmp1 = expr_muldivandop(l1->l1,op,l2->l1);
             tmp2 = expr_muldivandop(l1->l1,op,l2->l2);
             tmp3 = expr_muldivandop(l1->l2,op,l2->l1);
@@ -409,18 +435,18 @@ expr_t * normalize_expr_set(expr_t* expr_set){
             new_expr = expr_relop_equ_addop_mult(expr1,l1->op,expr2);
         }
         else if (l1->op!=OP_MULT && l1->op!=OP_IGNORE) {
-            expr2 = normalize_expr_set(l2);
+            normalize_expr_set(l2);
             tmp1 = expr_muldivandop(l1->l1,op,expr2);
             tmp2 = expr_muldivandop(l1->l2,op,expr2);
             new_expr = expr_relop_equ_addop_mult(tmp1,l1->op,tmp2);
         }
         else {
-            expr1 = normalize_expr_set(l1);
+            normalize_expr_set(l1);
             tmp1 = expr_muldivandop(expr1,op,l2->l1);
             tmp2 = expr_muldivandop(expr1,op,l2->l2);
             new_expr = expr_relop_equ_addop_mult(tmp1,l2->op,tmp2);
         }
-        return new_expr;
+        return;
     }
     yyerror("UNEXPECTED_ERROR: 85-1");
     exit(EXIT_FAILURE);
@@ -488,73 +514,6 @@ dim_t *make_dim_bound_from_id(char *id) {
         }
     }
     return new_dim;
-}
-
-var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
-    //reference to array
-    expr_t *relative_offset_expr;
-    expr_t *final_offset_expr;
-    expr_t *cond_expr;
-    mem_t *new_mem;
-    var_t *new_var;
-
-    if (!list) {
-#if BISON_DEBUG_LEVEL >= 1
-        yyerror("UNEXPECTED_ERROR: null expr_list for array refference (debugging info)");
-#endif
-        exit(EXIT_FAILURE);
-    }
-
-    if (v) {
-        if (v->id_is==ID_VAR) {
-            if (v->datatype->is==TYPE_ARRAY) {
-                if (valid_expr_list_for_array_reference(v->datatype,list)) {
-                    relative_offset_expr = make_array_refference(list,v->datatype);
-                    cond_expr = make_array_bound_check(list,v->datatype);
-                }
-                else {
-                    relative_offset_expr = expr_from_hardcoded_int(0);
-                    cond_expr = expr_from_hardcoded_boolean(0);
-                }
-                final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
-
-                //we start from the variable's mem position and we add the offset from there
-                new_mem = (mem_t*)malloc(sizeof(mem_t));
-                new_mem->direct_register_number = v->Lvalue->direct_register_number;
-                new_mem->segment = v->Lvalue->segment;
-                new_mem->seg_offset = v->Lvalue->seg_offset;
-                new_mem->offset_expr = final_offset_expr;
-                new_mem->content_type = v->Lvalue->content_type;
-                new_mem->size = v->datatype->def_datatype->memsize;
-
-                new_var = (var_t*)malloc(sizeof(var_t));
-                new_var->id_is = ID_VAR;
-                new_var->datatype = v->datatype->def_datatype;
-                new_var->name = v->name;
-                new_var->scope = v->scope;
-                new_var->Lvalue = new_mem;
-                new_var->cond_assign = cond_expr;
-                return new_var;
-            }
-            else {
-                sprintf(str_err,"ERROR: variable '%s' is not an array",v->name);
-                yyerror(str_err);
-                return lost_var_reference(); //avoid unreal error messages
-            }
-        }
-        else if (v->id_is==ID_LOST) {
-            return v; //avoid unreal error messages
-        }
-        else {
-            sprintf(str_err,"ERROR: id '%s' is not a variable",v->name);
-            yyerror(str_err);
-            return lost_var_reference();
-        }
-    }
-    else {
-        yyerror("UNEXPECTED_ERROR: 42");
-        exit(EXIT_FAILURE);
-    }
 }
 
 int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {

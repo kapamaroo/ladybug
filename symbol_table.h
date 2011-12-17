@@ -85,6 +85,7 @@ char *sm_find_lost_symbol(char *id);
 
 data_t *reference_to_typename(char *id);
 var_t *refference_to_variable_or_enum_element(char *id);
+var_t *refference_to_array_element(var_t *v, expr_list_t *list);
 var_t *refference_to_record_element(var_t *v, char *id);
 sem_t *reference_to_forwarded_function(char *id);
 
