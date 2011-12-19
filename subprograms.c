@@ -84,14 +84,8 @@ void subprogram_init(sem_t *sem_sub) {
 
     subprogram = sem_sub->subprogram;
 
-    //now is time to get_current_scope()
     start_new_scope(subprogram);
-
-    if (sem_sub->id_is==ID_FORWARDED_FUNC) {
-        //now is the time to set the corrent scope of return_value
-        subprogram->return_value->scope = get_current_scope();
-    }
-
+    configure_stack_size_and_param_lvalues(subprogram);
     declare_formal_parameters(subprogram); //declare them inside the new scope
     new_module(subprogram);
 }
@@ -120,7 +114,6 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
 sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) {
     sem_t *sem_2;
     var_t *return_value;
-    mem_t *new_mem;
 
     //function name belongs to current scope
     sem_2 = sm_insert(id);
@@ -128,10 +121,9 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         sem_2->id_is = ID_FORWARDED_FUNC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->func_name = sem_2->name;
-        //sem_2->subprogram->return_datatype = return_type;
 
         if (!list) {
-            yyerror("ERROR: functions must have at least one parameter.");
+            yyerror("functions must have at least one parameter.");
             //continue to avoid false error messages
         }
 
@@ -139,27 +131,15 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         return_value->id_is = ID_RETURN;
         return_value->datatype = return_type;
         return_value->name = sem_2->name;
-        //do not get_current_scope() here, we are still in caller's scope, wait for subprogram_init()
-        //return_value->scope = get_current_scope();
+        //do not set the scope or Lvalue here, we are not inside the function yet
 
-	new_mem = (mem_t*)malloc(sizeof(mem_t));
-	new_mem->offset_expr = NULL;
-        new_mem->segment = MEM_STACK;
-	new_mem->seg_offset = STACK_RETURN_VALUE_OFFSET;
-	new_mem->content_type = PASS_VAL;
-	new_mem->size = return_value->datatype->memsize;
-
-        return_value->Lvalue = new_mem;
         sem_2->subprogram->return_value = return_value;
 
-        //call them last
         configure_formal_parameters(list,sem_2->subprogram);
-        configure_stack_size_and_param_lvalues(sem_2->subprogram);
-
     }
     else { //sem_2==NULL
         //if the id is used before, an error is printed by sm_insert.
-        yyerror("ERROR: on function declaration");
+        yyerror("on function declaration");
     }
     return sem_2;
 }
@@ -177,11 +157,10 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
         sem_2->subprogram->return_value = NULL;
 
         configure_formal_parameters(list,sem_2->subprogram);
-        configure_stack_size_and_param_lvalues(sem_2->subprogram);
     }
     else { //sem_2==NULL
         //if the id is used before, an error is printed by sm_insert.
-        yyerror("ERROR: on procedure id declaration");
+        yyerror("on procedure id declaration");
     }
     return sem_2;
 }
@@ -189,11 +168,11 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
 void forward_subprogram_declaration(sem_t *subprogram) {
     if (subprogram) {
         if (subprogram->id_is!=ID_FORWARDED_FUNC) {
-            yyerror("ERROR: only functions can be forwarded");
+            yyerror("only functions can be forwarded");
         }
     }
     else {
         //either invalid forward on non function id, or more than one forwardes in a row
-        yyerror("ERROR: invalid function name or multiple forwards in a row");
+        yyerror("invalid function name or multiple forwards in a row");
     }
 }

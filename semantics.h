@@ -118,7 +118,7 @@ typedef enum pass_t {
 typedef struct mem_t {
     mem_seg_t segment; //global or local (stack) scope relevant
     int direct_register_number; //the max is MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS, see mem_reg.h
-    int seg_offset; //variable's static relative distance from segment's start (doesn't change)
+    struct expr_t * seg_offset; //static hardcoded relative distance (integer) from segment's start (doesn't change)
     struct expr_t *offset_expr; //dynamic code to calculate relative distance from variable's start (for arrays or records)
     pass_t content_type; //if PASS_VAL the memory contains the value, if PASS_REF the memory contains the address (for pointers)
     int size; //memory size
