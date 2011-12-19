@@ -59,7 +59,7 @@ int idf_insert(char *id) {
         return 0;
     }
     else if (idf_find(id)) {
-        sprintf(str_err,"ERROR: identifier `%s` already exists",id);
+        sprintf(str_err,"identifier `%s` already exists",id);
         yyerror(str_err);
         return 0;
     }
@@ -79,7 +79,7 @@ void idf_set_type(data_t *type) {
     }
     else {
         idf_init();
-        yyerror("ERROR: data type for record field is not defined");
+        yyerror("data type for record field is not defined");
     }
 }
 
@@ -99,13 +99,13 @@ void idf_addto_record() {
                 usr_datatype->memsize += idf_data_type->memsize;
             }
             else {
-                sprintf(str_err,"ERROR: '%s' declared previously in '%s' record type, ignoring",idf_table[i]->name,usr_datatype->data_name);
+                sprintf(str_err,"'%s' declared previously in '%s' record type, ignoring",idf_table[i]->name,usr_datatype->data_name);
                 yyerror(str_err);
             }
         }
     }
     else {
-        yyerror("ERROR: Too much fields in record type");
+        yyerror("Too much fields in record type");
     }
     idf_init();
 }
@@ -146,21 +146,6 @@ void init_symbol_table() {
     void_datatype->def_datatype = void_datatype;
     void_datatype->data_name = "__void_datatype__";
     void_datatype->memsize = 0; //no return type,so no size of return type :)
-
-    lost_var = (var_t*)malloc(sizeof(var_t));
-    lost_var->id_is = ID_LOST;
-    lost_var->name = "V__dummy_lost_variable";
-    lost_var->datatype = void_datatype;
-    lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
-    lost_var->ival = 0;
-    lost_var->fval = 0;
-    lost_var->cval = 0;
-    lost_var->Lvalue = (mem_t*)malloc(sizeof(mem_t));
-    lost_var->Lvalue->content_type = PASS_VAL;
-    lost_var->Lvalue->offset_expr = NULL;
-    lost_var->Lvalue->seg_offset = 0;
-    lost_var->Lvalue->segment = MEM_STACK;
-    lost_var->Lvalue->size = 0;
 
     sm_empty = MAX_SYMBOLS;
     sm_table = sm_array;
@@ -207,6 +192,21 @@ void init_symbol_table() {
     VIRTUAL_STRING_DATATYPE->is = TYPE_ARRAY;
     VIRTUAL_STRING_DATATYPE->field_num = 1;
     VIRTUAL_STRING_DATATYPE->def_datatype = SEM_CHAR;
+
+    lost_var = (var_t*)malloc(sizeof(var_t));
+    lost_var->id_is = ID_LOST;
+    lost_var->name = "V__dummy_lost_variable";
+    lost_var->datatype = void_datatype;
+    lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
+    lost_var->ival = 0;
+    lost_var->fval = 0;
+    lost_var->cval = 0;
+    lost_var->Lvalue = (mem_t*)malloc(sizeof(mem_t));
+    lost_var->Lvalue->content_type = PASS_VAL;
+    lost_var->Lvalue->offset_expr = expr_from_hardcoded_int(0);
+    lost_var->Lvalue->seg_offset = expr_from_hardcoded_int(0);
+    lost_var->Lvalue->segment = MEM_STACK;
+    lost_var->Lvalue->size = 0;
 
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("OK\n");
@@ -269,11 +269,11 @@ sem_t *sm_insert(const char *id) {
         return new_sem;
     }
     else if (!sm_empty) {
-        yyerror("ERROR: symbol table is full, cannot insert new symbols.");
+        yyerror("symbol table is full, cannot insert new symbols.");
         exit(EXIT_FAILURE);
     }
     else {
-        sprintf(str_err,"ERROR: `%s` already declared in this scope",id);
+        sprintf(str_err,"`%s` already declared in this scope",id);
         yyerror(str_err);
         return NULL;
     }
@@ -287,7 +287,7 @@ void sm_remove(char *id) {
     symbol = sm_find(id);
 
     if (!symbol) {
-        yyerror("ERROR: trying to remove null symbol from symbol table (debugging info)");
+        yyerror("trying to remove null symbol from symbol table (debugging info)");
         return;
     }
 
@@ -322,7 +322,7 @@ void sm_remove(char *id) {
     case ID_FORWARDED_FUNC:
     case ID_FORWARDED_PROC:
         scope_owner = get_current_scope_owner();
-        sprintf(str_err,"ERROR: subprogram '%s' without body in scope of %s.",id,scope_owner->func_name);
+        sprintf(str_err,"subprogram '%s' without body in scope of %s.",id,scope_owner->func_name);
         yyerror(str_err);
         break;
     }
@@ -350,21 +350,21 @@ void declare_consts(char *id,expr_t *l) {
         lost_id = sm_find_lost_symbol(id);
         if (!lost_id) {
             sm_insert_lost_symbol(id);
-            //sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            //sprintf(str_err,"undeclared symbol '%s'",id);
             //yyerror(str_err);
         }
-        sprintf(str_err,"ERROR: non constant value in constant declaration of '%s'",id);
+        sprintf(str_err,"non constant value in constant declaration of '%s'",id);
         yyerror(str_err);
         return;
     }
 
     if (!TYPE_IS_STANDARD(l->datatype) && l->datatype->is!=TYPE_ENUM) {
         //we have only one value so it cannot be a subset
-        yyerror("ERROR: invalid nonstandard datatype of constant declaration");
+        yyerror("invalid nonstandard datatype of constant declaration");
         lost_id = sm_find_lost_symbol(id);
         if (!lost_id) {
             sm_insert_lost_symbol(id);
-            //sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            //sprintf(str_err,"undeclared symbol '%s'",id);
             //yyerror(str_err);
         }
         return;
@@ -387,7 +387,7 @@ void declare_consts(char *id,expr_t *l) {
         sem->var->Lvalue = mem_allocate_symbol(l->datatype);
     }
     else {
-        sprintf(str_err,"ERROR: '%s' already declared",id);
+        sprintf(str_err,"'%s' already declared",id);
         yyerror(str_err);
     }
 }
@@ -416,7 +416,7 @@ void declare_vars(data_t* type){
                 new_sem->var->Lvalue = mem_allocate_symbol(type);
             }
             else {
-                sprintf(str_err,"ERROR: '%s' already declared",idf_table[i]->name);
+                sprintf(str_err,"'%s' already declared",idf_table[i]->name);
                 yyerror(str_err);
             }
         }
@@ -426,12 +426,12 @@ void declare_vars(data_t* type){
             lost_id = sm_find_lost_symbol(idf_table[i]->name);
             if (!lost_id) {
                 sm_insert_lost_symbol(idf_table[i]->name);
-                //sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+                //sprintf(str_err,"undeclared symbol '%s'",id);
                 //yyerror(str_err);
             }
         }
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: trying to declare variable(s) of unknown datatype (debugging info)");
+        yyerror("trying to declare variable(s) of unknown datatype (debugging info)");
 #endif
     }
 
@@ -514,16 +514,16 @@ sem_t *reference_to_forwarded_function(char *id) {
     sem_2 = sm_find(id);
     if (sem_2) {
         if (sem_2->id_is==ID_FUNC) {
-            yyerror("ERROR: Multiple body definitions for a function");
+            yyerror("Multiple body definitions for a function");
         }
         else if (sem_2->id_is==ID_PROC) {
-            yyerror("ERROR: id is a procedure not a function and is already declared");
+            yyerror("id is a procedure not a function and is already declared");
         }
         else if (sem_2->id_is==ID_FORWARDED_PROC) {
-            yyerror("ERROR: id is a procedure not a function, and procedures cannot be forwarded");
+            yyerror("id is a procedure not a function, and procedures cannot be forwarded");
         }
         else if (sem_2->id_is!=ID_FORWARDED_FUNC) {
-            yyerror("ERROR: id is not declared as a subprogram");
+            yyerror("id is not declared as a subprogram");
         }
         else {
             return sem_2;
@@ -532,7 +532,7 @@ sem_t *reference_to_forwarded_function(char *id) {
     else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: invalid forwarded function. '%s' not declared before in this scope",id);
+            sprintf(str_err,"invalid forwarded function. '%s' not declared before in this scope",id);
             yyerror(str_err);
         }
     }
@@ -554,7 +554,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
             //the name of the function acts like a variable
             scope_owner = get_current_scope_owner();
             if (scope_owner==main_program) {
-                yyerror("ERROR: the main program does not return any value");
+                yyerror("the main program does not return any value");
                 return lost_var_reference();
             }
             return sem_1->subprogram->return_value;
@@ -562,7 +562,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             //ALLOW this if only enumerations and subsets can declare an iter_space
             if (strcmp(sem_1->comp->data_name,id)==0) {
-                sprintf(str_err,"ERROR: '%s' is the name of the enumeration, expected only an element",id);
+                sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
                 yyerror(str_err);
                 return lost_var_reference();
             }
@@ -578,7 +578,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
             return new_enum_const;
         }
         else {
-            sprintf(str_err,"ERROR: id '%s' exists but it is not a variable or constant",id);
+            sprintf(str_err,"id '%s' exists but it is not a variable or constant",id);
             yyerror(str_err);
             return lost_var_reference();
         }
@@ -587,7 +587,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
         lost_id = sm_find_lost_symbol(id);
         if (!lost_id) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            sprintf(str_err,"undeclared symbol '%s'",id);
             yyerror(str_err);
         }
         return lost_var_reference();
@@ -639,7 +639,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
                 return new_var;
             }
             else {
-                sprintf(str_err,"ERROR: variable '%s' is not an array",v->name);
+                sprintf(str_err,"variable '%s' is not an array",v->name);
                 yyerror(str_err);
                 return lost_var_reference(); //avoid unreal error messages
             }
@@ -648,7 +648,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
             return v; //avoid unreal error messages
         }
         else {
-            sprintf(str_err,"ERROR: id '%s' is not a variable",v->name);
+            sprintf(str_err,"id '%s' is not a variable",v->name);
             yyerror(str_err);
             return lost_var_reference();
         }
@@ -692,13 +692,13 @@ var_t *refference_to_record_element(var_t *v, char *id) {
                     return new_var;
                 }
                 else {
-                    sprintf(str_err,"ERROR: no element named '%s' in record type",id);
+                    sprintf(str_err,"no element named '%s' in record type",id);
                     yyerror(str_err);
                     return lost_var_reference();
                 }
             }
             else {
-                yyerror("ERROR: type of variable is not a record");
+                yyerror("type of variable is not a record");
                 return lost_var_reference();
             }
         }
@@ -706,7 +706,7 @@ var_t *refference_to_record_element(var_t *v, char *id) {
             return v; //avoid unreal error messages
         }
         else {
-            sprintf(str_err,"ERROR: id '%s' is not a variable",v->name);
+            sprintf(str_err,"id '%s' is not a variable",v->name);
             yyerror(str_err);
             return lost_var_reference();
         }
@@ -778,7 +778,7 @@ data_t *close_set_type(data_t *type) {
         return close_datatype_start_new();
     }
     else {
-        yyerror("ERROR: cannot define set type for this data type");
+        yyerror("cannot define set type for this data type");
         return NULL;
     }
 }
@@ -810,7 +810,7 @@ data_t *close_enum_type() {
     for (i=0;i<MAX_IDF-idf_empty;i++) {
         id = idf_table[i]->name;
         if (sm_find(id)) {
-            sprintf(str_err,"ERROR: Identifier `%s` already exists in this scope",id);
+            sprintf(str_err,"Identifier `%s` already exists in this scope",id);
             yyerror(str_err);
             usr_datatype->memsize = MEM_SIZEOF_INT;
             return close_datatype_start_new();
@@ -828,7 +828,7 @@ data_t *close_enum_type() {
         idf_init();
     }
     else {
-        yyerror("ERROR: Too much identifiers in enum type");
+        yyerror("Too much identifiers in enum type");
     }
 
     usr_datatype->memsize = MEM_SIZEOF_INT;
@@ -846,22 +846,22 @@ data_t *close_subset_type(expr_t *l1, expr_t *l2) {
     }
 
     if (!TYPE_IS_SUBSET_VALID(l1->datatype) || !TYPE_IS_SUBSET_VALID(l2->datatype)) {
-        yyerror("ERROR: invalid datatype in subset declaration");
+        yyerror("invalid datatype in subset declaration");
         return NULL;
     }
 
     if (l1->datatype!=l2->datatype) {
-        yyerror("ERROR: in subset definition, bounds have different data types");
+        yyerror("in subset definition, bounds have different data types");
         return NULL;
     }
 
     if (l1->expr_is!=EXPR_HARDCODED_CONST || l2->expr_is!=EXPR_HARDCODED_CONST) {
-        yyerror("ERROR: subset limits MUST be constants");
+        yyerror("subset limits MUST be constants");
         return NULL;
     }
 
     if (l2->ival - l1->ival + 1<=0 || l2->ival - l1->ival + 1>MAX_FIELDS) {
-        yyerror("ERROR: subset limits are incorrect");
+        yyerror("subset limits are incorrect");
         return NULL;
     }
 
@@ -894,7 +894,7 @@ void add_dim_to_array_type(dim_t *dim) {
         usr_datatype->field_num++;
     }
     else {
-        //yyerror("ERROR: too much dimensions");
+        //yyerror("too much dimensions");
     }
 }
 
@@ -909,11 +909,11 @@ void make_type_definition(char *id, data_t *type) {
             sem_1->comp->data_name = sem_1->name;
         }
         else {
-            yyerror("ERROR: id type declaration already exists");
+            yyerror("id type declaration already exists");
         }
     }
     else {
-        yyerror("ERROR: data type NOT defined (debugging info)");
+        yyerror("data type NOT defined (debugging info)");
     }
 }
 
@@ -962,22 +962,22 @@ void protect_guard_var(char *id) {
                 sem_2->var->id_is = ID_VAR_GUARDED;
             }
             else {
-                sprintf(str_err,"ERROR: control variable '%s' must be integer",id);
+                sprintf(str_err,"control variable '%s' must be integer",id);
                 yyerror(str_err);
             }
         }
         else if (sem_2->id_is==ID_VAR_GUARDED) {
-            sprintf(str_err,"ERROR: variable '%s' already controls a for statement",id);
+            sprintf(str_err,"variable '%s' already controls a for statement",id);
             yyerror(str_err);
         }
         else {
-            sprintf(str_err,"ERROR: invalid reference to '%s', expected variable",id);
+            sprintf(str_err,"invalid reference to '%s', expected variable",id);
             yyerror(str_err);
         }
     }
     //else
     //nothing, error is printed from sm_insert
-    //yyerror("ERROR: the name of the control variable is declared before in this scope");
+    //yyerror("the name of the control variable is declared before in this scope");
 }
 
 void unprotect_guard_var(char *id) {
