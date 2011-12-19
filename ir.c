@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h> //memcpy()
 
 #include "build_flags.h"
 #include "semantics.h"
@@ -77,7 +78,7 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->offset = NULL;
     new_node->ir_lval_dest = NULL;
 
-    new_node->prev_stmt = new_node;
+    new_node->prev_stmt = NULL; //new_node;
     new_node->last_stmt = new_node;
     new_node->next_stmt = NULL;
     new_node->label = NULL;
@@ -121,7 +122,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     } else if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
         //should never reach here
-        yyerror("ERROR: null expression in assignment (debugging info)");
+        yyerror("null expression in assignment (debugging info)");
 #endif
         return NULL;
     }
@@ -131,13 +132,13 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     }
 
     if (v->id_is == ID_VAR_GUARDED) {
-        sprintf(str_err,"ERROR: forbidden assignment to '%s' which controls a `for` statement",v->name);
+        sprintf(str_err,"forbidden assignment to '%s' which controls a `for` statement",v->name);
         yyerror(str_err);
         return NULL;
     }
 
     if (v->id_is != ID_RETURN && v->id_is != ID_VAR) {
-        sprintf(str_err,"ERROR: trying to assign to symbol '%s' which is not a variable",v->name);
+        sprintf(str_err,"trying to assign to symbol '%s' which is not a variable",v->name);
         yyerror(str_err);
         return NULL;
     }
@@ -146,14 +147,14 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         scope_owner = get_current_scope_owner();
         if (scope_owner->return_value->scope!=get_current_scope()) {
             //v->name is the same with function's name because that's how functions return their value
-            sprintf(str_err,"ERROR: function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
+            sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
             yyerror(str_err);
             return NULL;
         }
     }
 
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
-        sprintf(str_err,"ERROR: assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
+        sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
@@ -161,8 +162,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     if (TYPE_IS_STRING(v->datatype)) {
         //strings terminate with 0, copy until array is full
         new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
-        new_stmt->ir_lval = calculate_lvalue(v);
-        new_stmt->ir_lval2 = calculate_lvalue(l->var);
+        new_stmt->address = calculate_lvalue(v);
+        new_stmt->ir_lval = calculate_lvalue(l->var);
         return new_stmt;
     }
 
@@ -179,7 +180,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         break;
     case TYPE_BOOLEAN:
         if (l->datatype->is!=TYPE_BOOLEAN) {
-	    yyerror("ERROR: assignment to boolean with nonboolean datatype");
+	    yyerror("assignment to boolean with nonboolean datatype");
 	    return NULL;
         }
         break;
@@ -200,16 +201,16 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         break;
     case TYPE_SET:
         new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
-        new_stmt->ir_lval = calculate_lvalue(v);
-        new_stmt->ir_lval2 = create_bitmap(l);
+        new_stmt->address = calculate_lvalue(v);
+        new_stmt->ir_lval = create_bitmap(l);
         return new_stmt;
     case TYPE_ARRAY:
         if (v->datatype==l->datatype) {
 	    //explicit datatype match, optimize: use memcopy
 	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
 	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
-	    new_stmt->ir_lval = calculate_lvalue(v);
-	    new_stmt->ir_lval2 = calculate_lvalue(l->var);
+	    new_stmt->address = calculate_lvalue(v);
+	    new_stmt->ir_lval = calculate_lvalue(l->var);
         } else {
 	    new_stmt = expand_array_assign(v,l);
         }
@@ -219,8 +220,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 	    //explicit datatype match, optimize: use memcopy
 	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
 	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
-	    new_stmt->ir_lval = calculate_lvalue(v);
-	    new_stmt->ir_lval2 = calculate_lvalue(l->var);
+	    new_stmt->address = calculate_lvalue(v);
+	    new_stmt->ir_lval = calculate_lvalue(l->var);
         } else {
 	    new_stmt = expand_record_assign(v,l);
         }
@@ -231,8 +232,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 
     /**** some common assign actions */
 
-    new_stmt = new_ir_node_t(NODE_ASM_SAVE);
-    new_stmt->ir_lval = calculate_lvalue(v);
+    new_stmt = new_ir_node_t(NODE_ASSIGN);
+    new_stmt->address = calculate_lvalue(v);
     new_stmt->ir_rval = expr_tree_to_ir_tree(l);
 
     if (v->id_is==ID_RETURN) {
@@ -402,8 +403,9 @@ ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
         //it is possible to call a subprogram before defining its body, so check for _FORWARDED_ subprograms too
         //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
         if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
-            sprintf(str_err,"ERROR: invalid '%s' function call, expected procedure",id);
+            sprintf(str_err,"invalid '%s' function call, expected procedure",id);
             yyerror(str_err);
+            //continue as usual
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
             dark_init_node = prepare_stack_for_call(sem_1->subprogram,list);
             if (dark_init_node) {
@@ -418,7 +420,7 @@ ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
     } else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared subprogram '%s'",id);
+            sprintf(str_err,"undeclared subprogram '%s'",id);
             yyerror(str_err);
         }
     }
@@ -449,19 +451,19 @@ ir_node_t *new_read_stmt(var_list_t *list) {
         if (v->id_is==ID_LOST) {
             error++;
         } else if (v->id_is==ID_VAR_GUARDED) {
-            sprintf(str_err,"ERROR: in read, control variable '%s' of 'for statement' is read only",v->name);
+            sprintf(str_err,"in read, control variable '%s' of 'for statement' is read only",v->name);
             yyerror(str_err);
             error++;
         } else if (v->id_is==ID_CONST) {
-            sprintf(str_err,"ERROR: in read, trying to change constant '%s'",v->name);
+            sprintf(str_err,"in read, trying to change constant '%s'",v->name);
             yyerror(str_err);
             error++;
         } else if (v->id_is==ID_RETURN) {
-            sprintf(str_err,"ERROR: in read, return value '%s' can be set only with assignment",v->name);
+            sprintf(str_err,"in read, return value '%s' can be set only with assignment",v->name);
             yyerror(str_err);
             error++;
         } else if (!TYPE_IS_STANDARD(v->datatype) && !TYPE_IS_STRING(v->datatype)) {
-            sprintf(str_err,"ERROR: in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->data_name);
+            sprintf(str_err,"in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->data_name);
             yyerror(str_err);
             error++;
         }
@@ -530,13 +532,13 @@ ir_node_t *new_write_stmt(expr_list_t *list) {
             error++;
         }
         else if (l->expr_is==EXPR_SET || EXPR_NULL_SET) {
-            sprintf(str_err,"ERROR: in write, can only print standard types or strings, this is a set");
+            sprintf(str_err,"in write, can only print standard types or strings, this is a set");
             yyerror(str_err);
             error++;
         }
         else if (!TYPE_IS_STANDARD(l->datatype) && l->expr_is!=EXPR_STRING) {
             //EXPR_RVAL, EXPR_HARDCODED_CONST, EXPR_LVAL, EXPR_STRING
-            sprintf(str_err,"ERROR: in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->data_name);
+            sprintf(str_err,"in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->data_name);
             yyerror(str_err);
             error++;
         }
@@ -623,10 +625,8 @@ ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
     new_stmt = NULL;
     for(i=0; i<elem_offset_num; i+=v->datatype->def_datatype->memsize) {
         dummy_mem_array = (mem_t*)malloc(sizeof(mem_t));
-        dummy_mem_array->content_type = v->Lvalue->content_type;
-        dummy_mem_array->direct_register_number = v->Lvalue->direct_register_number;
-        dummy_mem_array->seg_offset = v->Lvalue->seg_offset;
-        dummy_mem_array->segment = v->Lvalue->segment;
+        dummy_mem_array = (mem_t*)memcpy(dummy_mem_array,v->Lvalue,sizeof(mem_t));
+
         dummy_mem_array->size = v->datatype->def_datatype->memsize;
         dummy_mem_array->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
 
@@ -639,10 +639,8 @@ ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
         dummy_var_array->Lvalue = dummy_mem_array;
 
         dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
-        dummy_mem_l->content_type = l->var->Lvalue->content_type;
-        dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
-        dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
-        dummy_mem_l->segment = l->var->Lvalue->segment;
+        dummy_mem_l = (mem_t*)memcpy(dummy_mem_l,l->var->Lvalue,sizeof(mem_t));
+
         dummy_mem_l->size = l->var->datatype->def_datatype->memsize;
         dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
 
@@ -677,10 +675,8 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
     new_stmt = NULL;
     for(i=0; i<v->datatype->field_num; i++) {
         dummy_mem_record = (mem_t*)malloc(sizeof(mem_t));
-        dummy_mem_record->content_type = v->Lvalue->content_type;
-        dummy_mem_record->direct_register_number = v->Lvalue->direct_register_number;
-        dummy_mem_record->seg_offset = v->Lvalue->seg_offset;
-        dummy_mem_record->segment = v->Lvalue->segment;
+        dummy_mem_record = (mem_t*)memcpy(dummy_mem_record,v->Lvalue,sizeof(mem_t));
+
         dummy_mem_record->size = v->datatype->field_datatype[i]->memsize;
         dummy_mem_record->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(v->datatype->field_offset[i]));
 
@@ -693,10 +689,8 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
         dummy_var_record->Lvalue = dummy_mem_record;
 
         dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
-        dummy_mem_l->content_type = l->var->Lvalue->content_type;
-        dummy_mem_l->direct_register_number = l->var->Lvalue->direct_register_number;
-        dummy_mem_l->seg_offset = l->var->Lvalue->seg_offset;
-        dummy_mem_l->segment = l->var->Lvalue->segment;
+        dummy_mem_l = (mem_t*)memcpy(dummy_mem_l,l->var->Lvalue,sizeof(mem_t));
+
         dummy_mem_l->size = l->var->datatype->field_datatype[i]->memsize;
         dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(l->var->datatype->field_offset[i]));
 

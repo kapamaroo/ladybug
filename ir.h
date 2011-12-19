@@ -23,14 +23,15 @@ typedef enum ir_node_type_t {
     NODE_OUTPUT_BOOLEAN,
     NODE_OUTPUT_CHAR,           //print character (service 11)
     NODE_OUTPUT_STRING,
-    NODE_ASM_CONVERT_TO_INT,	//if it is neccessary
-    NODE_ASM_CONVERT_TO_REAL,	//if it is neccessary
-    NODE_ASM_MEMCOPY,		//for assignment of identical arrays and records
-    NODE_ASM_LOAD,		//load a NODE_LVAL or NODE_HARDCODED_LVAL
-    NODE_ASM_SAVE,		//assign statement
-    NODE_TYPEOF_SET_AND,	//AND for sets (operator *,OP_MULT)
-    NODE_TYPEOF_SET_OR,	        //OR for sets (operator +,OP_PLUS), inverts the bits
-    NODE_TYPEOF_SET_NOT,	//NOT for sets (operator -,OP_MINUS)
+    NODE_CONVERT_TO_INT,	//if it is neccessary
+    NODE_CONVERT_TO_REAL,	//if it is neccessary
+    NODE_MEMCOPY,		//for assignment of identical arrays and records
+    NODE_LOAD,		        //load a NODE_LVAL or NODE_HARDCODED_LVAL
+    NODE_BINARY_AND,	        //AND for sets (operator *,OP_MULT)
+    NODE_BINARY_OR,	        //OR for sets (operator +,OP_PLUS), inverts the bits
+    NODE_BINARY_NOT,    	//NOT for sets (operator -,OP_MINUS)
+    NODE_SHIFT_LEFT,
+    NODE_SHIFT_RIGHT,
     NODE_LVAL,			//memory address with possible offset
     NODE_HARDCODED_LVAL,	//immediate memory address, with possible offset
     NODE_RVAL,
@@ -39,6 +40,7 @@ typedef enum ir_node_type_t {
     NODE_ADD_ELEM_TO_SET,       //checks first if bigger or equal to zero
     NODE_ADD_ELEM_RANGE_TO_SET, //only the values bigger or equal to zero
     NODE_CHECK_INOP_BITMAPPED,
+    NODE_ASSIGN,		//assign statement
     NODE_ASSIGN_SET,            //the set exists in its own memory or in bitmap_factory
     NODE_ASSIGN_STRING,
     NODE_ASSIGN_MEMCPY,
@@ -64,22 +66,22 @@ typedef struct ir_node_t {
 
     struct ir_node_t *ir_lval_dest;	//for TYPESET nodes we need one more lvalue;
 
-    struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_ASM_LOAD reads it
-    struct ir_node_t *offset;  //NODE_ASM_LOAD adds this to *address
+    struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_LOAD,NODE_ASSIGN* reads it
+    struct ir_node_t *offset;  //NODE_LOAD adds this to *address
 
     char *label;               //the label of the node
     char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
 
-    mem_t *lval; //used only from load immediate (this should be removed at some point and we should use the *address)
+    mem_t *lval; //generate *address and *offset from here (this should be removed)
     int ival;	 //hardcoded int
     float fval;	 //hardcoded real
     char cval;   //hardcoded char
 } ir_node_t;
 
-//we convert sets to bitmaps here, we need two places in memory
-extern var_t *ll;	//left result
-extern var_t *rr;	//right result
-extern var_t *x;	//protected result
+extern ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
+extern int ir_root_module_empty;
+extern int ir_root_module_current;
+extern ir_node_t *ir_root;
 
 void init_ir();
 void new_module(func_t *subprogram);

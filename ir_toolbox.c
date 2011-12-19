@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "semantics.h"
 #include "scope.h"
 #include "symbol_table.h"
@@ -80,8 +81,6 @@ char *new_label_subprogram(char *sub_name) {
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *new_node;
     ir_node_t *convert_node;
-    ir_node_t *new_ASM_load_stmt;
-    ir_node_t *ptr_deref;
     ir_node_t *dark_init_node;
     ir_node_t *new_func_call;
     sem_t *sem_1;
@@ -133,12 +132,12 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
 
             if (ltree->convert_to==SEM_INTEGER) {
-                convert_node = new_ir_node_t(NODE_ASM_CONVERT_TO_INT);
+                convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
                 convert_node->ir_rval = new_node;
                 return convert_node;
             }
             else if (ltree->convert_to==SEM_REAL) {
-                convert_node = new_ir_node_t(NODE_ASM_CONVERT_TO_REAL);
+                convert_node = new_ir_node_t(NODE_CONVERT_TO_REAL);
                 convert_node->ir_rval = new_node;
                 return convert_node;
             }
@@ -163,7 +162,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             exit(EXIT_FAILURE);
         }
 
-        new_node = new_ir_node_t(NODE_ASM_LOAD);
+        new_node = new_ir_node_t(NODE_LOAD);
         new_node->address = calculate_lvalue(ltree->var);
 
         if (ltree->var->id_is==ID_RETURN) {
@@ -182,12 +181,12 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         }
 
         if (ltree->convert_to==SEM_INTEGER) {
-            convert_node = new_ir_node_t(NODE_ASM_CONVERT_TO_INT);
+            convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
             convert_node->ir_rval = new_node;
             return convert_node;
         }
         else if (ltree->convert_to==SEM_REAL) {
-            convert_node = new_ir_node_t(NODE_ASM_CONVERT_TO_REAL);
+            convert_node = new_ir_node_t(NODE_CONVERT_TO_REAL);
             convert_node->ir_rval = new_node;
             return convert_node;
         }
@@ -203,6 +202,8 @@ ir_node_t *calculate_lvalue(var_t *v) {
     ir_node_t *new_node;
     ir_node_t *ptr_deref;
 
+    expr_t *address_expr;
+
     if (!v) {
         printf("UNEXPECTED_ERROR: 74-1\n");
         exit(EXIT_FAILURE);
@@ -213,16 +214,24 @@ ir_node_t *calculate_lvalue(var_t *v) {
     new_node->lval = v->Lvalue;
 
     if (v->Lvalue->content_type==PASS_REF) {
+        //set the address so far
+        new_node->address = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
+
         //load the final address
-        //we don't have offset here
-        ptr_deref = new_ir_node_t(NODE_ASM_LOAD);
+        ptr_deref = new_ir_node_t(NODE_LOAD);
         ptr_deref->address = new_node;
 
         new_node = new_ir_node_t(NODE_LVAL);
         new_node->address = ptr_deref;
+
+        //put the offset separate after the load
+        new_node->offset = expr_tree_to_ir_tree(v->Lvalue->offset_expr);
+    } else { //PASS_VAL
+        //put the offset together with the *address
+        address_expr = expr_relop_equ_addop_mult(v->Lvalue->seg_offset,OP_PLUS,v->Lvalue->offset_expr);
+        new_node->address = expr_tree_to_ir_tree(address_expr);
     }
 
-    new_node->offset = expr_tree_to_ir_tree(v->Lvalue->offset_expr); //ID_RETURN has offset NULL and possibly others
     return new_node;
 }
 
@@ -270,7 +279,6 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 
     data_t *el_datatype;
     var_t *tmp_var;
-    expr_t *expr_lval;
 
     int i;
 
@@ -282,7 +290,7 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
     }
 
     if (list->all_expr_num != subprogram->param_num) {
-        sprintf(str_err,"ERROR: invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
+        sprintf(str_err,"invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
         yyerror(str_err);
         return NULL;
     }
@@ -313,45 +321,37 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
             if (subprogram->param[i]->pass_mode==PASS_REF) {
                 //accept only lvalues
                 if (list->expr_list[i]->expr_is!=EXPR_LVAL) {
-                    sprintf(str_err,"ERROR: parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
+                    sprintf(str_err,"parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
                     yyerror(str_err);
                     free(tmp_var);
                     return NULL;
                 }
 
                 if (el_datatype != subprogram->param[i]->datatype) {
-                    sprintf(str_err,"ERROR: assign to formal parameter of datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
+                    sprintf(str_err,"passing refference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
                     yyerror(str_err);
                     free(tmp_var);
                     return NULL;
                 }
 
                 if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
-                    sprintf(str_err,"ERROR: guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
+                    sprintf(str_err,"guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
                     yyerror(str_err);
                     free(tmp_var);
                     return NULL;
                 }
 
-                //first take the segment offset (does not change)
-                expr_lval = expr_from_hardcoded_int(list->expr_list[i]->var->Lvalue->seg_offset);
-
-                //now add the offset_expr (if any)
-                if (list->expr_list[i]->var->Lvalue->offset_expr) {
-                    if (el_datatype!=SEM_INTEGER) {
-                        //sanity check
-                        yyerror("INTERNAL ERROR: offset_expr MUST be integer");
-                        exit(EXIT_FAILURE);
-                    }
-                    expr_lval = expr_relop_equ_addop_mult(expr_lval,OP_PLUS,list->expr_list[i]->var->Lvalue->offset_expr);
-                }
-
-                //mark temporarily the lvalue as PASS_VAL, in order for the new_assign_stmt() to work properly
+                //mark temporarily the lvalue as PASS_VAL, in order for the calculate_lvalue() to work properly
                 //this is a very ugly way of doing things :( //FIXME
                 tmp_var->Lvalue->content_type = PASS_VAL;
 
-                //assign the address in stack, although we read directly using the *ref pointer (optimization)
-                tmp_assign = new_assign_stmt(tmp_var,expr_lval);
+                //reminder: we are talking about stack Lvalues
+                //there are no offsets, parameters do not change position in stack
+                //this means that the address is HARDCODED_LVAL
+
+                tmp_assign = new_ir_node_t(NODE_ASSIGN);
+                tmp_assign->address = calculate_lvalue(tmp_var);
+                tmp_assign->ir_rval = calculate_lvalue(list->expr_list[i]->var);
 
                 //restore the PASS_REF content_type
                 tmp_var->Lvalue->content_type = PASS_REF;
@@ -359,7 +359,7 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
             else { //PASS_VAL
                 //accept anything, if it's not rvalue we pass it's address
                 if (TYPE_IS_COMPOSITE(el_datatype)) {
-                    yyerror("ERROR: arrays, records and set datatypes can only be passed by refference");
+                    yyerror("arrays, records and set datatypes can only be passed by refference");
                     free(tmp_var);
                     return NULL;
                 }
@@ -381,7 +381,7 @@ var_t *new_normal_variable_from_guarded(var_t *guarded) {
     var_t *new_var;
 
     if (!guarded) {
-        yyerror("ERROR: null guarded variable for conversion (debugging info)");
+        yyerror("null guarded variable for conversion (debugging info)");
         return NULL;
     }
 
@@ -431,7 +431,8 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
     else if (vd->is==ld->is && vd->is==TYPE_RECORD) {
         if (vd->field_num==ld->field_num) {
             for(i=0;i<vd->field_num;i++) {
-                if (!check_assign_similar_comp_datatypes(vd->field_datatype[i],ld->field_datatype[i])) {
+                if (!check_assign_similar_comp_datatypes(vd->field_datatype[i],
+                                                         ld->field_datatype[i])) {
                     return 0;
                 }
             }
