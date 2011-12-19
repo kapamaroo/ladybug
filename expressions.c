@@ -15,7 +15,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
     if (!l1 || !l2) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in expr_relop_equ (debugging info)");
+        yyerror("null expression in expr_relop_equ (debugging info)");
 #endif
         return expr_from_hardcoded_boolean(0);
     }
@@ -38,11 +38,11 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
         case OP_PLUS:
         case OP_MINUS:
         case OP_MULT:
-            sprintf(str_err,"ERROR: '%s' operator applies only to integers, reals and sets",op_literal(op));
+            sprintf(str_err,"'%s' operator applies only to integers, reals and sets",op_literal(op));
             yyerror(str_err);
             return expr_from_hardcoded_int(0);
         default:
-            sprintf(str_err,"ERROR: '%s' operator does not apply to arrays, records and sets",op_literal(op));
+            sprintf(str_err,"'%s' operator does not apply to arrays, records and sets",op_literal(op));
             yyerror(str_err);
             return expr_from_hardcoded_boolean(0);
         }
@@ -60,28 +60,28 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
             //set the datatype of the new expression
             if (l1->expr_is==EXPR_LVAL && l2->expr_is==EXPR_LVAL) {
                 if (l1->datatype!=l2->datatype) {
-                    yyerror("ERROR: comparing sets with different data types");
+                    yyerror("comparing sets with different data types");
                     return expr_from_setexpression(NULL); //return the NULL set expression
                 }
                 datatype = l1->datatype->def_datatype; //the result set has the same datadef type
             }
             else if(l1->expr_is==EXPR_LVAL) {
                 if (l1->datatype->def_datatype!=l2->datatype) {
-                    yyerror("ERROR: comparing sets with different data types");
+                    yyerror("comparing sets with different data types");
                     return expr_from_setexpression(NULL); //return the NULL set expression
                 }
                 datatype = l2->datatype; //the result set has the same datadef type
             }
             else if(l2->expr_is==EXPR_LVAL) {
                 if (l1->datatype!=l2->datatype->def_datatype) {
-                    yyerror("ERROR: comparing sets with different data types");
+                    yyerror("comparing sets with different data types");
                     return expr_from_setexpression(NULL); //return the NULL set expression
                 }
                 datatype = l1->datatype; //the result set has the same datadef type
             }
             else {
                 if (l1->datatype!=l2->datatype) {
-                    yyerror("ERROR: comparing sets with different datadef types");
+                    yyerror("comparing sets with different datadef types");
                     return expr_from_setexpression(NULL); //return the NULL set expression
                 }
                 datatype = l1->datatype; //the result set has the same datadef type
@@ -99,7 +99,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
             return new_expr;
         default:
-            yyerror("ERROR: invalid operator for set types");
+            yyerror("invalid operator for set types");
             return expr_from_hardcoded_boolean(0);
         }
     }
@@ -218,7 +218,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
         return new_expr;
     }
     else {
-        yyerror("ERROR: incopatible datatypes of operands in expr_relop_equ");
+        yyerror("incopatible datatypes of operands in expr_relop_equ");
         return expr_from_hardcoded_boolean(0);
     }
 }
@@ -226,7 +226,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
     if (!l1 || !l2) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in expr_inop (debugging info)");
+        yyerror("null expression in expr_inop (debugging info)");
 #endif
         return expr_from_hardcoded_boolean(0);
     }
@@ -239,13 +239,13 @@ expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
         //it is not necessary for a `set` datatype to be declared previously, we just want a boolean result
         if (l2->expr_is==EXPR_LVAL) {
             if (l1->datatype!=l2->datatype->def_datatype) { //for the set datatype see expr_from_setexpression() from expr_toolbox.c
-                yyerror("ERROR: `in` operator: set expression and element must have the same type of data");
+                yyerror("`in` operator: set expression and element must have the same type of data");
                 return expr_from_hardcoded_boolean(0);
             }
         }
         else {
             if (l1->datatype!=l2->datatype) { //for the set datatype see expr_from_setexpression() from expr_toolbox.c
-                yyerror("ERROR: `in` operator: set expression and element must have the same type of data");
+                yyerror("`in` operator: set expression and element must have the same type of data");
                 return expr_from_hardcoded_boolean(0);
             }
         }
@@ -256,7 +256,7 @@ expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
         return expr_from_hardcoded_boolean(0);
     }
     else {
-        yyerror("ERROR: expected expression of `set` type after `in` operator");
+        yyerror("expected expression of `set` type after `in` operator");
         return expr_from_hardcoded_boolean(0);
     }
 
@@ -269,7 +269,7 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
 
     if (!l2 || (!l1 && op!=OP_NOT)) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in expr_orop (debugging info)");
+        yyerror("null expression in expr_orop (debugging info)");
 #endif
         return expr_from_hardcoded_boolean(0);
     }
@@ -279,7 +279,7 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     if ((op!=OP_NOT && l1->datatype->is!=TYPE_BOOLEAN) || l2->datatype->is!=TYPE_BOOLEAN) {
-        sprintf(str_err,"ERROR: `%s' operator applies only to booleans",op_literal(op));
+        sprintf(str_err,"`%s' operator applies only to booleans",op_literal(op));
         yyerror(str_err);
         return expr_from_hardcoded_boolean(0);
     }
@@ -316,7 +316,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
 
     if (!l1 || !l2) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in expr_muldivandop (debugging info)");
+        yyerror("null expression in expr_muldivandop (debugging info)");
 #endif
         return expr_from_hardcoded_int(0);
     }
@@ -343,7 +343,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
 
     //arrays and record types are allowed only for asignments
     if (!TYPE_IS_ARITHMETIC(l1->datatype) || !TYPE_IS_ARITHMETIC(l2->datatype)) {
-        sprintf(str_err,"ERROR: '%s' operator does not applies only to integers, reals and sets",op_literal(op));
+        sprintf(str_err,"'%s' operator does not applies only to integers, reals and sets",op_literal(op));
         yyerror(str_err);
         switch (op) {
         case OP_DIV:
@@ -396,7 +396,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
     case OP_MOD:
         //applies only on integer expressions
         if (l1->datatype->is!=TYPE_INT || l2->datatype->is!=TYPE_INT) {
-            yyerror("ERROR: `div`, 'mod' apply only to integers");
+            yyerror("`div`, 'mod' apply only to integers");
             return expr_from_hardcoded_int(1); //cannot divide with zero, so set 1
         }
 
@@ -435,7 +435,7 @@ expr_t *expr_sign(op_t op,expr_t *l) {
 
     if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in expr_sign (debugging info)");
+        yyerror("null expression in expr_sign (debugging info)");
 #endif
         return expr_from_hardcoded_int(0);
     }
@@ -445,12 +445,12 @@ expr_t *expr_sign(op_t op,expr_t *l) {
     }
 
     if (!TYPE_IS_ARITHMETIC(l->datatype)) {
-        yyerror("ERROR: only integers and reals can be signed");
+        yyerror("only integers and reals can be signed");
         return expr_from_hardcoded_int(0);
     }
 
     if (l->op==OP_SIGN) {
-        yyerror("ERROR: 2 sign operators in a row are not allowed, ignoring the second sigh (the left)");
+        yyerror("2 sign operators in a row are not allowed, ignoring the second sign (the left)");
         return expr_from_hardcoded_int(0);
     }
 

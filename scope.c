@@ -136,14 +136,14 @@ void start_new_with_statement_scope(var_t *var) {
 
     if (!var) {
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
-        sprintf(str_err,"ERROR: null variable in with_statement (debugging info)");
+        sprintf(str_err,"null variable in with_statement (debugging info)");
         yyerror(str_err);
         return;
 #endif
     }
 
     if (var->datatype->is!=TYPE_RECORD) {
-        yyerror("ERROR: the type of variable is not a record");
+        yyerror("the type of variable is not a record");
         return;
     }
 
@@ -158,7 +158,7 @@ void start_new_with_statement_scope(var_t *var) {
         for(with_scope=root_scope_with;with_scope;with_scope=with_scope->next) {
             for(i=0;i<var->datatype->field_num;i++) {
                 if (check_for_id_in_datatype(with_scope->type,var->datatype->field_name[i])>=0) {
-                    sprintf(str_err,"ERROR: conflict in nested with_statement of type '%s' inside type '%s',\n\t both record datatypes have the name '%s' for element"
+                    sprintf(str_err,"conflict in nested with_statement of type '%s' inside type '%s',\n\t both record datatypes have the name '%s' for element"
                             ,var->datatype->data_name,with_scope->type->data_name,var->datatype->field_name[i]);
                     yyerror(str_err);
                     tail_scope_with->conflicts++;;

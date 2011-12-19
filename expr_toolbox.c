@@ -371,7 +371,7 @@ int check_if_boolean(expr_t *l) {
     else if (l->datatype->is==TYPE_BOOLEAN) {
         return 1;
     }
-    yyerror("ERROR: a flow control expression must be boolean");
+    yyerror("a flow control expression must be boolean");
     return 0;
 }
 
@@ -385,16 +385,16 @@ dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {
     new_dim->range = 1;
 
     if (!TYPE_IS_SCALAR(l1->datatype)) {
-        yyerror("ERROR: nonscalar type of left dim bound");
+        yyerror("nonscalar type of left dim bound");
     }
     else if (!TYPE_IS_SCALAR(l2->datatype)) {
-        yyerror("ERROR: type of right dim bound not scalar");
+        yyerror("type of right dim bound not scalar");
     }
     else if (l1->expr_is!=EXPR_HARDCODED_CONST || l2->expr_is!=EXPR_HARDCODED_CONST) {
-        yyerror("ERROR: dim bounds MUST be constants");
+        yyerror("dim bounds MUST be constants");
     }
     else if (l2->ival - l1->ival + 1<=0 || l2->ival - l1->ival + 1>MAX_FIELDS) {
-        yyerror("ERROR: dimension bounds are incorrect");
+        yyerror("dimension bounds are incorrect");
     }
     else {
         new_dim->first = l1->ival;
@@ -422,17 +422,17 @@ dim_t *make_dim_bound_from_id(char *id) {
             else {
                 //id is an element name of enum or subset type
                 //which means the size of dimension is 1
-                yyerror("ERROR: id name is an element of a enum or subset type, the size of dimension is 1");
+                yyerror("id name is an element of a enum or subset type, the size of dimension is 1");
             }
         }
         else {
-            yyerror("ERROR: `limit` id type mismatch");
+            yyerror("`limit` id type mismatch");
         }
     }
     else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            sprintf(str_err,"undeclared symbol '%s'",id);
             yyerror(str_err);
         }
     }
@@ -453,7 +453,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
             case EXPR_HARDCODED_CONST:
                 index = l->ival - data->dim[i]->first;
                 if (index<0 || index > data->dim[i]->range) {
-                    sprintf(str_err,"ERROR: reference to the %d dimension of array, out of bounds",i);
+                    sprintf(str_err,"reference to the %d dimension of array, out of bounds",i);
                     yyerror(str_err);
                     return 0;
                 }
@@ -468,7 +468,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
             }
         }
         else {
-            sprintf(str_err,"ERROR: reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
+            sprintf(str_err,"reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
             yyerror(str_err);
             return 0;
         }
@@ -533,7 +533,7 @@ expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
             case EXPR_HARDCODED_CONST:
                 index = l->ival - data->dim[i]->first;
                 if (index<0 || index > data->dim[i]->range) {
-                    sprintf(str_err,"ERROR: reference to the %d dimension of array, out of bounds",i);
+                    sprintf(str_err,"reference to the %d dimension of array, out of bounds",i);
                     yyerror(str_err);
                     return expr_from_hardcoded_boolean(0);
                 }
@@ -560,7 +560,7 @@ expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
         return expr_from_hardcoded_boolean(0);
     }
     else {
-        sprintf(str_err,"ERROR: different number of dimensions (%d) and dimension refferences (%d)",data->field_num, MAX_EXPR_LIST-list->expr_list_empty);
+        sprintf(str_err,"different number of dimensions (%d) and dimension refferences (%d)",data->field_num, MAX_EXPR_LIST-list->expr_list_empty);
         yyerror(str_err);
         return expr_from_hardcoded_boolean(0);
     }
@@ -574,28 +574,28 @@ iter_t *make_iter_space(expr_t *l1,int step,expr_t *l3) {
 
     if (!l1 || !l3) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: NULL expression in make_iter_space() (debugging info)");
+        yyerror("NULL expression in make_iter_space() (debugging info)");
 #endif
         return NULL;
     }
 
     if (l1->expr_is!=EXPR_LVAL && l1->expr_is!=EXPR_HARDCODED_CONST) {
-        yyerror("ERROR: invalid expr for left bound in iter space");
+        yyerror("invalid expr for left bound in iter space");
         return NULL;
     }
 
     if (l1->expr_is==EXPR_LVAL && l1->var->datatype->is!=TYPE_INT && l1->var->datatype->def_datatype->is!=TYPE_INT) {
-        yyerror("ERROR: left bound in iter space MUST be integer");
+        yyerror("left bound in iter space MUST be integer");
         return NULL;
     }
 
     if (l3->expr_is!=EXPR_LVAL && l3->expr_is!=EXPR_HARDCODED_CONST) {
-        yyerror("ERROR: invalid expr for right bound in iter space");
+        yyerror("invalid expr for right bound in iter space");
         return NULL;
     }
 
     if (l3->expr_is==EXPR_LVAL && l3->var->datatype->is!=TYPE_INT && l3->var->datatype->def_datatype->is!=TYPE_INT) {
-        yyerror("ERROR: right bound in iter space MUST be integer");
+        yyerror("right bound in iter space MUST be integer");
         return NULL;
     }
 
@@ -606,7 +606,7 @@ iter_t *make_iter_space(expr_t *l1,int step,expr_t *l3) {
 
     if (l1->expr_is==EXPR_HARDCODED_CONST && l3->expr_is==EXPR_HARDCODED_CONST &&
         new_iter->start->ival > new_iter->stop->ival) {
-        yyerror("ERROR: unreachable 'for' statement, left bound of iter_space must be less or equal to right bound");
+        yyerror("unreachable 'for' statement, left bound of iter_space must be less or equal to right bound");
     }
 
     return new_iter;
@@ -629,7 +629,7 @@ expr_list_t *expr_list_add(expr_list_t *new_list, expr_t *l) {
 
     if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression to expr_list (debugging info) ");
+        yyerror("null expression to expr_list (debugging info) ");
 #endif
     }
     else if (list->expr_list_empty) {
@@ -637,7 +637,7 @@ expr_list_t *expr_list_add(expr_list_t *new_list, expr_t *l) {
         list->expr_list_empty--;
     }
     else {
-        yyerror("ERROR: too much expressions");
+        yyerror("too much expressions");
     }
     return list;
 }
@@ -659,7 +659,7 @@ var_list_t *var_list_add(var_list_t *new_list, var_t *v) {
 
     if (!v) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null variable to var_list (debugging info) ");
+        yyerror("null variable to var_list (debugging info) ");
 #endif
     }
     else if (list->var_list_empty) {
@@ -667,7 +667,7 @@ var_list_t *var_list_add(var_list_t *new_list, var_t *v) {
         list->var_list_empty--;
     }
     else {
-        yyerror("ERROR: too much variables");
+        yyerror("too much variables");
     }
     return list;
 }
@@ -691,7 +691,7 @@ elexpr_list_t *elexpr_list_add(elexpr_list_t *new_list,elexpr_t *el) {
 
     if (!el) {
 #if BISON_DEBUG_LEVEL >= 2
-        yyerror("ERROR: null elexpression to elexpr_list (debugging info) ");
+        yyerror("null elexpression to elexpr_list (debugging info) ");
 #endif
     }
     else if (list->elexpr_list_empty==MAX_SET_ELEM) {
@@ -705,7 +705,7 @@ elexpr_list_t *elexpr_list_add(elexpr_list_t *new_list,elexpr_t *el) {
         //check if datatype is the same with the first element
         if (el->elexpr_datatype!=list->elexpr_list_datatype) {
             //all elexpressions in setexpression must have the same type
-            yyerror("ERROR: ignoring elexpression because of type mismatch");
+            yyerror("ignoring elexpression because of type mismatch");
         }
         else {
             //list->elexpr_list_usage = EXPR_SET;
@@ -714,7 +714,7 @@ elexpr_list_t *elexpr_list_add(elexpr_list_t *new_list,elexpr_t *el) {
         }
     }
     else {
-        yyerror("ERROR: too many elexpressions");
+        yyerror("too many elexpressions");
     }
     return list;
 }
@@ -724,7 +724,7 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
 
     if (!l1 || !l2) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in setexpression (debugging info)");
+        yyerror("null expression in setexpression (debugging info)");
 #endif
         return NULL;
     }
@@ -735,20 +735,20 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
     //at least one expression exists, check if valid
 
     if (!TYPE_IS_ELEXPR_VALID(l1->datatype)) {
-        sprintf(str_err,"ERROR: ignoring elexpression range because of invalid type '%s'",l1->datatype->data_name);
+        sprintf(str_err,"ignoring elexpression range because of invalid type '%s'",l1->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
 
     if (!TYPE_IS_ELEXPR_VALID(l2->datatype)) {
-        sprintf(str_err,"ERROR: ignoring elexpression range because of invalid type '%s'",l2->datatype->data_name);
+        sprintf(str_err,"ignoring elexpression range because of invalid type '%s'",l2->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
 
 
     if (l1->datatype!=l2->datatype) {
-        yyerror("ERROR: ignoring elexpression range because bounds don't have the same type");
+        yyerror("ignoring elexpression range because bounds don't have the same type");
         return NULL;
     }
 
@@ -785,7 +785,7 @@ elexpr_t *make_elexpr(expr_t *l) {
 
     if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expression in setexpression (debugging info)");
+        yyerror("null expression in setexpression (debugging info)");
 #endif
         return NULL;
     }
@@ -795,7 +795,7 @@ elexpr_t *make_elexpr(expr_t *l) {
     }
 
     if (!TYPE_IS_ELEXPR_VALID(l->datatype)) {
-        sprintf(str_err,"ERROR: ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
+        sprintf(str_err,"ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
@@ -827,13 +827,13 @@ expr_t *limit_from_id(char *id) {
                 new_expr = expr_from_hardcoded_char(sem_1->var->cval);
             }
             else {
-                yyerror("ERROR: limit can't be real type");
+                yyerror("limit can't be real type");
                 new_expr = expr_from_hardcoded_int(0);
             }
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             if (strcmp(sem_1->comp->data_name,id)==0) {
-                sprintf(str_err,"ERROR: limit '%s' is a typename, expected constant integer or enumeration",id);
+                sprintf(str_err,"limit '%s' is a typename, expected constant integer or enumeration",id);
                 yyerror(str_err);
                 new_expr = expr_from_hardcoded_int(0);
             }
@@ -844,7 +844,7 @@ expr_t *limit_from_id(char *id) {
             }
         }
         else {
-            sprintf(str_err,"ERROR: invalid limit '%s', expected constant integer or enumeration",id);
+            sprintf(str_err,"invalid limit '%s', expected constant integer or enumeration",id);
             yyerror(str_err);
             new_expr = expr_from_hardcoded_int(0);
         }
@@ -852,7 +852,7 @@ expr_t *limit_from_id(char *id) {
     else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            sprintf(str_err,"undeclared symbol '%s'",id);
             yyerror(str_err);
         }
         new_expr = expr_from_hardcoded_int(0);
@@ -871,19 +871,19 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
                 new_expr = expr_from_signed_hardcoded_int(op,sem_2->var->ival);
             }
             else {
-                yyerror("ERROR: signed `limit` can be only integer constant");
+                yyerror("signed `limit` can be only integer constant");
                 new_expr = expr_from_hardcoded_int(0);
             }
         }
         else {
-            yyerror("ERROR: signed `limit` can be only integer constant");
+            yyerror("signed `limit` can be only integer constant");
             new_expr = expr_from_hardcoded_int(0);
         }
     }
     else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared symbol '%s'",id);
+            sprintf(str_err,"undeclared symbol '%s'",id);
             yyerror(str_err);
         }
         new_expr = expr_from_hardcoded_int(0);
@@ -898,12 +898,12 @@ data_t *reference_to_typename(char *id) {
         if (sm_1->id_is == ID_TYPEDEF) {
             return sm_1->comp;
         }
-        yyerror("ERROR: id is not a data type");
+        yyerror("id is not a data type");
     }
     else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared datatype '%s'",id);
+            sprintf(str_err,"undeclared datatype '%s'",id);
             yyerror(str_err);
         }
     }
