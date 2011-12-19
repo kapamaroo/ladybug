@@ -49,7 +49,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     op_t op;
     var_t *tmp;
 
-    ir_node_t *new_ASM_binary;
+    ir_node_t *new_binary;
     ir_node_t *bitmap1;
     ir_node_t *bitmap2;
     ir_node_t *ir_final;
@@ -106,33 +106,33 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
 
     //result goes to x
     if (op==OP_PLUS) {
-        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
-        new_ASM_binary->ir_lval = calculate_lvalue(ll);
-        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-        new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-        return new_ASM_binary;
+        new_binary = new_ir_node_t(NODE_BINARY_OR);
+        new_binary->ir_lval = calculate_lvalue(ll);
+        new_binary->ir_lval2 = calculate_lvalue(rr);
+        new_binary->ir_lval_dest = calculate_lvalue(x);
+        return new_binary;
     }
     else if (op==OP_MINUS) {
         //should never reach here, we cannot assign an expression of set datatype
         yyerror("UNEXPECTED_ERROR: 71-1");
         exit(EXIT_FAILURE);
         /*
-          tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
+          tmp_node = new_ir_node_t(NODE_BINARY_NOT);
           tmp_node->ir_lval = calculate_lvalue(rr);
           tmp_node->ir_lval_dest = calculate_lvalue(rr);
-          new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-          new_ASM_binary->ir_lval = calculate_lvalue(lr);
-          new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-          new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-          return new_ASM_binary;
+          new_binary = new_ir_node_t(NODE_BINARY_AND);
+          new_binary->ir_lval = calculate_lvalue(lr);
+          new_binary->ir_lval2 = calculate_lvalue(rr);
+          new_binary->ir_lval_dest = calculate_lvalue(x);
+          return new_binary;
         */
     }
     else if (op==OP_MULT) {
-        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-        new_ASM_binary->ir_lval = calculate_lvalue(ll);
-        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-        new_ASM_binary->ir_lval_dest = calculate_lvalue(x);
-        return new_ASM_binary;
+        new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary->ir_lval = calculate_lvalue(ll);
+        new_binary->ir_lval2 = calculate_lvalue(rr);
+        new_binary->ir_lval_dest = calculate_lvalue(x);
+        return new_binary;
     }
     else {
         yyerror("UNEXPECTED_ERROR: 71-2 :bad operator in create_bitmap()");
@@ -142,7 +142,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     ir_final = NULL;
     ir_final = link_stmt_to_stmt(bitmap1,ir_final);
     ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-    ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+    ir_final = link_stmt_to_stmt(new_binary,ir_final);
 
     return ir_final;
 }
@@ -153,7 +153,7 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
     op_t op;
     var_t *tmp;
 
-    ir_node_t *new_ASM_binary;
+    ir_node_t *new_binary;
     ir_node_t *bitmap1;
     ir_node_t *bitmap2;
     ir_node_t *tmp_node;
@@ -181,33 +181,33 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
     ll = tmp;
 
     if (op==OP_PLUS) {
-        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_OR);
-        new_ASM_binary->ir_lval = calculate_lvalue(ll);
-        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
+        new_binary = new_ir_node_t(NODE_BINARY_OR);
+        new_binary->ir_lval = calculate_lvalue(ll);
+        new_binary->ir_lval2 = calculate_lvalue(rr);
+        new_binary->ir_lval_dest = calculate_lvalue(factory);
     }
     else if (op==OP_MINUS) {
-        tmp_node = new_ir_node_t(NODE_TYPEOF_SET_NOT);
+        tmp_node = new_ir_node_t(NODE_BINARY_NOT);
         tmp_node->ir_lval = calculate_lvalue(rr);
         tmp_node->ir_lval_dest = calculate_lvalue(rr);
-        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-        new_ASM_binary->ir_lval = calculate_lvalue(ll);
-        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
+        new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary->ir_lval = calculate_lvalue(ll);
+        new_binary->ir_lval2 = calculate_lvalue(rr);
+        new_binary->ir_lval_dest = calculate_lvalue(factory);
 
-        new_ASM_binary = link_stmt_to_stmt(new_ASM_binary,tmp_node);
+        new_binary = link_stmt_to_stmt(new_binary,tmp_node);
     }
     else if (op==OP_MULT) {
-        new_ASM_binary = new_ir_node_t(NODE_TYPEOF_SET_AND);
-        new_ASM_binary->ir_lval = calculate_lvalue(ll);
-        new_ASM_binary->ir_lval2 = calculate_lvalue(rr);
-        new_ASM_binary->ir_lval_dest = calculate_lvalue(factory);
+        new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary->ir_lval = calculate_lvalue(ll);
+        new_binary->ir_lval2 = calculate_lvalue(rr);
+        new_binary->ir_lval_dest = calculate_lvalue(factory);
     }
 
     ir_final = NULL;
     ir_final = link_stmt_to_stmt(bitmap1,ir_final);
     ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-    ir_final = link_stmt_to_stmt(new_ASM_binary,ir_final);
+    ir_final = link_stmt_to_stmt(new_binary,ir_final);
 
     return ir_final;
 }
@@ -221,6 +221,7 @@ ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set) {
     expr_t *norm_base;
     expr_t *left;
     expr_t *right;
+    expr_t *range;
 
     if (expr_set->expr_is==EXPR_LVAL) {
         ir_final = new_ir_node_t(NODE_ASSIGN_SET);
@@ -255,7 +256,10 @@ ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set) {
             }
             else {
                 //range of elements
+#warning fixme
+                //2^(left+1) - 2^(right)  == 2^right * (2^(left-right+1)-1)
                 tmp_node = new_ir_node_t(NODE_ADD_ELEM_RANGE_TO_SET);
+                //range =
                 tmp_node->ir_rval = expr_tree_to_ir_tree(left);
                 tmp_node->ir_rval2 = expr_tree_to_ir_tree(right);
             }
