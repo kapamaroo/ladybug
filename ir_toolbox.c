@@ -74,21 +74,34 @@ char *new_label_subprogram(char *sub_name) {
         sub_name = DEFAULT_LABEL_PREFIX;
     }
 
-    snprintf(label_buf,MAX_LABEL_SIZE,"sub_%s",sub_name);
+    snprintf(label_buf,MAX_LABEL_SIZE,"%s",sub_name);
     return strdup(label_buf);
+}
+
+ir_node_t *new_lost_node(char *error) {
+    ir_node_t *new_ir;
+
+    new_ir = new_ir_node_t(NODE_LOST_NODE);
+    new_ir->error = error;
+
+    return new_ir;
 }
 
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *new_node;
     ir_node_t *convert_node;
-    ir_node_t *dark_init_node;
     ir_node_t *new_func_call;
     sem_t *sem_1;
 
-    //we do not handle EXPR_STRING here, strings can be only on assignments (not inside expressions)
+    //we do not handle EXPR_STRING here, strings can be only in assignments (not inside expressions)
 
-    if (!ltree || ltree->expr_is==EXPR_LOST) {
-        return NULL;
+    //the EXPR_LOST is actually a EXPR_LVAL with parsing errors, just load from lost_var
+
+    if (!ltree) {
+        //this at the worst case MUST be EXPR_LOST
+        yyerror("UNEXPECTED_ERROR: 99-1: NULL expr_tree_to_ir_tree()");
+        exit(EXIT_FAILURE);
+        //return NULL;
     }
 
     if (ltree->expr_is==EXPR_RVAL) {
@@ -103,32 +116,35 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 return new_node;
             }
             else {
-                yyerror("UNEXPECTED_ERROR: 99-1");
+                yyerror("UNEXPECTED_ERROR: 99-2: expr_tree_to_ir_tree()");
                 exit(EXIT_FAILURE);
             }
         }
-        //{		else if (ltree->op==RELOP_B) {}
-        //		else if (ltree->op==RELOP_BE) {}
-        //		else if (ltree->op==RELOP_L) {}
-        //		else if (ltree->op==RELOP_LE) {}
-        //		else if (ltree->op==RELOP_NE) {}
-        //		else if (ltree->op==RELOP_EQU) {}
-        //		else if (ltree->op==OP_SIGN) {}
-        //		else if (ltree->op==OP_PLUS) {}
-        //		else if (ltree->op==OP_MINUS) {}
-        //		else if (ltree->op==OP_MULT) {}
-        //		else if (ltree->op==OP_RDIV) {}
-        //		else if (ltree->op==OP_DIV) {}
-        //		else if (ltree->op==OP_MOD) {}
-        //		else if (ltree->op==OP_AND) {}
-        //		else if (ltree->op==OP_OR) {}
-        //		else if (ltree->op==OP_NOT) {}
-        //}
+        //else if (ltree->op==RELOP_B) {}
+        //else if (ltree->op==RELOP_BE) {}
+        //else if (ltree->op==RELOP_L) {}
+        //else if (ltree->op==RELOP_LE) {}
+        //else if (ltree->op==RELOP_NE) {}
+        //else if (ltree->op==RELOP_EQU) {}
+        //else if (ltree->op==OP_SIGN) {}
+        //else if (ltree->op==OP_PLUS) {}
+        //else if (ltree->op==OP_MINUS) {}
+        //else if (ltree->op==OP_MULT) {}
+        //else if (ltree->op==OP_RDIV) {}
+        //else if (ltree->op==OP_DIV) {}
+        //else if (ltree->op==OP_MOD) {}
+        //else if (ltree->op==OP_AND) {}
+        //else if (ltree->op==OP_OR) {}
+        //else if (ltree->op==OP_NOT) {}
         else { //it's all the same
             new_node = new_ir_node_t(NODE_RVAL);
             new_node->op_rval = ltree->op;
-            //also convert the l1 and l2 from ltree
-            new_node->ir_rval = expr_tree_to_ir_tree(ltree->l1);
+
+            if (ltree->op!=OP_NOT) {
+                //speciall case for OP_SIGN, OP_NOT they use only the l2 expr, see expr_toolbox.c, expressions.c
+                new_node->ir_rval = expr_tree_to_ir_tree(ltree->l1);
+            }
+
             new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
 
             if (ltree->convert_to==SEM_INTEGER) {
@@ -148,33 +164,36 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
         new_node->ival = ltree->ival;
         new_node->fval = ltree->fval;
+        new_node->cval = ltree->cval;
         return new_node;
     }
-    else if (ltree->expr_is==EXPR_SET || ltree->expr_is==EXPR_NULL_SET) {
+    else if (ltree->expr_is==EXPR_NULL_SET) {
+        new_node = new_ir_node_t(NODE_INIT_NULL_SET);
+        new_node->ir_lval_dest = calculate_lvalue(ltree->var);
+        return new_node;
+    }
+    else if (ltree->expr_is==EXPR_SET) {
         //convert to bitmap, this set goes for assignment
+        //we enter here with an assign statement like:
+        //"set_variable := [5,10..15,20] + lval_set * another_lval_set - [7,8]
         new_node = create_bitmap(ltree);
         return new_node;
     }
-    else if (ltree->expr_is==EXPR_LVAL) {
-        if (ltree->datatype->is==TYPE_SET) {
-	    //we handle differently the lvalue sets, see new_assignment() in ir.c
-            printf("UNEXPECTED_ERROR:72-1");
-            exit(EXIT_FAILURE);
-        }
+    else if (ltree->expr_is==EXPR_LVAL || ltree->expr_is==EXPR_LOST) {
+        //if (ltree->datatype->is==TYPE_SET) {
+	//    //we handle differently the lvalue sets, see new_assignment() in ir.c
+        //    yyerror("UNEXPECTED_ERROR: 99-3: EXPR_LVAL of TYPE_SET in expr_tree_to_ir_tree()");
+        //    exit(EXIT_FAILURE);
+        //}
+
+        //load the lvalue of every datatype
 
         new_node = new_ir_node_t(NODE_LOAD);
         new_node->address = calculate_lvalue(ltree->var);
 
         if (ltree->var->id_is==ID_RETURN) {
             sem_1 = sm_find(ltree->var->name);
-            dark_init_node = prepare_stack_for_call(sem_1->subprogram,ltree->expr_list);
-            if (!dark_init_node) {
-                //parse errors, omit code
-                return NULL;
-            }
-
-            new_func_call = jump_and_link_to(sem_1->subprogram->label);
-            new_func_call = link_stmt_to_stmt(new_func_call,dark_init_node);
+            new_func_call = prepare_stack_and_call(sem_1->subprogram,ltree->expr_list);
 
             //finally we must read the return value after the actual call
             new_node = link_stmt_to_stmt(new_node,new_func_call);
@@ -193,7 +212,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         return new_node;
     }
     else {
-        yyerror("UNEXPECTED_ERROR: 99-2");
+        yyerror("UNEXPECTED_ERROR: 99-5: UNKNOWN EXPR type in expr_tree_to_ir_tree()");
         exit(EXIT_FAILURE);
     }
 }
@@ -206,12 +225,14 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
     if (!v) {
         printf("UNEXPECTED_ERROR: 74-1\n");
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
 
     //calculate the reference address
     new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
     new_node->lval = v->Lvalue;
+
+    new_node->ival = v->Lvalue->seg_offset->ival;
 
     if (v->Lvalue->content_type==PASS_REF) {
         //set the address so far
@@ -273,8 +294,9 @@ expr_t *make_ASCII_bound_checks(var_t *v,expr_t *l) {
     return total_cond;
 }
 
-ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
+ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
     ir_node_t *new_stack_init_node;
+    ir_node_t *ir_jump_link;
     ir_node_t *tmp_assign;
 
     data_t *el_datatype;
@@ -286,13 +308,13 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
 #if BISON_DEBUG_LEVEL >= 1
         yyerror("ERROR: null expr_list for subprogram call (debugging info)");
 #endif
-        return NULL;
+        return new_lost_node("__BAD_STACK_PREPARATION__");
     }
 
     if (list->all_expr_num != subprogram->param_num) {
         sprintf(str_err,"invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
         yyerror(str_err);
-        return NULL;
+        return new_lost_node("__BAD_STACK_PREPARATION__");
     }
 
     if (MAX_EXPR_LIST - list->expr_list_empty == subprogram->param_num) {
@@ -306,11 +328,12 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
         for (i=0;i<subprogram->param_num;i++) {
             tmp_assign = NULL;
 
-            if (list->expr_list[i]->expr_is==EXPR_LOST) {
-                //parse errors
-                free(tmp_var);
-                return NULL;
-            }
+            //continue ir generation
+            //if (list->expr_list[i]->expr_is==EXPR_LOST) {
+            //    //parse errors
+            //    free(tmp_var);
+            //    return NULL;
+            //}
 
             tmp_var->datatype = subprogram->param[i]->datatype;
             tmp_var->name = subprogram->param[i]->name;
@@ -324,21 +347,24 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                     sprintf(str_err,"parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
                     yyerror(str_err);
                     free(tmp_var);
-                    return NULL;
+
+                    return new_lost_node("__BAD_STACK_PREPARATION__");
                 }
 
                 if (el_datatype != subprogram->param[i]->datatype) {
                     sprintf(str_err,"passing refference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
                     yyerror(str_err);
                     free(tmp_var);
-                    return NULL;
+
+                    return new_lost_node("__BAD_STACK_PREPARATION__");
                 }
 
                 if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
                     sprintf(str_err,"guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
                     yyerror(str_err);
                     free(tmp_var);
-                    return NULL;
+
+                    return new_lost_node("__BAD_STACK_PREPARATION__");
                 }
 
                 //mark temporarily the lvalue as PASS_VAL, in order for the calculate_lvalue() to work properly
@@ -361,7 +387,8 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
                 if (TYPE_IS_COMPOSITE(el_datatype)) {
                     yyerror("arrays, records and set datatypes can only be passed by refference");
                     free(tmp_var);
-                    return NULL;
+
+                    return new_lost_node("__BAD_STACK_PREPARATION__");
                 }
                 tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
             }
@@ -370,11 +397,15 @@ ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list) {
             new_stack_init_node = link_stmt_to_stmt(tmp_assign,new_stack_init_node);
         }
         free(tmp_var);
+
+        ir_jump_link = jump_and_link_to(subprogram->label);
+        new_stack_init_node = link_stmt_to_stmt(ir_jump_link,new_stack_init_node);
+
         return new_stack_init_node;
     }
 
     //some expressions are invalid, but their number is correct, avoid some unreal error messages afterwards
-    return NULL;
+    return new_lost_node("__BAD_STACK_PREPARATION__");
 }
 
 var_t *new_normal_variable_from_guarded(var_t *guarded) {

@@ -15,9 +15,11 @@ char *new_label_loop_to_cond(char *branch_label);
 char *new_label_exit_branch(char *branch_label);
 char *new_label_subprogram(char *sub_name);
 
+ir_node_t *new_lost_node(char *error);
+
 expr_t *make_enum_subset_bound_checks(var_t *v,expr_t *l);
 expr_t *make_ASCII_bound_checks(var_t *v,expr_t *l);
-ir_node_t *prepare_stack_for_call(func_t *subprogram, expr_list_t *list);
+ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list);
 
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree);
 ir_node_t *calculate_lvalue(var_t *v);
