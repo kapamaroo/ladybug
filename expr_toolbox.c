@@ -57,6 +57,7 @@ expr_t *expr_from_variable(var_t *v) {
     l->cstr = NULL;
     l->var = v;
     l->datatype = v->datatype;
+    l->expr_list = NULL; //for ID_RETURN, see semantics.h
     l->convert_to = NULL;
 
     if (v->id_is==ID_LOST) {
