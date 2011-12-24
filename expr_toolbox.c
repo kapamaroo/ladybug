@@ -18,6 +18,15 @@ expr_t *expr_from_variable(var_t *v) {
         exit(EXIT_FAILURE);
     }
 
+    //no
+    //ID_STRING,
+    //ID_FUNC,
+    //ID_PROC,
+    //ID_FORWARDED_FUNC,
+    //ID_FORWARDED_PROC,
+    //ID_TYPEDEF,
+    //ID_PROGRAM_NAME
+
     if (v->id_is==ID_CONST) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
@@ -39,10 +48,6 @@ expr_t *expr_from_variable(var_t *v) {
         return l;
     }
 
-    if (v->id_is==ID_LOST) {
-        return expr_from_lost_int(0);
-    }
-
     l = (expr_t*)malloc(sizeof(expr_t));
     l->parent = l;
     l->l1 = NULL;
@@ -54,14 +59,45 @@ expr_t *expr_from_variable(var_t *v) {
     l->datatype = v->datatype;
     l->convert_to = NULL;
 
-    if (v->id_is==ID_VAR) {
-        if (v->datatype->is==TYPE_SUBSET) {
-            l->datatype = v->datatype->def_datatype; //integer,char,boolean, or enumeration
-        }
-        //arrays and record types are allowed only for asignments
+    if (v->id_is==ID_LOST) {
+        //refference to lost variable
+        l->expr_is = EXPR_LOST;
+        return l;
     }
 
-    return l;
+    //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
+    if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
+        if (v->datatype->is==TYPE_ARRAY || v->datatype->is==TYPE_RECORD) {
+            sprintf(str_err,"ERROR: doing math with '%s' of composite datatype '%s'",v->name,v->datatype->data_name);
+            yyerror(str_err);
+            l->expr_is = EXPR_LOST;
+            l->var = lost_var_reference();
+            l->datatype = l->var->datatype;
+            return l;
+        }
+
+        if (!TYPE_IS_ARITHMETIC(v->datatype)) {
+            sprintf(str_err,"WARNING: doing math with '%s' value",v->datatype->data_name);
+            yyerror(str_err);
+        }
+
+        //reminder: we check bounds before we assign to subset or enumeration,
+        //so we can use their __actual__ datatype
+        if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
+            //this is actually a warning, maybe we need a yywarning?
+            sprintf(str_err,"WARNING: expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->data_name);
+            yyerror(str_err);
+
+            //pass the __actual__ datatype (integer,char,boolean, or enumeration)
+            //reminder: def_datatype is always standard scalar, see limit_from_id() below
+            l->datatype = v->datatype->def_datatype;
+        }
+        //arrays and record types are allowed only for asignments
+        return l;
+    }
+
+    printf("UNEXPECTED ERROR: expr_from_variable()");
+    exit(EXIT_FAILURE);
 }
 
 expr_t *expr_from_STRING(char *id) {
@@ -123,10 +159,8 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
             sprintf(str_err,"ERROR: invalid procedure call '%s', expected function",id);
             yyerror(str_err);
-            return expr_from_lost_int(0); //return something to avoid unreal error messages
         } else {
             yyerror("ID is not a subprogram.");
-            return expr_from_lost_int(0); //return something to avoid unreal error messages
         }
     } else {
         if (!sm_find_lost_symbol(id)) {
@@ -134,17 +168,8 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
             sprintf(str_err,"ERROR: undeclared subprogram '%s'",id);
             yyerror(str_err);
         }
-        return expr_from_lost_int(0); //return something to avoid unreal error messages
     }
-}
-
-expr_t *expr_from_lost_int(int value) {
-    expr_t *new_expr;
-
-    new_expr = expr_from_hardcoded_int(value);
-    new_expr->expr_is = EXPR_LOST;
-
-    return new_expr;
+    return expr_from_variable(lost_var_reference()); //EXPR_LOST
 }
 
 expr_t *expr_from_signed_hardcoded_int(op_t op,int value) {
@@ -164,8 +189,8 @@ expr_t *expr_from_hardcoded_real(float value) {
     new_expr->op = OP_IGNORE;
     new_expr->expr_is = EXPR_HARDCODED_CONST;
     new_expr->datatype = SEM_REAL;
-    new_expr->fval = value;
     new_expr->ival = value;
+    new_expr->fval = value;
     new_expr->cval = value;
 
     return new_expr;
@@ -184,15 +209,6 @@ expr_t *expr_from_hardcoded_boolean(int value) {
     new_expr->ival = value;
     new_expr->fval = value;
     new_expr->cval = value;
-
-    return new_expr;
-}
-
-expr_t *expr_from_lost_boolean(int value) {
-    expr_t *new_expr;
-
-    new_expr = expr_from_hardcoded_boolean(value);
-    new_expr->expr_is = EXPR_LOST;
 
     return new_expr;
 }
@@ -229,7 +245,6 @@ expr_t *expr_from_setexpression(elexpr_list_t *list) {
     new_expr->op = OP_IGNORE;
     new_expr->elexpr_list = NULL;
     new_expr->datatype = SEM_CHAR; //default type of set
-
 
     if (list && list->elexpr_list_usage==EXPR_SET) {
         new_expr->expr_is = EXPR_SET;
@@ -335,7 +350,7 @@ char *op_literal(op_t op) {
     	return "<>";
     case RELOP_EQU:	// '='
         return "=";
-    case RELOP_IN:		// 'in'
+    case RELOP_IN:	// 'in'
     	return "in";
     case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
     	return "op_SIGN";
@@ -347,15 +362,15 @@ char *op_literal(op_t op) {
     	return "*";
     case OP_RDIV:	// '/'
     	return "/";
-    case OP_DIV:		// 'div'
+    case OP_DIV:       	// 'div'
     	return "div";
-    case OP_MOD:		// 'mod'
+    case OP_MOD:       	// 'mod'
     	return "mod";
-    case OP_AND:		// 'and'
+    case OP_AND:       	// 'and'
     	return "and";
     case OP_OR:		// 'or'
     	return "or";
-    case OP_NOT:		// 'not'
+    case OP_NOT:       	// 'not'
         return "not";
     default:
         yyerror("UNEXPECTED_ERROR: 04");
@@ -442,22 +457,26 @@ dim_t *make_dim_bound_from_id(char *id) {
 int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
     int i;
     int index;
+    int error=0;
+
     expr_t *l;
 
     for (i=0;i<data->field_num;i++) {
         l = list->expr_list[i];
-        if (TYPE_IS_SCALAR(l->datatype)) {
+        if (l->expr_is==EXPR_LOST) {
+            error++;
+        } else if (TYPE_IS_SCALAR(l->datatype)) {
             switch (l->expr_is) {
-            case EXPR_LOST:
-                return 0;
             case EXPR_HARDCODED_CONST:
+                //static check here
                 index = l->ival - data->dim[i]->first;
                 if (index<0 || index > data->dim[i]->range) {
                     sprintf(str_err,"reference to the %d dimension of array, out of bounds",i);
                     yyerror(str_err);
-                    return 0;
+                    error++;
+                    break;
                 }
-                break; //static check here, do not generate dynamic checks here, we already know the answer
+                break;
             case EXPR_LVAL:
             case EXPR_RVAL:
                 break;
@@ -466,12 +485,15 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
                 printf("UNEXPECTED ERROR 30\n");
                 exit(EXIT_FAILURE);
             }
-        }
-        else {
+        } else {
             sprintf(str_err,"reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
             yyerror(str_err);
-            return 0;
+            error++;
         }
+    }
+
+    if (error) {
+        return 0;
     }
     return 1;
 }
@@ -572,34 +594,55 @@ iter_t *make_iter_space(expr_t *l1,int step,expr_t *l3) {
 
     iter_t *new_iter;
 
+    new_iter = (iter_t*)malloc(sizeof(iter_t));
+
     if (!l1 || !l3) {
 #if BISON_DEBUG_LEVEL >= 1
         yyerror("NULL expression in make_iter_space() (debugging info)");
 #endif
-        return NULL;
+        new_iter->start = expr_from_hardcoded_int(0);
+        new_iter->stop = expr_from_hardcoded_int(0);
+        new_iter->step = expr_from_hardcoded_int(0);
+        return new_iter;
     }
 
     if (l1->expr_is!=EXPR_LVAL && l1->expr_is!=EXPR_HARDCODED_CONST) {
         yyerror("invalid expr for left bound in iter space");
-        return NULL;
+        new_iter->start = expr_from_hardcoded_int(0);
+        new_iter->stop = expr_from_hardcoded_int(0);
+        new_iter->step = expr_from_hardcoded_int(0);
+        return new_iter;
+        //return NULL;
     }
 
     if (l1->expr_is==EXPR_LVAL && l1->var->datatype->is!=TYPE_INT && l1->var->datatype->def_datatype->is!=TYPE_INT) {
         yyerror("left bound in iter space MUST be integer");
-        return NULL;
+        new_iter->start = expr_from_hardcoded_int(0);
+        new_iter->stop = expr_from_hardcoded_int(0);
+        new_iter->step = expr_from_hardcoded_int(0);
+        return new_iter;
+        //return NULL;
     }
 
     if (l3->expr_is!=EXPR_LVAL && l3->expr_is!=EXPR_HARDCODED_CONST) {
         yyerror("invalid expr for right bound in iter space");
-        return NULL;
+        new_iter->start = expr_from_hardcoded_int(0);
+        new_iter->stop = expr_from_hardcoded_int(0);
+        new_iter->step = expr_from_hardcoded_int(0);
+        return new_iter;
+        //return NULL;
     }
 
     if (l3->expr_is==EXPR_LVAL && l3->var->datatype->is!=TYPE_INT && l3->var->datatype->def_datatype->is!=TYPE_INT) {
         yyerror("right bound in iter space MUST be integer");
-        return NULL;
+        new_iter->start = expr_from_hardcoded_int(0);
+        new_iter->stop = expr_from_hardcoded_int(0);
+        new_iter->step = expr_from_hardcoded_int(0);
+        return new_iter;
+        //return NULL;
     }
 
-    new_iter = (iter_t*)malloc(sizeof(iter_t));
+    //everything is ok, make the real iter_space
     new_iter->start = l1;
     new_iter->stop = l3;
     new_iter->step = expr_from_hardcoded_int(step);
@@ -730,22 +773,22 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
     }
 
     if (l1->expr_is==EXPR_LOST && l2->expr_is==EXPR_LOST) {
-        return NULL; //both expressions had parse errors, ignore elexpr
+        //both expressions had parse errors, ignore elexpr
+        return NULL;
     }
+
     //at least one expression exists, check if valid
-
-    if (!TYPE_IS_ELEXPR_VALID(l1->datatype)) {
-        sprintf(str_err,"ignoring elexpression range because of invalid type '%s'",l1->datatype->data_name);
+    if (l1->expr_is!=EXPR_LOST && !TYPE_IS_ELEXPR_VALID(l1->datatype)) {
+        sprintf(str_err,"left bound of elexpression range has invalid datatype '%s'",l1->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
 
-    if (!TYPE_IS_ELEXPR_VALID(l2->datatype)) {
-        sprintf(str_err,"ignoring elexpression range because of invalid type '%s'",l2->datatype->data_name);
+    if (l2->expr_is!=EXPR_LOST && !TYPE_IS_ELEXPR_VALID(l2->datatype)) {
+        sprintf(str_err,"right bound of elexpression range has invalid datatype '%s'",l2->datatype->data_name);
         yyerror(str_err);
         return NULL;
     }
-
 
     if (l1->datatype!=l2->datatype) {
         yyerror("ignoring elexpression range because bounds don't have the same type");
@@ -754,7 +797,7 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
 
     if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) { //optimization
         if (l1->ival>l2->ival) {
-            sprintf(str_err,"WARNING: ignore invalid range %d..%d, left bound must be less or equal to right bound",l1->ival,l2->ival);
+            sprintf(str_err,"WARNING: ignore invalid range %d..%d, (%d > %d)",l1->ival,l2->ival,l1->ival,l2->ival);
             yyerror(str_err);
             return NULL;
         }
@@ -795,7 +838,12 @@ elexpr_t *make_elexpr(expr_t *l) {
     }
 
     if (!TYPE_IS_ELEXPR_VALID(l->datatype)) {
-        sprintf(str_err,"ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
+        if (l->expr_is==EXPR_LVAL) {
+            sprintf(str_err,"ignoring elexpression because '%s' has invalid datatype '%s'",l->var->name,l->datatype->data_name);
+        }
+        else {
+            sprintf(str_err,"ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
+        }
         yyerror(str_err);
         return NULL;
     }

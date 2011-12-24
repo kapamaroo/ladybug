@@ -14,9 +14,6 @@ expr_t *expr_from_hardcoded_char(char value);
 
 expr_t *expr_from_function_call(char *id,expr_list_t *list);
 
-expr_t *expr_from_lost_int(int value);
-expr_t *expr_from_lost_boolean(int value);
-
 void normalize_expr_set(expr_t *expr_set);
 expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set);
 
