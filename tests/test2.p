@@ -1,8 +1,14 @@
-program test1;
-var a,d,e,x,z: integer;
-
+program test2;
+var a,b,c,d,x: integer;
+function try_me(i,j:integer): integer;
 begin
-  a :=5;
-  z:=0;
-  a := a + x + 2*a + 8 - 3 * x ;
+  i := i+j;
+   try_me := i+4;
+end;
+begin
+  a := 5;
+  b := 10;
+
+  c := try_me(a,b);
+  {d := a + x + 2*a + 8 - 3 * x ;}
 end.

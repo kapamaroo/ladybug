@@ -9,8 +9,11 @@ begin
   a := 5;
   b := 10;
 
-  a :=  try_me(x,b);
-  c := a*x;
+  c := try_me(a,b);
+  d := a - x;
+  c := 1 + try_me(a,b);
+  d := a - x;
+  c := try_me(a,b) + 4;
 
   if ( x > a ) then
     begin
