@@ -91,8 +91,6 @@ void subprogram_init(sem_t *sem_sub) {
 }
 
 void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
-    ir_node_t *ir_return;
-
     //mark subprogram as well-declared, if needed
     if (subprogram->id_is == ID_FORWARDED_FUNC) {
         subprogram->id_is = ID_FUNC;
@@ -101,10 +99,6 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
     else if (subprogram->id_is == ID_FORWARDED_PROC) {
         subprogram->id_is = ID_PROC;
     }
-
-    //this now is done from return_to_previous module()
-    //ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
-    //body = link_stmt_to_stmt(ir_return,body);
 
     close_current_scope();
 
@@ -122,6 +116,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         sem_2->id_is = ID_FORWARDED_FUNC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->func_name = sem_2->name;
+        sem_2->subprogram->stack_size = 0;
 
         if (!list) {
             yyerror("functions must have at least one parameter.");
@@ -156,6 +151,7 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->func_name = sem_2->name;
         sem_2->subprogram->return_value = NULL;
+        sem_2->subprogram->stack_size = 0;
 
         configure_formal_parameters(list,sem_2->subprogram);
     }

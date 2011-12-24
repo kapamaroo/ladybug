@@ -245,7 +245,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 	    new_stmt = expand_record_assign(v,l);
         }
         return new_stmt;
-        //case TYPE_SET:
+    case TYPE_SET:
         //not a special case any more
         //new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
         //new_stmt->address = calculate_lvalue(v);

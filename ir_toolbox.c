@@ -256,7 +256,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
             new_node->address = expr_tree_to_ir_tree(address_expr);
         } else {
             new_node = new_ir_node_t(NODE_LVAL);
-            new_node->address = v->Lvalue->seg_offset;
+            new_node->address = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
             new_node->offset = expr_tree_to_ir_tree(v->Lvalue->offset_expr);
         }
     }
@@ -329,7 +329,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
 
         tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
         tmp_var->id_is = ID_VAR;
-#warning don't we need the scope of the callee here?
+#warning do we need the scope of the callee here?
         tmp_var->scope = get_current_scope();
         tmp_var->cond_assign = NULL;
 
