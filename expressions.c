@@ -25,28 +25,13 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
         case OP_PLUS:
         case OP_MINUS:
         case OP_MULT:
-            return expr_from_lost_int(0);
-        default:
-            return expr_from_lost_boolean(0);
-        }
-    }
-
-    //arrays and record types are allowed only for asignments
-    if (l1->datatype->is==TYPE_ARRAY || l1->datatype->is==TYPE_RECORD ||
-        l2->datatype->is==TYPE_ARRAY || l1->datatype->is==TYPE_RECORD) {
-        switch (op) {
-        case OP_PLUS:
-        case OP_MINUS:
-        case OP_MULT:
-            sprintf(str_err,"'%s' operator applies only to integers, reals and sets",op_literal(op));
-            yyerror(str_err);
             return expr_from_hardcoded_int(0);
         default:
-            sprintf(str_err,"'%s' operator does not apply to arrays, records and sets",op_literal(op));
-            yyerror(str_err);
             return expr_from_hardcoded_boolean(0);
         }
     }
+
+    //reminder: we cannot have STRING inside expressions, see bison.y
 
     if ((l1->expr_is==EXPR_SET || l1->expr_is==EXPR_NULL_SET ||
          (l1->expr_is==EXPR_LVAL && l1->datatype->is==TYPE_SET)) &&
@@ -103,124 +88,157 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
             return expr_from_hardcoded_boolean(0);
         }
     }
-    else if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
-             (l2->expr_is==EXPR_RVAL || l2->expr_is==EXPR_LVAL || l2->expr_is==EXPR_HARDCODED_CONST)) {
+
+    //maybe only the one of them is a set expression
+    if ((l1->expr_is==EXPR_SET || l1->expr_is==EXPR_NULL_SET ||
+         (l1->expr_is==EXPR_LVAL && l1->datatype->is==TYPE_SET)) ||
+        (l2->expr_is==EXPR_SET || l2->expr_is==EXPR_NULL_SET ||
+         (l2->expr_is==EXPR_LVAL && l2->datatype->is==TYPE_SET))) {
+        switch (op) {
+        case OP_PLUS:
+        case OP_MINUS:
+        case OP_MULT:
+            //assume that the programmer wanted an expression of sets
+            yyerror("expected both expressions to be of set datatype");
+            return expr_from_setexpression(NULL); //return the NULL set expression
+        default:
+            //all other operators in this function are comparison operators
+            //assume that the programmer wanted a boolean expression
+            sprintf(str_err,"'%s' operator does not apply to sets",op_literal(op));
+            yyerror(str_err);
+            return expr_from_hardcoded_boolean(0);
+        }
+    }
+
+    //continue only with scalar or arithmetic datatypes
+    if (TYPE_IS_COMPOSITE(l1->datatype) || TYPE_IS_COMPOSITE(l2->datatype)) {
+        printf("UNEXPECTED ERROR: composite type in expression\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
+        (l2->expr_is==EXPR_RVAL || l2->expr_is==EXPR_LVAL || l2->expr_is==EXPR_HARDCODED_CONST)) {
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
-        new_expr->datatype = SEM_BOOLEAN;
+        //new_expr->datatype = SEM_BOOLEAN; //decide later
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
         new_expr->ival = 0;
+        new_expr->fval = 0;
+        new_expr->cval = 0;
 
         l1->parent = new_expr;
         l2->parent = new_expr;
 
-        if (l1->datatype->is==TYPE_REAL || l2->datatype->is==TYPE_REAL) {
-            //convert everything to real
-            if (l1->expr_is==EXPR_HARDCODED_CONST) {
-                l1->datatype = SEM_REAL;
-                l1->fval = l1->ival;
-            }
-            else {
-                l1->convert_to = SEM_REAL;
-            }
-
-            if (l2->expr_is==EXPR_HARDCODED_CONST) {
-                l2->datatype = SEM_REAL;
-                l2->fval = l2->ival;
-            }
-            else {
-                l2->convert_to = SEM_REAL;
-            }
-
-            switch (op) {
-            case OP_PLUS:
-            case OP_MINUS:
-            case OP_MULT:
-                new_expr->datatype = SEM_REAL; //the result set has the same datatype
-                break;
-            default: //keep the compiler happy
-                break;
-            }
-        }
-        else {
-            //convert everything to int, there are no reals
-            //enums are already integers, chars are in ASCII so change the type (no convert)
-            //see expr_toolbox.c for more information
-            l1->datatype = SEM_INTEGER;
-            l2->datatype = SEM_INTEGER;
-            switch (op) {
-            case OP_PLUS:
-            case OP_MINUS:
-            case OP_MULT:
-                new_expr->datatype = SEM_INTEGER; //the result set has the same datatype
-                break;
-            default: //keep the compiler happy
-                break;
-            }
+        //if EXPR_LVAL we already printed a warning from expr_from_variable(), see expr_toolbox.c
+        if (!TYPE_IS_ARITHMETIC(l1->datatype) && l1->expr_is!=EXPR_LVAL) {
+            sprintf(str_err,"WARNING: doing math with '%s' value",l1->datatype->data_name);
+            yyerror(str_err);
         }
 
-        //both datatypes are the same
+        if (!TYPE_IS_ARITHMETIC(l2->datatype) && l2->expr_is!=EXPR_LVAL) {
+            sprintf(str_err,"WARNING: doing math with '%s' value",l2->datatype->data_name);
+            yyerror(str_err);
+        }
+        //continue as normal
+
+        if (l1->datatype->is!=l2->datatype->is) {
+            //if we have at least one real, convert the other expr to real too
+            if (l1->datatype->is==TYPE_REAL) {
+                if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_REAL; }
+                else { l2->convert_to = SEM_REAL; }
+                new_expr->datatype = SEM_REAL;
+            } else if (l2->datatype->is==TYPE_REAL) {
+                if (l1->expr_is==EXPR_HARDCODED_CONST) { l1->datatype = SEM_REAL; }
+                else { l1->convert_to = SEM_REAL; }
+                new_expr->datatype = SEM_REAL;
+            } else {
+                //both are of datatype integer
+                new_expr->datatype = SEM_INTEGER;
+            }
+        } else if (l1->datatype->is==TYPE_REAL) {
+            //both are real
+            new_expr->datatype = SEM_REAL;
+        } else {
+            //both are not real, do it integer
+            //here, if we are doing math with non arithmetic datatypes, consider them as integer
+            new_expr->datatype = SEM_INTEGER;
+        }
+
+        //correct the datatype if we have RELOP operator
+        switch (op) {
+        case OP_PLUS:
+        case OP_MINUS:
+        case OP_MULT:
+            //we already decided
+            break;
+        default:
+            new_expr->datatype = SEM_BOOLEAN;
+        }
+
         if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {	//optimization
+            //both datatypes are the same
             new_expr->expr_is = EXPR_HARDCODED_CONST;
             switch (op) {
             case OP_PLUS:
                 new_expr->ival = l1->ival + l2->ival;	//if integer
                 new_expr->fval = l1->fval + l2->fval;	//if real
+                new_expr->cval = l1->cval + l2->cval;	//if char, boolean
                 break;
             case OP_MINUS:
                 new_expr->ival = l1->ival - l2->ival;	//if integer
                 new_expr->fval = l1->fval - l2->fval;	//if real
+                new_expr->cval = l1->cval - l2->cval;	//if char, boolean
                 break;
             case OP_MULT:
                 new_expr->ival = l1->ival * l2->ival;	//if integer
                 new_expr->fval = l1->fval * l2->fval;	//if real
+                new_expr->cval = l1->cval * l2->cval;	//if char, boolean
                 break;
             case RELOP_B:
                 if (l1->fval > l2->fval || l1->ival > l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
             case RELOP_BE:
                 if (l1->fval >= l2->fval || l1->ival >= l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
             case RELOP_L:
                 if (l1->fval < l2->fval || l1->ival < l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
             case RELOP_LE:
                 if (l1->fval <= l2->fval || l1->ival <= l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
             case RELOP_NE:
                 if (l1->fval != l2->fval || l1->ival != l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
             case RELOP_EQU:
                 if (l1->fval == l2->fval || l1->ival == l2->ival) {
-                    new_expr->ival = 1;
+                    new_expr->cval = 1;
                 }
                 break;
-            default: //keep the compiler happy
+            default:
+                printf("UNEXPECTED ERROR: expressions.c : bad operator\n");
+                exit(EXIT_FAILURE);
                 break;
             }
             //we don't need the previous hardcoded values any more
             new_expr->l1 = NULL;
             new_expr->l2 = NULL;
         }
-        return new_expr;
     }
-    else {
-        yyerror("incopatible datatypes of operands in expr_relop_equ");
-        return expr_from_hardcoded_boolean(0);
-    }
+
+    return new_expr;
 }
 
 expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
@@ -232,7 +250,7 @@ expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     if (l1->expr_is==EXPR_LOST || l2->expr_is==EXPR_LOST) {
-        return expr_from_lost_boolean(0);
+        return expr_from_hardcoded_boolean(0);
     }
 
     if (l2->expr_is==EXPR_SET || (l2->expr_is==EXPR_LVAL && l2->datatype->is==TYPE_SET)) {
@@ -244,7 +262,7 @@ expr_t *expr_inop(expr_t *l1,op_t op,expr_t *l2) {
             }
         }
         else {
-            if (l1->datatype!=l2->datatype) { //for the set datatype see expr_from_setexpression() from expr_toolbox.c
+            if (l1->datatype!=l2->datatype) { //for the set datatype see expr_from_setexpression() from expressions.c
                 yyerror("`in` operator: set expression and element must have the same type of data");
                 return expr_from_hardcoded_boolean(0);
             }
@@ -275,7 +293,7 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     if ((op!=OP_NOT && l1->expr_is==EXPR_LOST) || l2->expr_is==EXPR_LOST) {
-        return expr_from_lost_boolean(0);
+        return expr_from_hardcoded_boolean(0);
     }
 
     if ((op!=OP_NOT && l1->datatype->is!=TYPE_BOOLEAN) || l2->datatype->is!=TYPE_BOOLEAN) {
@@ -296,15 +314,16 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     else { //no hardcoded value
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
-        new_expr->l1 = l1;
-        new_expr->l2 = l2;
         new_expr->datatype = SEM_BOOLEAN;
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
 
+        new_expr->l2 = l2;
         l2->parent = new_expr;
+
         if (op!=OP_NOT) {
             //the first parameter for OP_NOT is NULL
+            new_expr->l1 = l1;
             l1->parent = new_expr;
         }
         return new_expr;
@@ -332,53 +351,44 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         switch (op) {
         case OP_DIV:
         case OP_MOD:
-            return expr_from_hardcoded_int(1);
+            return expr_from_hardcoded_int(0);
         case OP_RDIV:
-            return expr_from_hardcoded_real(1);
+            return expr_from_hardcoded_real(0);
         default:
             yyerror("UNEXPECTED_ERROR: 89-1");
             exit(EXIT_FAILURE);
         }
     }
 
-    //arrays and record types are allowed only for asignments
     if (!TYPE_IS_ARITHMETIC(l1->datatype) || !TYPE_IS_ARITHMETIC(l2->datatype)) {
-        sprintf(str_err,"'%s' operator does not applies only to integers, reals and sets",op_literal(op));
+        sprintf(str_err,"'%s' operator applies only to integers and reals",op_literal(op));
         yyerror(str_err);
+    }
+
+    if (l2->expr_is==EXPR_HARDCODED_CONST && l2->ival==0) {
+        yyerror("ERROR: division by zero");
+        return expr_from_hardcoded_int(0);
+    }
+
+    if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {	//optimization
         switch (op) {
-        case OP_DIV:
-        case OP_MOD:
-            return expr_from_hardcoded_int(1);
-        case OP_RDIV:
-            return expr_from_hardcoded_real(1);
+        case OP_RDIV: return expr_from_hardcoded_real(l1->fval / l2->fval);
+        case OP_DIV:  return expr_from_hardcoded_int(l1->ival / l2->ival);
+        case OP_MOD:  return expr_from_hardcoded_int(l1->ival % l2->ival);
         default:
-            yyerror("UNEXPECTED_ERROR: 89-2");
+            yyerror("UNEXPECTED_ERROR: 89-2-1");
             exit(EXIT_FAILURE);
         }
     }
 
     switch (op) {
     case OP_RDIV:
-        if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {	//optimization
-            return expr_from_hardcoded_real(l1->fval / l2->fval);
-        }
-
         //the `/` op always returns real
-        if (l1->expr_is==EXPR_HARDCODED_CONST) {
-            l1->datatype = SEM_REAL;
-            l1->fval = l1->ival;
-        }
-        else {
-            l1->convert_to = SEM_REAL;
-        }
+        if (l1->expr_is==EXPR_HARDCODED_CONST) { l1->datatype = SEM_REAL; }
+        else { l1->convert_to = SEM_REAL; }
 
-        if (l2->expr_is==EXPR_HARDCODED_CONST) {
-            l2->datatype = SEM_REAL;
-            l2->fval = l2->ival;
-        }
-        else {
-            l2->convert_to = SEM_REAL;
-        }
+        if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_REAL; }
+        else { l2->convert_to = SEM_REAL; }
 
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
@@ -397,20 +407,15 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         //applies only on integer expressions
         if (l1->datatype->is!=TYPE_INT || l2->datatype->is!=TYPE_INT) {
             yyerror("`div`, 'mod' apply only to integers");
-            return expr_from_hardcoded_int(1); //cannot divide with zero, so set 1
+#warning convert or not convert to integer?
+            //return expr_from_hardcoded_int(0);
         }
 
-        if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {	//optimization
-            switch (op) {
-            case OP_DIV:
-                return expr_from_hardcoded_int(l1->fval / l2->fval);
-            case OP_MOD:
-                return expr_from_hardcoded_int(l1->ival % l2->ival);
-            default: //keep the compiler happy
-                yyerror("UNEXPECTED_ERROR: 89-3");
-                exit(EXIT_FAILURE);
-            }
-        }
+        if (l1->expr_is==EXPR_HARDCODED_CONST) { l1->datatype = SEM_INTEGER; }
+        else { l1->convert_to = SEM_INTEGER; }
+
+        if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_INTEGER; }
+        else { l2->convert_to = SEM_INTEGER; }
 
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
@@ -441,7 +446,7 @@ expr_t *expr_sign(op_t op,expr_t *l) {
     }
 
     if (l->expr_is==EXPR_LOST) {
-        return expr_from_lost_int(0);
+        return expr_from_hardcoded_int(0);
     }
 
     if (!TYPE_IS_ARITHMETIC(l->datatype)) {
@@ -450,31 +455,40 @@ expr_t *expr_sign(op_t op,expr_t *l) {
     }
 
     if (l->op==OP_SIGN) {
-        yyerror("2 sign operators in a row are not allowed, ignoring the second sign (the left)");
-        return expr_from_hardcoded_int(0);
+        yyerror("2 sign operators in a row are not allowed, ignoring the second sign");
+        return l;
     }
 
     if (op==OP_MINUS) {
         if (l->expr_is==EXPR_HARDCODED_CONST) { //optimization
             l->ival = -l->ival; //if integer
             l->fval = -l->fval; //if real
+            l->cval = -l->cval; //if char, boolean
             return l;
         }
-        else {
-            new_expr = (expr_t*)malloc(sizeof(expr_t));
-            new_expr->parent = new_expr;
-            new_expr->l1 = l;
-            new_expr->l2 = NULL;
-            new_expr->datatype = l->datatype;
-            new_expr->expr_is = EXPR_RVAL;
-            new_expr->op = OP_SIGN;
-            l->parent = new_expr;
-            return new_expr;
+
+        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr->parent = new_expr;
+
+        if (l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) {
+            new_expr->l1 = expr_from_setexpression(NULL);
+        } else if (l->datatype->is==TYPE_REAL) {
+            new_expr->l1 = expr_from_hardcoded_real(0);
+        } else {
+            new_expr->l1 = expr_from_hardcoded_int(0);
         }
+
+        new_expr->l2 = l;
+        new_expr->datatype = l->datatype;
+        new_expr->expr_is = EXPR_RVAL;
+        //new_expr->op = OP_SIGN;
+        new_expr->op = OP_MINUS;
+        l->parent = new_expr;
+        return new_expr;
+
     }
-    else {
-        return l;
-    }
+
+    return l;
 }
 
 expr_t *expr_mark_paren(expr_t *l) {
