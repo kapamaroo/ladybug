@@ -66,20 +66,19 @@ mem_t *mem_allocate_string(char *string) {
     return m;
 }
 
-mem_t *mem_allocate_return_value(data_t *d) {
+mem_t *mem_allocate_return_value(func_t *subprogram) {
     mem_t *m;
-    func_t *scope_owner;
 
-    scope_owner = get_current_scope_owner();
+    subprogram->stack_size += STACK_RETURN_VALUE_OFFSET;
 
     m = (mem_t*)malloc(sizeof(struct mem_t));
     m->segment = MEM_STACK;
     m->offset_expr = expr_from_hardcoded_int(0);
-    m->seg_offset = expr_from_hardcoded_int(STACK_RETURN_VALUE_OFFSET);
+    m->seg_offset = expr_from_hardcoded_int(subprogram->stack_size);
     m->content_type = PASS_VAL;
-    m->size = d->memsize;
+    m->size = subprogram->return_value->datatype->memsize;
 
-    scope_owner->stack_size += STACK_RETURN_VALUE_OFFSET;
+    subprogram->stack_size += m->size;
 
     return m;
 }
@@ -94,7 +93,7 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
     if (subprogram->return_value) {
         //add space for return_value if subprogram is a function
         subprogram->return_value->scope = get_current_scope();
-        subprogram->return_value->Lvalue = mem_allocate_return_value(subprogram->return_value->datatype);
+        subprogram->return_value->Lvalue = mem_allocate_return_value(subprogram);
     }
 
     //we do not put the variables in the stack here, just declare them in scope and allocate them
@@ -102,24 +101,17 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
         new_mem = (mem_t*)malloc(sizeof(mem_t));
         new_mem->offset_expr = expr_from_hardcoded_int(0);
         new_mem->content_type = subprogram->param[i]->pass_mode;
-        if (i<MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS) {
-            new_mem->segment = MEM_REGISTER;
-            new_mem->direct_register_number = i;
-            new_mem->seg_offset = expr_from_hardcoded_int(0);
-            new_mem->size = 0;
-        }
-        else {
-            new_mem->segment = MEM_STACK;
-            new_mem->direct_register_number = 0;
-            new_mem->seg_offset = expr_from_hardcoded_int(subprogram->stack_size); //stack_size so far
-            new_mem->size = subprogram->param[i]->datatype->memsize;
+        new_mem->segment = MEM_STACK;
+        new_mem->direct_register_number = i;
+        new_mem->seg_offset = expr_from_hardcoded_int(subprogram->stack_size); //stack_size so far
 
-            if (subprogram->param[i]->pass_mode==PASS_VAL) {
-                subprogram->stack_size += subprogram->param[i]->datatype->memsize;
-            }
-            else { //PASS_REF
-                subprogram->stack_size += SIZEOF_POINTER_TYPE; //sizeof memory address
-            }
+        if (subprogram->param[i]->pass_mode==PASS_VAL) {
+            new_mem->size = subprogram->param[i]->datatype->memsize;
+            subprogram->stack_size += subprogram->param[i]->datatype->memsize;
+        }
+        else { //PASS_REF
+            new_mem->size = SIZEOF_POINTER_TYPE;
+            subprogram->stack_size += SIZEOF_POINTER_TYPE; //sizeof memory address
         }
 
         subprogram->param_Lvalue[i] = new_mem;
