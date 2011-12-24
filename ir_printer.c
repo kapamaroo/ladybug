@@ -175,8 +175,11 @@ void print_ir_node(ir_node_t *ir_node) {
 
 void print_all_modules() {
     int i;
+    ir_node_t *module;
+
     for(i=0;i<MAX_NUM_OF_MODULES;i++) {
-        print_module(ir_root_module[i]);
+        module = ir_root_module[i];
+        print_module(module);
     }
 }
 
@@ -208,8 +211,13 @@ void print_module(ir_node_t *module) {
         } else {
             print_ir_node(ir_node);
             ir_node = ir_node->next;
-            print_ir_node(ir_node);
-            printf("\n");
+            if (ir_node) {
+                print_ir_node(ir_node);
+                printf("\n");
+            } else {
+                //we hit NULL, end of module
+                return;
+            }
         }
 
         ir_node = ir_node->next;
