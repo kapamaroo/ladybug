@@ -164,7 +164,7 @@ typedef struct func_t {
     param_t *param[MAX_PARAMS];
     mem_t *param_Lvalue[MAX_PARAMS];
     int stack_size; //formal parameters + return value + whatever
-    scope_t *scope; //a subprogram belongs to the previous scope
+    //scope_t *scope; //a subprogram belongs to the previous scope
     char *label;
 } func_t;
 
