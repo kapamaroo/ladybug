@@ -9,6 +9,7 @@
 
 typedef enum ir_node_type_t {
     NODE_DUMMY_LABEL,	        //empty statement, with label only
+    NODE_LOST_NODE,              //on parse errors generate this node
     NODE_BRANCH,
     NODE_JUMP_LINK,	        //jump and link
     NODE_JUMP,		        //jump only
@@ -25,7 +26,7 @@ typedef enum ir_node_type_t {
     NODE_OUTPUT_STRING,
     NODE_CONVERT_TO_INT,	//if it is neccessary
     NODE_CONVERT_TO_REAL,	//if it is neccessary
-    NODE_MEMCOPY,		//for assignment of identical arrays and records
+    NODE_MEMCPY,		//for assignment of identical arrays and records
     NODE_LOAD,		        //load a NODE_LVAL or NODE_HARDCODED_LVAL
     NODE_BINARY_AND,	        //AND for sets (operator *,OP_MULT)
     NODE_BINARY_OR,	        //OR for sets (operator +,OP_PLUS), inverts the bits
@@ -41,20 +42,19 @@ typedef enum ir_node_type_t {
     NODE_ADD_ELEM_RANGE_TO_SET, //only the values bigger or equal to zero
     NODE_CHECK_INOP_BITMAPPED,
     NODE_ASSIGN,		//assign statement
-    NODE_ASSIGN_SET,            //the set exists in its own memory or in bitmap_factory
+    NODE_ASSIGN_SET,            //obsolete, the set exists in its own memory or in bitmap_factory
     NODE_ASSIGN_STRING,
-    NODE_ASSIGN_MEMCPY,
 } ir_node_type_t;
 
 typedef struct ir_node_t {
     ir_node_type_t node_type;
     op_t op_rval;
-    int R_register;
+    unsigned long R_register;
     int return_point;
 
-    struct ir_node_t *next_stmt;
-    struct ir_node_t *prev_stmt;
-    struct ir_node_t *last_stmt;
+    struct ir_node_t *next;
+    struct ir_node_t *prev;
+    struct ir_node_t *last;
 
     struct ir_node_t *ir_lval;	//first lvalue to use
     struct ir_node_t *ir_lval2;	//second lvalue to use
@@ -71,6 +71,8 @@ typedef struct ir_node_t {
 
     char *label;               //the label of the node
     char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
+
+    char *error; //NODE_LOST_NODE uses this
 
     mem_t *lval; //generate *address and *offset from here (this should be removed)
     int ival;	 //hardcoded int
