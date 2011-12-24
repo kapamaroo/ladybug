@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <libgen.h>
+#include <libgen.h> //basename()
 
 #include "build_flags.h"
 #include "semantics.h"
@@ -14,7 +14,7 @@
 #include "mem_reg.h"
 #include "ir.h"
 #include "err_buff.h"
-#include "final_code.h"
+#include "ir_printer.h"
 #include "main_app.h"
 
     int yylex(void);
@@ -304,7 +304,7 @@ pass: VAR {$$ = PASS_REF;}
 comp_statement: T_BEGIN statements END {$$ = new_comp_stmt($2);}
 ;
 
-statements: statements SEMI statement {$$ = link_stmt_to_stmt($1,$3);}
+statements: statements SEMI statement {$$ = link_stmt_to_stmt($3,$1);}
 | statement {$$ = $1;}
 ;
 
@@ -397,7 +397,9 @@ int main(int argc, char *argv[]) {
     }
 
     switch (status) {
-    case 0: exit(EXIT_SUCCESS);
+    case 0:
+        print_all_modules();
+        exit(EXIT_SUCCESS);
     case 1:
     case 2:
     default: exit(EXIT_FAILURE);
