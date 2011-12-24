@@ -1,4 +1,4 @@
-#include <stdio.h>
+ #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -225,7 +225,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
     if (!v) {
         printf("UNEXPECTED_ERROR: 74-1\n");
-        //exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     //calculate the reference address
