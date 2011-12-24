@@ -145,7 +145,7 @@ void init_symbol_table() {
     void_datatype->is = TYPE_VOID;
     void_datatype->def_datatype = void_datatype;
     void_datatype->data_name = "__void_datatype__";
-    void_datatype->memsize = 0; //no return type,so no size of return type :)
+    void_datatype->memsize = 0;
 
     sm_empty = MAX_SYMBOLS;
     sm_table = sm_array;
@@ -195,7 +195,7 @@ void init_symbol_table() {
 
     lost_var = (var_t*)malloc(sizeof(var_t));
     lost_var->id_is = ID_LOST;
-    lost_var->name = "V__dummy_lost_variable";
+    lost_var->name = "__lost_variable__";
     lost_var->datatype = void_datatype;
     lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
     lost_var->ival = 0;
@@ -613,50 +613,48 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
         if (v->id_is==ID_VAR) {
             if (v->datatype->is==TYPE_ARRAY) {
                 if (valid_expr_list_for_array_reference(v->datatype,list)) {
+                    //we print any possible messages in "valid_expr_list_for_array_reference()"
                     relative_offset_expr = make_array_refference(list,v->datatype);
                     cond_expr = make_array_bound_check(list,v->datatype);
-                }
-                else {
-                    relative_offset_expr = expr_from_hardcoded_int(0);
-                    cond_expr = expr_from_hardcoded_boolean(0);
-                }
-                final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
 
-                //we start from the variable's mem position and we add the offset from there
-                new_mem = (mem_t*)malloc(sizeof(mem_t));
-                new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(mem_t));
-                new_mem->offset_expr = final_offset_expr;
-                new_mem->size = v->datatype->def_datatype->memsize;
+                    final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
 
-                new_var = (var_t*)malloc(sizeof(var_t));
-                new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
-                //new_var->id_is = ID_VAR;
-                new_var->datatype = v->datatype->def_datatype;
-                //new_var->name = v->name;
-                //new_var->scope = v->scope;
-                new_var->Lvalue = new_mem;
-                new_var->cond_assign = cond_expr;
-                return new_var;
+                    //we start from the variable's mem position and we add the offset from there
+                    new_mem = (mem_t*)malloc(sizeof(mem_t));
+                    new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(mem_t));
+
+                    new_mem->offset_expr = final_offset_expr;
+                    new_mem->size = v->datatype->def_datatype->memsize;
+
+                    new_var = (var_t*)malloc(sizeof(var_t));
+                    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+                    //new_var->id_is = ID_VAR;
+                    new_var->datatype = v->datatype->def_datatype;
+                    //new_var->name = v->name;
+                    //new_var->scope = v->scope;
+                    new_var->Lvalue = new_mem;
+                    new_var->cond_assign = cond_expr;
+                    return new_var;
+                }
             }
             else {
                 sprintf(str_err,"variable '%s' is not an array",v->name);
                 yyerror(str_err);
-                return lost_var_reference(); //avoid unreal error messages
             }
         }
         else if (v->id_is==ID_LOST) {
-            return v; //avoid unreal error messages
+            //avoid duplucate error messages
+            return v; //this points to lost variable
         }
         else {
             sprintf(str_err,"id '%s' is not a variable",v->name);
             yyerror(str_err);
-            return lost_var_reference();
         }
+        return lost_var_reference();
     }
-    else {
-        yyerror("UNEXPECTED_ERROR: 42");
-        exit(EXIT_FAILURE);
-    }
+
+    yyerror("UNEXPECTED_ERROR: 42");
+    exit(EXIT_FAILURE);
 }
 
 var_t *refference_to_record_element(var_t *v, char *id) {
