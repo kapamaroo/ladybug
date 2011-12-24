@@ -156,7 +156,8 @@
 
 program: header declarations subprograms comp_statement DOT {
     link_stmt_to_tree($4);
-    //generate_final_code();
+    return_to_previous_module();
+    //no previous module here, this just appends the return node
  }
 ;
 
@@ -398,8 +399,13 @@ int main(int argc, char *argv[]) {
 
     switch (status) {
     case 0:
-        print_all_modules();
-        exit(EXIT_SUCCESS);
+        if (!err_num) {
+            print_all_modules();
+            exit(EXIT_SUCCESS);
+        } else {
+            printf("Please correct the errors.\n");
+            exit(EXIT_FAILURE);
+        }
     case 1:
     case 2:
     default: exit(EXIT_FAILURE);
