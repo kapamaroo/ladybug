@@ -366,7 +366,7 @@ ir_node_t *make_bitmap_inop_check(expr_t *expr_inop) {
     }
 
     new_stmt = new_ir_node_t(NODE_CHECK_INOP_BITMAPPED);
-    new_stmt->lval = expr_inop->l2->var->Lvalue; //l2 is lvalue for sure
+    new_stmt->address = calculate_lvalue(expr_inop->l2->var); //l2 is lvalue for sure
     new_stmt->ir_rval = dark_init_node;
 
     return new_stmt;
@@ -387,7 +387,10 @@ ir_node_t *make_dynamic_inop_check(expr_t *expr_inop) {
     expr_t *right;
 
     if (!expr_inop || !expr_inop->l1 || expr_inop->l2->datatype->is!=TYPE_SET) {
-        return NULL; //parse errors
+        //parse errors
+        total_cond = expr_from_hardcoded_boolean(0);
+        return expr_tree_to_ir_tree(total_cond);
+        //return NULL;
     }
 
     element = expr_inop->l1;
