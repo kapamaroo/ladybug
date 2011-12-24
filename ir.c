@@ -13,6 +13,8 @@
 #include "bitmap.h"
 #include "err_buff.h"
 
+unsigned long unique_R;
+
 ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
 int ir_root_module_empty;
 int ir_root_module_current;
@@ -23,6 +25,9 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l);
 
 void init_ir() {
     int i;
+
+    //first of all initialize the register counter
+    unique_R = 0;
 
     for(i=0; i<MAX_NUM_OF_MODULES; i++) {
         ir_root_module[i] = NULL;
@@ -56,7 +61,7 @@ void return_to_previous_module() {
 }
 
 void check_for_return_value(func_t *subprogram,ir_node_t *body) {
-    if (body->last_stmt->return_point==0) {
+    if (body->last->return_point==0) {
         sprintf(str_err,"ERROR: control reaches end of function '%s' without return value",subprogram->func_name);
         yyerror(str_err);
     }
@@ -68,6 +73,8 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node = (ir_node_t*)malloc(sizeof(ir_node_t));
     new_node->node_type = node_type;
 
+    new_node->R_register = ++unique_R;
+
     new_node->ir_lval = NULL;
     new_node->ir_lval2 = NULL;
     new_node->ir_rval = NULL;
@@ -78,11 +85,12 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->offset = NULL;
     new_node->ir_lval_dest = NULL;
 
-    new_node->prev_stmt = NULL; //new_node;
-    new_node->last_stmt = new_node;
-    new_node->next_stmt = NULL;
+    new_node->next = NULL;
+    new_node->prev = NULL; //new_node;
+    new_node->last = new_node;
     new_node->label = NULL;
     new_node->jump_label = NULL;
+    new_node->error = NULL;
     new_node->lval = NULL;
     new_node->return_point = 0;
     return new_node;
@@ -96,12 +104,12 @@ ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
     //return the head of the linked list
     if (parent && child) {
         //if child's return_point is not set, propagate the parent's return_point value
-        if (child->last_stmt->return_point==0) {
-            child->last_stmt->return_point = parent->last_stmt->return_point;
+        if (child->last->return_point==0) {
+            child->last->return_point = parent->last->return_point;
         }
-        parent->last_stmt->next_stmt = child;
-        child->prev_stmt = parent->last_stmt;
-        parent->last_stmt = child->last_stmt;
+        parent->last->next = child;
+        child->prev = parent->last;
+        parent->last = child->last;
         return parent;
     } else if (!parent) {
         return child;
@@ -118,29 +126,34 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     //check for valid assignment
     if (!v || v->id_is==ID_LOST) {
         //parse errors, error is printed from the 'variable' rule
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
+        //return NULL;
     } else if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
         //should never reach here
         yyerror("null expression in assignment (debugging info)");
 #endif
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
+        //return NULL;
     }
 
     if (l->expr_is==EXPR_LOST) {
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
+        //return NULL;
     }
 
     if (v->id_is == ID_VAR_GUARDED) {
         sprintf(str_err,"forbidden assignment to '%s' which controls a `for` statement",v->name);
         yyerror(str_err);
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
+        //return NULL;
     }
 
     if (v->id_is != ID_RETURN && v->id_is != ID_VAR) {
         sprintf(str_err,"trying to assign to symbol '%s' which is not a variable",v->name);
         yyerror(str_err);
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
+        //return NULL;
     }
 
     if (v->id_is==ID_RETURN) {
@@ -149,14 +162,17 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
             //v->name is the same with function's name because that's how functions return their value
             sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
             yyerror(str_err);
-            return NULL;
+            return new_lost_node("__BAD_ASSIGN_STMT__");
+            //return NULL;
         }
     }
 
+
+    //reminder: expressions hava standard datatypes or set datatype
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
         sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
         yyerror(str_err);
-        return NULL;
+        return new_lost_node("__BAD_ASSIGN_STMT__");
     }
 
     if (TYPE_IS_STRING(v->datatype)) {
@@ -169,7 +185,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 
     switch (v->datatype->is) {
     case TYPE_INT:
-        if (l->datatype->is!=TYPE_INT) {
+        //standard types are scalar but real
+        if (l->datatype->is==TYPE_REAL) {
 	    l->convert_to = SEM_INTEGER;
         }
         break;
@@ -181,7 +198,8 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     case TYPE_BOOLEAN:
         if (l->datatype->is!=TYPE_BOOLEAN) {
 	    yyerror("assignment to boolean with nonboolean datatype");
-	    return NULL;
+	    return new_lost_node("__BAD_ASSIGN_STMT_boolean__");
+            //return NULL;
         }
         break;
     case TYPE_CHAR:
@@ -199,16 +217,11 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     case TYPE_SUBSET:
         v->cond_assign = make_enum_subset_bound_checks(v,l);
         break;
-    case TYPE_SET:
-        new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
-        new_stmt->address = calculate_lvalue(v);
-        new_stmt->ir_lval = create_bitmap(l);
-        return new_stmt;
     case TYPE_ARRAY:
         if (v->datatype==l->datatype) {
 	    //explicit datatype match, optimize: use memcopy
 	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
-	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
+	    new_stmt = new_ir_node_t(NODE_MEMCPY);
 	    new_stmt->address = calculate_lvalue(v);
 	    new_stmt->ir_lval = calculate_lvalue(l->var);
         } else {
@@ -219,15 +232,22 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         if (v->datatype==l->datatype) {
 	    //explicit datatype match, optimize: use memcopy
 	    //reminder: we do not allow signed arrays in expressions, see expr_sign() in expressions.c
-	    new_stmt = new_ir_node_t(NODE_ASSIGN_MEMCPY);
+	    new_stmt = new_ir_node_t(NODE_MEMCPY);
 	    new_stmt->address = calculate_lvalue(v);
 	    new_stmt->ir_lval = calculate_lvalue(l->var);
         } else {
 	    new_stmt = expand_record_assign(v,l);
         }
         return new_stmt;
+        //case TYPE_SET:
+        //not a special case any more
+        //new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
+        //new_stmt->address = calculate_lvalue(v);
+        //new_stmt->ir_lval = expr_tree_to_ir_tree(l); // create_bitmap(l);
+        //return new_stmt;
     case TYPE_VOID: //keep the compiler happy
-        return NULL;
+        printf("UNEXPECTED ERROR: TYPE_VOID in assignment\n");
+        exit(EXIT_FAILURE);
     }
 
     /**** some common assign actions */
@@ -260,7 +280,8 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
     if (cond->datatype->is!=TYPE_BOOLEAN || !true_stmt) {
         //parse errors or empty if statement, ignore statement
-        return NULL;
+        return new_lost_node("__BAD_IF_STMT__");
+        //return NULL;
     }
 
     if (cond->expr_is==EXPR_HARDCODED_CONST) {
@@ -297,7 +318,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
         false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
 
 	//propagate return_point to the last statement
-	if (true_stmt->last_stmt->return_point && false_stmt->last_stmt->return_point) {
+	if (true_stmt->last->return_point && false_stmt->last->return_point) {
             ir_exit_if->return_point = 1;
 	}
     } else {
@@ -323,7 +344,8 @@ ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt) {
 
     if (!cond || !true_stmt) {
         //parse errors or empty while statement, ignore statement
-        return NULL;
+        return new_lost_node("__BAD_WHILE_STMT__");
+        //return NULL;
     }
 
     /* pseudo assembly
@@ -358,7 +380,8 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
 
     if ((!sem_guard || sem_guard->id_is!=ID_VAR_GUARDED) || !range || !true_stmt) {
         //parse errors or empty for_statement, ignore statement
-        return NULL;
+        return new_lost_node("__BAD_FOR_STMT__");
+        //return NULL;
     }
 
     /* pseudo assembly
@@ -395,7 +418,6 @@ ir_node_t *new_with_stmt(ir_node_t *body) {
 
 ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
     sem_t *sem_1;
-    ir_node_t *dark_init_node;
     ir_node_t *new_proc_call;
 
     sem_1 = sm_find(id);
@@ -407,13 +429,8 @@ ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
             yyerror(str_err);
             //continue as usual
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            dark_init_node = prepare_stack_for_call(sem_1->subprogram,list);
-            if (dark_init_node) {
-                new_proc_call = jump_and_link_to(sem_1->subprogram->label);
-                new_proc_call = link_stmt_to_stmt(new_proc_call,dark_init_node);
-                return new_proc_call;
-            }
-            //we had parse errors
+            new_proc_call = prepare_stack_and_call(sem_1->subprogram,list);
+            return new_proc_call;
         } else {
             yyerror("ID is not a subprogram.");
         }
@@ -424,7 +441,7 @@ ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
             yyerror(str_err);
         }
     }
-    return NULL;
+    return new_lost_node("__BAD_PROCEDURE_STMT__");
 }
 
 ir_node_t *new_comp_stmt(ir_node_t *body) {
@@ -470,7 +487,8 @@ ir_node_t *new_read_stmt(var_list_t *list) {
     }
 
     if (error) {
-        return NULL;
+        return new_lost_node("__BAD_READ_STMT__");
+        //return NULL;
     }
 
     //we are error free here!
@@ -545,7 +563,8 @@ ir_node_t *new_write_stmt(expr_list_t *list) {
     }
 
     if (error) {
-        return NULL;
+        return new_lost_node("__BAD_WRITE_STMT__");
+        //return NULL;
     }
 
     //we are error free here!
