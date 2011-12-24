@@ -52,12 +52,18 @@ void new_module(func_t *subprogram) {
 }
 
 void return_to_previous_module() {
+    ir_node_t *ir_return;
+
+    //append return node
+    //this also works for main program
+    ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
+    ir_root = link_stmt_to_stmt(ir_return,ir_root);
+
     if (ir_root_module_current==0) {
-        ir_root = ir_root_module[0];
+        return;
     }
-    else {
-        ir_root = ir_root_module[--ir_root_module_current];
-    }
+
+    ir_root = ir_root_module[--ir_root_module_current];
 }
 
 void check_for_return_value(func_t *subprogram,ir_node_t *body) {

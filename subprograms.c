@@ -102,8 +102,9 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
         subprogram->id_is = ID_PROC;
     }
 
-    ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
-    body = link_stmt_to_stmt(ir_return,body);
+    //this now is done from return_to_previous module()
+    //ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
+    //body = link_stmt_to_stmt(ir_return,body);
 
     close_current_scope();
 
