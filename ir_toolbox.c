@@ -229,12 +229,11 @@ ir_node_t *calculate_lvalue(var_t *v) {
     }
 
     //calculate the reference address
-    new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
-    new_node->lval = v->Lvalue;
-
-    new_node->ival = v->Lvalue->seg_offset->ival;
-
     if (v->Lvalue->content_type==PASS_REF) {
+        new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
+        new_node->lval = v->Lvalue;
+        new_node->ival = v->Lvalue->seg_offset->ival;
+
         //set the address so far
         new_node->address = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
 
@@ -242,17 +241,25 @@ ir_node_t *calculate_lvalue(var_t *v) {
         ptr_deref = new_ir_node_t(NODE_LOAD);
         ptr_deref->address = new_node;
 
+        //put the offset separate after the load
         new_node = new_ir_node_t(NODE_LVAL);
         new_node->address = ptr_deref;
-
-        //put the offset separate after the load
         new_node->offset = expr_tree_to_ir_tree(v->Lvalue->offset_expr);
     } else { //PASS_VAL
-        //put the offset together with the *address
-        address_expr = expr_relop_equ_addop_mult(v->Lvalue->seg_offset,OP_PLUS,v->Lvalue->offset_expr);
-        new_node->address = expr_tree_to_ir_tree(address_expr);
-    }
+        if (v->Lvalue->offset_expr->expr_is==EXPR_HARDCODED_CONST) {
+            new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
+            new_node->lval = v->Lvalue;
+            new_node->ival = v->Lvalue->seg_offset->ival + v->Lvalue->offset_expr->ival;
 
+            //put the offset together with the *address
+            address_expr = expr_relop_equ_addop_mult(v->Lvalue->seg_offset,OP_PLUS,v->Lvalue->offset_expr);
+            new_node->address = expr_tree_to_ir_tree(address_expr);
+        } else {
+            new_node = new_ir_node_t(NODE_LVAL);
+            new_node->address = v->Lvalue->seg_offset;
+            new_node->offset = expr_tree_to_ir_tree(v->Lvalue->offset_expr);
+        }
+    }
     return new_node;
 }
 
@@ -322,6 +329,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
 
         tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
         tmp_var->id_is = ID_VAR;
+#warning don't we need the scope of the callee here?
         tmp_var->scope = get_current_scope();
         tmp_var->cond_assign = NULL;
 
@@ -378,6 +386,14 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
                 tmp_assign = new_ir_node_t(NODE_ASSIGN);
                 tmp_assign->address = calculate_lvalue(tmp_var);
                 tmp_assign->ir_rval = calculate_lvalue(list->expr_list[i]->var);
+
+                //convert to RVAL
+#warning should I mark the ir_rval as NODE_RVAL here?
+                tmp_assign->ir_rval->node_type = NODE_RVAL;
+                tmp_assign->ir_rval->ir_rval = tmp_assign->ir_rval->address;
+                if (tmp_assign->ir_rval->node_type==NODE_LVAL) {
+                    tmp_assign->ir_rval->ir_rval2 = tmp_assign->ir_rval->offset;
+                }
 
                 //restore the PASS_REF content_type
                 tmp_var->Lvalue->content_type = PASS_REF;
