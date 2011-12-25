@@ -9,6 +9,6 @@ begin
   a := 5;
   b := 10;
 
-  c := try_me(a,b);
+  c := 1 + try_me(a,b) + a;
   {d := a + x + 2*a + 8 - 3 * x ;}
 end.
