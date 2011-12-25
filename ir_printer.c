@@ -10,7 +10,7 @@ void print_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
 
     if (ir_node->node_type!=NODE_DUMMY_LABEL) {
-        //printf("R_%ld \t",ir_node->R_register);
+        //printf("R_%ld__",ir_node->R_register);
     }
 
     switch(ir_node->node_type) {
@@ -142,10 +142,6 @@ void print_ir_node(ir_node_t *ir_node) {
                     printf("\n\t\t\t");
                 }
                 break;
-            case NODE_RVAL:
-                printf("$%ld",ir_node->ir_rval->R_register);
-                printf("\n\t\t\t");
-                break;
             case NODE_HARDCODED_RVAL:
                 printf("addi $%ld, $0, %0.2f",ir_node->ir_rval->R_register,ir_node->ir_rval->fval);
                 printf("\n\t\t\t");
@@ -170,10 +166,6 @@ void print_ir_node(ir_node_t *ir_node) {
                 printf("\n\t\t\t");
             }
             break;
-        case NODE_RVAL:
-            printf("$%ld",ir_node->ir_rval2->R_register);
-            printf("\n\t\t\t");
-            break;
         case NODE_HARDCODED_RVAL:
             printf("addi $%ld, $0, %0.2f",ir_node->ir_rval2->R_register,ir_node->ir_rval2->fval);
             printf("\n\t\t\t");
@@ -185,20 +177,22 @@ void print_ir_node(ir_node_t *ir_node) {
         }
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
-            printf("_%s_ %ld, %ld, %ld",op_literal(ir_node->op_rval),
+            printf("%s_ $%ld, $%ld, $%ld",op_literal(ir_node->op_rval),
                    ir_node->R_register,
-                   ir_node->ir_rval->R_register,
-                   ir_node->ir_rval2->R_register);
+                   ir_node->ir_rval->last->R_register,
+                   ir_node->ir_rval2->last->R_register);
+            //printf("_%d_",ir_node->ir_rval->node_type);
         } else {
-            printf("_%s_ %ld, %ld",op_literal(ir_node->op_rval),
+            printf("%s_ $%ld, $%ld",op_literal(ir_node->op_rval),
                    ir_node->R_register,
-                   ir_node->ir_rval2->R_register);
+                   ir_node->ir_rval2->last->R_register);
         }
 
         return;
     case NODE_HARDCODED_RVAL:
         //printf("addi $%ld, $0, %0.2f",ir_node->R_register,ir_node->fval);
         //printf("%0.2f",ir_node->fval);
+        //printf("__%ld__",ir_node->R_register);
         printf("%d",ir_node->ival);
         return;
     case NODE_INIT_NULL_SET:
@@ -232,8 +226,8 @@ void print_ir_node(ir_node_t *ir_node) {
             break;
         }
 
-        if (ir_node->ir_rval->node_type==NODE_HARDCODED_RVAL) {
-            printf("addi $%ld, $0, %d",ir_node->ir_rval->R_register,ir_node->ir_rval->ival);
+        if (ir_node->ir_rval->last->node_type==NODE_HARDCODED_RVAL) {
+            printf("addi $%ld, $0, %d",ir_node->ir_rval->last->R_register,ir_node->ir_rval->last->ival);
         } else {
             print_ir_node(ir_node->ir_rval->last);
         }
