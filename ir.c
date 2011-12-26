@@ -304,13 +304,9 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
     if_node = new_ir_node_t(NODE_BRANCH);
 
-    //we implement branches by checking the !cond, see below
-    cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
-    if_node->ir_cond = expr_tree_to_ir_tree(cond);
-
     if (true_stmt && false_stmt) {
         /* pseudo assembly
-           if !cond goto: TRUE_STMT
+           if cond goto: TRUE_STMT
            FALSE_STMT
            goto: EXIT_LABEL
            TRUE_STMT
@@ -334,10 +330,15 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
            TRUE_STMT
            EXIT_LABEL
         */
+
+        cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
         if_node->jump_label = ir_exit_if->label;
     }
 
     true_stmt = link_stmt_to_stmt(ir_exit_if,true_stmt); //true_stmt always exists
+
+    if_node->ir_cond = expr_tree_to_ir_tree(cond);
+
     if_node = link_stmt_to_stmt(false_stmt,if_node);     //this ignores false_stmt if  NULL
     if_node = link_stmt_to_stmt(true_stmt,if_node);
 
