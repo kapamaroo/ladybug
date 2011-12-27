@@ -22,7 +22,8 @@ void print_ir_node(ir_node_t *ir_node) {
         return;
     case NODE_BRANCH:
         print_ir_node(ir_node->ir_cond);
-        printf("if $%ld goto: %s",ir_node->R_register,ir_node->jump_label);
+        printf("\n\t\t\t");
+        printf("if $%ld goto: %s",ir_node->ir_cond->R_register,ir_node->jump_label);
         return;
     case NODE_JUMP_LINK:
         printf("jal %s",ir_node->jump_label);
