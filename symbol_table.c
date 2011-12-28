@@ -9,7 +9,7 @@
 #include "scope.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
-#include "mem_reg.h"
+#include "mem.h"
 #include "err_buff.h"
 
 //ARRAY implementation of symbol table

@@ -6,7 +6,7 @@
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "symbol_table.h"
-#include "mem_reg.h"
+#include "mem.h"
 #include "err_buff.h"
 
 expr_t *expr_from_variable(var_t *v) {

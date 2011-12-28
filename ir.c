@@ -7,13 +7,13 @@
 #include "symbol_table.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
-#include "mem_reg.h"
+#include "mem.h"
 #include "ir.h"
 #include "ir_toolbox.h"
 #include "bitmap.h"
 #include "err_buff.h"
 
-unsigned long unique_R;
+unsigned long unique_virt_reg;
 
 ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
 int ir_root_module_empty;
@@ -27,7 +27,7 @@ void init_ir() {
     int i;
 
     //first of all initialize the register counter
-    unique_R = 0;
+    unique_virt_reg = 40; //to recognize the virtual registers easier
 
     for(i=0; i<MAX_NUM_OF_MODULES; i++) {
         ir_root_module[i] = NULL;
@@ -79,7 +79,54 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node = (ir_node_t*)malloc(sizeof(ir_node_t));
     new_node->node_type = node_type;
 
-    new_node->R_register = ++unique_R;
+    /*
+    switch(node_type) {
+    case NODE_DUMMY_LABEL:
+    case NODE_LOST_NODE:
+    case NODE_BRANCH:
+    case NODE_JUMP_LINK:
+    case NODE_JUMP:
+    case NODE_RETURN_SUBPROGRAM:
+    case NODE_INPUT_INT:
+    case NODE_INPUT_REAL:
+    case NODE_INPUT_BOOLEAN:
+    case NODE_INPUT_CHAR:
+    case NODE_INPUT_STRING:
+    case NODE_OUTPUT_INT:
+    case NODE_OUTPUT_REAL:
+    case NODE_OUTPUT_BOOLEAN:
+    case NODE_OUTPUT_CHAR:
+    case NODE_OUTPUT_STRING:
+    case NODE_MEMCPY:
+    case NODE_ASSIGN:
+    case NODE_ASSIGN_SET:
+    case NODE_ASSIGN_STRING:
+    case NODE_INIT_NULL_SET: //assign zero
+    case NODE_HARDCODED_LVAL:
+    case NODE_HARDCODED_RVAL:
+        //do not give real reg here
+        break;
+    case NODE_LOAD:
+    case NODE_CONVERT_TO_INT:
+    case NODE_CONVERT_TO_REAL:
+    case NODE_BINARY_AND:
+    case NODE_BINARY_OR:
+    case NODE_BINARY_NOT:
+    case NODE_SHIFT_LEFT:
+    case NODE_SHIFT_RIGHT:
+    case NODE_RVAL:
+    case NODE_LVAL:
+        //new_node->reg = get_available_reg(REG_CONTENT);
+        break;
+    case NODE_ADD_ELEM_TO_SET:
+    case NODE_ADD_ELEM_RANGE_TO_SET:
+    case NODE_CHECK_INOP_BITMAPPED:
+#warning do these nodes need a real register?
+        break;
+    }
+    */
+
+    new_node->virt_reg = ++unique_virt_reg;
 
     new_node->ir_lval = NULL;
     new_node->ir_lval2 = NULL;

@@ -5,7 +5,7 @@
 #include "subprograms.h"
 #include "scope.h"
 #include "symbol_table.h"
-#include "mem_reg.h"
+#include "mem.h"
 #include "err_buff.h"
 
 param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {

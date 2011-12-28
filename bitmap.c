@@ -5,7 +5,7 @@
 #include "expressions.h"
 #include "expr_toolbox.h"
 #include "ir_toolbox.h"
-#include "mem_reg.h"
+#include "mem.h"
 #include "symbol_table.h"
 #include "err_buff.h"
 
