@@ -2,6 +2,7 @@
 #define _INTERMEDIATE_REPRESENTATION_H
 
 #include "semantics.h"
+#include "reg.h"
 
 //module zero is the main program
 #define MAX_NUM_OF_MODULES 128
@@ -49,7 +50,8 @@ typedef enum ir_node_type_t {
 typedef struct ir_node_t {
     ir_node_type_t node_type;
     op_t op_rval;
-    unsigned long R_register;
+    unsigned long virt_reg;
+    reg_t *reg;
     int return_point;
 
     struct ir_node_t *next;
