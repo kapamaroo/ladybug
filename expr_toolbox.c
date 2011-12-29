@@ -18,14 +18,20 @@ expr_t *expr_from_variable(var_t *v) {
         exit(EXIT_FAILURE);
     }
 
-    //no
-    //ID_STRING,
-    //ID_FUNC,
-    //ID_PROC,
-    //ID_FORWARDED_FUNC,
-    //ID_FORWARDED_PROC,
-    //ID_TYPEDEF,
-    //ID_PROGRAM_NAME
+    //simple sanity check
+    switch (v->id_is) {
+    case ID_STRING:
+    case ID_FUNC:
+    case ID_PROC:
+    case ID_FORWARDED_FUNC:
+    case ID_FORWARDED_PROC:
+    case ID_TYPEDEF:
+    case ID_PROGRAM_NAME:
+        printf("UNEXPECTED ERROR: expr_from_variable: bad id\n");
+        exit(EXIT_FAILURE);
+    default:
+        break;
+    }
 
     if (v->id_is==ID_CONST) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
@@ -36,7 +42,11 @@ expr_t *expr_from_variable(var_t *v) {
             l = expr_from_hardcoded_real(v->fval);
         }
         else if (v->datatype->is==TYPE_CHAR) {
+            //use chars as integers
+            //reminder: we check bounds before we assign to char variables
+
             l = expr_from_hardcoded_char(v->cval);
+            //l = expr_from_hardcoded_int(v->ival);
         }
         else if (v->datatype->is==TYPE_BOOLEAN) {
             l = expr_from_hardcoded_boolean(v->cval);
@@ -68,6 +78,7 @@ expr_t *expr_from_variable(var_t *v) {
 
     //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
+        //reminder: arrays and record types are allowed only for asignments
         if (v->datatype->is==TYPE_ARRAY || v->datatype->is==TYPE_RECORD) {
             sprintf(str_err,"ERROR: doing math with '%s' of composite datatype '%s'",v->name,v->datatype->data_name);
             yyerror(str_err);
@@ -77,12 +88,7 @@ expr_t *expr_from_variable(var_t *v) {
             return l;
         }
 
-        if (!TYPE_IS_ARITHMETIC(v->datatype)) {
-            sprintf(str_err,"WARNING: doing math with '%s' value",v->datatype->data_name);
-            yyerror(str_err);
-        }
-
-        //reminder: we check bounds before we assign to subset or enumeration,
+        //reminder: we check bounds before we assign to char, subset or enumeration,
         //so we can use their __actual__ datatype
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
             //this is actually a warning, maybe we need a yywarning?
@@ -93,7 +99,18 @@ expr_t *expr_from_variable(var_t *v) {
             //reminder: def_datatype is always standard scalar, see limit_from_id() below
             l->datatype = v->datatype->def_datatype;
         }
-        //arrays and record types are allowed only for asignments
+
+
+        //decide later inside expressions.c
+        ////final correction, this may override the subset datatype in the case of char subset
+        ////if (!TYPE_IS_ARITHMETIC(v->datatype)) {
+        //if (v->datatype->is==TYPE_CHAR) {
+        //    sprintf(str_err,"WARNING: doing math with '%s' variable",v->datatype->data_name);
+        //    yyerror(str_err); //maybe a yywarning?
+        //    l->datatype = SEM_INTEGER;
+        //}
+
+        //let set variables in expressions
         return l;
     }
 
