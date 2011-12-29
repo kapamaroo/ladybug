@@ -6,6 +6,8 @@
 
 #include "expr_toolbox.h"
 
+char *op_to_instruction(op_t op);
+
 void print_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
 
@@ -21,9 +23,15 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("%s ",ir_node->error);
         return;
     case NODE_BRANCH:
-        print_ir_node(ir_node->ir_cond);
+        print_ir_node(ir_node->ir_cond->ir_rval);
         printf("\n\t\t\t");
-        printf("if $%ld goto: %s",ir_node->ir_cond->virt_reg,ir_node->jump_label);
+        print_ir_node(ir_node->ir_cond->ir_rval2);
+        //print_ir_node(ir_node->ir_cond);
+        printf("\n\t\t\t");
+        printf("%s $%ld, $%ld goto: %s",op_to_instruction(ir_node->ir_cond->op_rval),
+               ir_node->ir_cond->ir_rval->virt_reg,
+               ir_node->ir_cond->ir_rval2->virt_reg,
+               ir_node->jump_label);
         return;
     case NODE_JUMP_LINK:
         printf("jal %s",ir_node->jump_label);
@@ -178,17 +186,20 @@ void print_ir_node(ir_node_t *ir_node) {
         }
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
-            printf("%s_ $%ld, $%ld, $%ld",op_literal(ir_node->op_rval),
+            printf("%s $%ld, $%ld, $%ld",op_to_instruction(ir_node->op_rval),
                    ir_node->virt_reg,
                    ir_node->ir_rval->last->virt_reg,
                    ir_node->ir_rval2->last->virt_reg);
             //printf("_%d_",ir_node->ir_rval->node_type);
         } else {
-            printf("%s_ $%ld, $%ld",op_literal(ir_node->op_rval),
+            printf("%s $%ld, $%ld",op_to_instruction(ir_node->op_rval),
                    ir_node->virt_reg,
                    ir_node->ir_rval2->last->virt_reg);
         }
 
+        return;
+    case NODE_RVAL_ARCH:
+        printf("%s",ir_node->reg->name);
         return;
     case NODE_HARDCODED_RVAL:
         //printf("addi $%ld, $0, %0.2f",ir_node->virt_reg,ir_node->fval);
@@ -314,24 +325,20 @@ void print_module(ir_node_t *module) {
 
 char *op_to_instruction(op_t op) {
     switch (op) {
-    case OP_IGNORE:
-        return "__op_IGNORE__";
     case RELOP_B:	// '>'
-        return ">";
+        return "bgt";
     case RELOP_BE:	// '>='
-        return ">=";
+        return "bge";
     case RELOP_L:	// '<'
-    	return "<";
+    	return "blt";
     case RELOP_LE:	// '<='
-    	return "<=";
+    	return "ble";
     case RELOP_NE:	// '<>'
     	return "bne";
     case RELOP_EQU:	// '='
         return "beq";
     case RELOP_IN:	// 'in'
     	return "in";
-    case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
-    	return "op_SIGN";
     case OP_PLUS:	// '+'
     	return "add";
     case OP_MINUS:	// '-'
@@ -341,15 +348,19 @@ char *op_to_instruction(op_t op) {
     case OP_RDIV:	// '/'
     	return "fp.div";
     case OP_DIV:       	// 'div'
-    	return "divLO";
+    	return "div";
     case OP_MOD:       	// 'mod'
-    	return "divHI";
+    	return "div";
     case OP_AND:       	// 'and'
     	return "and";
     case OP_OR:		// 'or'
     	return "or";
     case OP_NOT:       	// 'not'
         return "xor"; //$reg xor 11111111111
+    case OP_IGNORE:
+        //return "__op_IGNORE__";
+    case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
+    	//return "op_SIGN";
     default:
         yyerror("UNEXPECTED_ERROR: 04");
         exit(EXIT_FAILURE);
