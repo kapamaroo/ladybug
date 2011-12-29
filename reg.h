@@ -16,6 +16,7 @@ typedef enum reg_type_t {
                       //r29,            $sp,      stac pointer
                       //r30             $fp,      frame pointer
                       //r31,            $ra,      return address
+                      //hi,lo
 } reg_type_t;
 
 typedef struct reg_t {
@@ -25,7 +26,41 @@ typedef struct reg_t {
     char *alias;
 } reg_t;
 
-//extern reg_t *arch[REG_NUM];
+extern reg_t R_zero;
+extern reg_t R_at;
+extern reg_t R_v0;
+extern reg_t R_v1;
+extern reg_t R_a0;
+extern reg_t R_a1;
+extern reg_t R_a2;
+extern reg_t R_a3;
+extern reg_t R_t0;
+extern reg_t R_t1;
+extern reg_t R_t2;
+extern reg_t R_t3;
+extern reg_t R_t4;
+extern reg_t R_t5;
+extern reg_t R_t6;
+extern reg_t R_t7;
+extern reg_t R_s0;
+extern reg_t R_s1;
+extern reg_t R_s2;
+extern reg_t R_s3;
+extern reg_t R_s4;
+extern reg_t R_s5;
+extern reg_t R_s6;
+extern reg_t R_s7;
+extern reg_t R_t8;
+extern reg_t R_t9;
+extern reg_t R_k0;
+extern reg_t R_k1;
+extern reg_t R_gp;
+extern reg_t R_sp;
+extern reg_t R_fp;
+extern reg_t R_ra;
+
+extern reg_t R_hi;
+extern reg_t R_lo;
 
 void init_reg();
 reg_t *get_available_reg(reg_type_t type);
