@@ -158,11 +158,8 @@
 %%
 
 program: header declarations subprograms comp_statement DOT {
-    //link_stmt_to_tree($4);
-    link_statement_to_module($4);
-    //return_to_previous_module();
-    return_to_previous_statement_module();
-    //no previous module here, this just appends the return node
+    //link_ir_to_tree($4);
+    link_statement_to_module_and_return($4);
  }
 ;
 
@@ -407,7 +404,7 @@ int main(int argc, char *argv[]) {
     switch (status) {
     case 0:
         if (!err_num) {
-            //print_all_modules();
+            print_all_modules();
             exit(EXIT_SUCCESS);
         } else {
             printf("Please correct the errors.\n");

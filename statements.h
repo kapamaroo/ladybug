@@ -116,9 +116,8 @@ statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
-void link_statement_to_module(statement_t *new_statement);
-void new_statement_module();
-void return_to_previous_statement_module();
+void link_statement_to_module_and_return(statement_t *new_statement);
+void new_statement_module(char *label);
 
 const char* statement_type_to_string(statement_t *statement);
 

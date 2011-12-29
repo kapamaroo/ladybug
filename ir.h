@@ -82,29 +82,28 @@ typedef struct ir_node_t {
     char cval;   //hardcoded char
 } ir_node_t;
 
-extern ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
-extern int ir_root_module_empty;
-extern int ir_root_module_current;
-extern ir_node_t *ir_root;
+extern ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
+extern int ir_root_tree_current;
 
 void init_ir();
-void new_module(func_t *subprogram);
-void return_to_previous_module();
+void new_ir_tree(char *label);
+
+void link_ir_to_tree(ir_node_t *new_node);
+void return_to_previous_ir_tree();
 
 ir_node_t *new_ir_node_t(ir_node_type_t node_type);
-void link_stmt_to_tree(ir_node_t *new_node);
-ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent);
+ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent);
 
-ir_node_t *new_assign_stmt(var_t *v, expr_t *l);
-ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt);
-ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt);
-ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt);
-ir_node_t *new_with_stmt(ir_node_t *body);
-ir_node_t *new_procedure_call(char *id,expr_list_t *list);
-ir_node_t *new_comp_stmt(ir_node_t *body);
+ir_node_t *new_ir_assign(var_t *v, expr_t *l);
+ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt);
+ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt);
+ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt);
+ir_node_t *new_ir_with(ir_node_t *body);
+ir_node_t *new_ir_procedure_call(char *id,expr_list_t *list);
+ir_node_t *new_ir_comp_stmt(ir_node_t *body);
 //ir_node_t *new_io_statement is divided to read and write
-ir_node_t *new_read_stmt(var_list_t *list);
-ir_node_t *new_write_stmt(expr_list_t *list);
+ir_node_t *new_ir_read(var_list_t *list);
+ir_node_t *new_ir_write(expr_list_t *list);
 
 ir_node_t *jump_and_link_to(char *jump_label);
 ir_node_t *jump_to(char *jump_label);

@@ -5,17 +5,9 @@
 #include "ir.h"
 
 #define MAX_LABEL_SIZE 64
-#define DEFAULT_LABEL_PREFIX "autolabel"
+#define DEFAULT_LABEL_PREFIX "label"
 
-char *new_label_literal(char *label);
-char *new_label_unique(char *prefix);
-char *new_label_true(char *branch_label);
-char *new_label_false(char *branch_label);
-char *new_label_loop_to_cond(char *branch_label);
-char *new_label_exit_branch(char *branch_label);
-char *new_label_subprogram(char *sub_name);
-
-ir_node_t *new_lost_node(char *error);
+ir_node_t *new_lost_ir_node(char *error);
 
 expr_t *make_enum_subset_bound_checks(var_t *v,expr_t *l);
 expr_t *make_ASCII_bound_checks(var_t *v,expr_t *l);

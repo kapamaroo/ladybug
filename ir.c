@@ -15,13 +15,24 @@
 
 unsigned long unique_virt_reg;
 
-ir_node_t *ir_root_module[MAX_NUM_OF_MODULES];
-int ir_root_module_empty;
-int ir_root_module_current;
-ir_node_t *ir_root;
+ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
+int ir_root_tree_current;
 
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
+
+char *new_label_literal(char *label) {
+    return strdup(label);
+}
+
+char *new_label_unique(char *prefix) {
+    static int n = 0;
+    char label_buf[MAX_LABEL_SIZE];
+
+    snprintf(label_buf,MAX_LABEL_SIZE,"L_%s_%d",prefix,n);
+    n++;
+    return strdup(label_buf);
+}
 
 void init_ir() {
     int i;
@@ -30,40 +41,59 @@ void init_ir() {
     unique_virt_reg = 40; //to recognize the virtual registers easier
 
     for(i=0; i<MAX_NUM_OF_MODULES; i++) {
-        ir_root_module[i] = NULL;
+        ir_root_tree[i] = NULL;
     }
 
-    ir_root_module[0] = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_root_module[0]->label = new_label_literal("main");
-    ir_root_module_empty = MAX_NUM_OF_MODULES;
-    ir_root_module_current = 0;
-    ir_root = ir_root_module[0];
+    ir_root_tree[0] = new_ir_node_t(NODE_DUMMY_LABEL);
+    ir_root_tree[0]->label = new_label_literal("main");
+    ir_root_tree_current = 0;
 
     init_bitmap();
 }
 
-void new_module(func_t *subprogram) {
-    subprogram->label = new_label_subprogram(subprogram->func_name);
-    ir_root_module_current++;
-    ir_root_module[ir_root_module_current] = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_root_module[ir_root_module_current]->label = subprogram->label;
-    ir_root_module_empty--;
-    ir_root = ir_root_module[ir_root_module_current];
+void new_ir_tree(char *label) {
+    ir_node_t *ir_new;
+
+    ir_new = new_ir_node_t(NODE_DUMMY_LABEL);
+    ir_new->label = label;
+
+    ir_root_tree_current++;
+    ir_root_tree[ir_root_tree_current] = ir_new;
 }
 
-void return_to_previous_module() {
+void return_to_previous_ir_tree() {
     ir_node_t *ir_return;
 
     //append return node
     //this also works for main program
     ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
-    ir_root = link_stmt_to_stmt(ir_return,ir_root);
+    ir_root_tree[ir_root_tree_current] =
+        link_ir_to_ir(ir_return,ir_root_tree[ir_root_tree_current]);
 
-    if (ir_root_module_current==0) {
+    if (ir_root_tree_current==0) {
         return;
     }
 
-    ir_root = ir_root_module[--ir_root_module_current];
+    ir_root_tree_current--;
+}
+
+void link_ir_to_tree(ir_node_t *new_node) {
+    ir_root_tree[ir_root_tree_current] =
+        link_ir_to_ir(new_node,ir_root_tree[ir_root_tree_current]);
+}
+
+ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent) {
+    //return the head of the linked list
+    if (parent && child) {
+        parent->last->next = child;
+        child->prev = parent->last;
+        parent->last = child->last;
+        return parent;
+    } else if (!parent) {
+        return child;
+    } else {
+        return parent;
+    }
 }
 
 ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
@@ -141,25 +171,7 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     return new_node;
 }
 
-void link_stmt_to_tree(ir_node_t *new_node) {
-    link_stmt_to_stmt(new_node,ir_root);
-}
-
-ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
-    //return the head of the linked list
-    if (parent && child) {
-        parent->last->next = child;
-        child->prev = parent->last;
-        parent->last = child->last;
-        return parent;
-    } else if (!parent) {
-        return child;
-    } else {
-        return parent;
-    }
-}
-
-ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
+ir_node_t *new_ir_assign(var_t *v, expr_t *l) {
     ir_node_t *new_stmt;
 
     func_t *scope_owner;
@@ -167,33 +179,33 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     //check for valid assignment
     if (!v || v->id_is==ID_LOST) {
         //parse errors, error is printed from the 'variable' rule
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
         //return NULL;
     } else if (!l) {
 #if BISON_DEBUG_LEVEL >= 1
         //should never reach here
         yyerror("null expression in assignment (debugging info)");
 #endif
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
         //return NULL;
     }
 
     if (l->expr_is==EXPR_LOST) {
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
         //return NULL;
     }
 
     if (v->id_is == ID_VAR_GUARDED) {
         sprintf(str_err,"forbidden assignment to '%s' which controls a `for` statement",v->name);
         yyerror(str_err);
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
         //return NULL;
     }
 
     if (v->id_is != ID_RETURN && v->id_is != ID_VAR) {
         sprintf(str_err,"trying to assign to symbol '%s' which is not a variable",v->name);
         yyerror(str_err);
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
         //return NULL;
     }
 
@@ -203,7 +215,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
             //v->name is the same with function's name because that's how functions return their value
             sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
             yyerror(str_err);
-            return new_lost_node("__BAD_ASSIGN_STMT__");
+            return new_lost_ir_node("__BAD_ASSIGN_STMT__");
             //return NULL;
         }
     }
@@ -213,7 +225,7 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
         sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
         yyerror(str_err);
-        return new_lost_node("__BAD_ASSIGN_STMT__");
+        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
     }
 
     if (TYPE_IS_STRING(v->datatype)) {
@@ -299,13 +311,13 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
 
     if (v->cond_assign) {
         //we must do some checks before the assignment, convert to branch node
-        new_stmt = new_if_stmt(v->cond_assign,new_stmt,NULL);
+        new_stmt = new_ir_if(v->cond_assign,new_stmt,NULL);
     }
 
     return new_stmt;
 }
 
-ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
+ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_node_t *if_node;
     ir_node_t *jump_exit_branch;
     ir_node_t *ir_exit_if;
@@ -317,7 +329,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 
     if (cond->datatype->is!=TYPE_BOOLEAN || !true_stmt) {
         //parse errors or empty if statement, ignore statement
-        return new_lost_node("__BAD_IF_STMT__");
+        return new_lost_ir_node("__BAD_IF_STMT__");
         //return NULL;
     }
 
@@ -348,7 +360,7 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
         if_node->jump_label = true_stmt->label;
 
 	jump_exit_branch = jump_to(ir_exit_if->label);
-        false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
+        false_stmt = link_ir_to_ir(jump_exit_branch,false_stmt);
 
     } else {
         // only true_stmt
@@ -362,41 +374,41 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
         if_node->jump_label = ir_exit_if->label;
     }
 
-    true_stmt = link_stmt_to_stmt(ir_exit_if,true_stmt); //true_stmt always exists
+    true_stmt = link_ir_to_ir(ir_exit_if,true_stmt); //true_stmt always exists
 
     if_node->ir_cond = expr_tree_to_ir_tree(cond);
 
-    if_node = link_stmt_to_stmt(false_stmt,if_node);     //this ignores false_stmt if  NULL
-    if_node = link_stmt_to_stmt(true_stmt,if_node);
+    if_node = link_ir_to_ir(false_stmt,if_node);     //this ignores false_stmt if  NULL
+    if_node = link_ir_to_ir(true_stmt,if_node);
 
     return if_node;
 }
 
-ir_node_t *new_while_stmt(expr_t *cond,ir_node_t *true_stmt) {
+ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
     ir_node_t *while_node;
     ir_node_t *jump_loop_branch;
 
     if (!cond || !true_stmt) {
         //parse errors or empty while statement, ignore statement
-        return new_lost_node("__BAD_WHILE_STMT__");
+        return new_lost_ir_node("__BAD_WHILE_STMT__");
         //return NULL;
     }
 
     /* pseudo assembly
        LABEL_ENTER
-       new_if_stmt(cond,true_stmt);
+       new_ir_if(cond,true_stmt);
      */
 
     jump_loop_branch = jump_to(new_label_unique("WHILE_ENTER"));
-    true_stmt = link_stmt_to_stmt(jump_loop_branch,true_stmt);
+    true_stmt = link_ir_to_ir(jump_loop_branch,true_stmt);
 
-    while_node = new_if_stmt(cond,true_stmt,NULL);
+    while_node = new_ir_if(cond,true_stmt,NULL);
     while_node->label = jump_loop_branch->jump_label;
 
     return while_node;
 }
 
-ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
+ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     sem_t *sem_guard;
     var_t *var_from_guarded;
 
@@ -414,13 +426,13 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
 
     if ((!sem_guard || sem_guard->id_is!=ID_VAR_GUARDED) || !range || !true_stmt) {
         //parse errors or empty for_statement, ignore statement
-        return new_lost_node("__BAD_FOR_STMT__");
+        return new_lost_ir_node("__BAD_FOR_STMT__");
         //return NULL;
     }
 
     /* pseudo assembly
        INIT_FOR
-       new_while_stmt(total_cond,true_stmt);
+       new_ir_while(total_cond,true_stmt);
      */
 
     var_from_guarded = new_normal_variable_from_guarded(sem_guard->var);
@@ -430,21 +442,21 @@ ir_node_t *new_for_stmt(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     right_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
     total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
 
-    dark_init_for = new_assign_stmt(var_from_guarded,range->start);
+    dark_init_for = new_ir_assign(var_from_guarded,range->start);
     dark_init_for->label = new_label_unique("FOR_ENTER");
 
     expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
-    dark_cond_step = new_assign_stmt(expr_guard->var,expr_step);
+    dark_cond_step = new_ir_assign(expr_guard->var,expr_step);
 
-    true_stmt = link_stmt_to_stmt(dark_cond_step,true_stmt);
+    true_stmt = link_ir_to_ir(dark_cond_step,true_stmt);
 
-    for_node = new_while_stmt(total_cond,true_stmt);
-    for_node = link_stmt_to_stmt(for_node,dark_init_for);
+    for_node = new_ir_while(total_cond,true_stmt);
+    for_node = link_ir_to_ir(for_node,dark_init_for);
 
     return for_node;
 }
 
-ir_node_t *new_with_stmt(ir_node_t *body) {
+ir_node_t *new_ir_with(ir_node_t *body) {
     //if the variable is a record return the body of the statement
     //the body is a comp_statement
     return body;
@@ -475,7 +487,7 @@ ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
             yyerror(str_err);
         }
     }
-    return new_lost_node("__BAD_PROCEDURE_STMT__");
+    return new_lost_ir_node("__BAD_PROCEDURE_STMT__");
 }
 
 ir_node_t *new_comp_stmt(ir_node_t *body) {
@@ -487,7 +499,7 @@ ir_node_t *new_comp_stmt(ir_node_t *body) {
  * booleans are considered chars here and we must check their value after we read them
  * chars are considered STRINGS of size 1
  */
-ir_node_t *new_read_stmt(var_list_t *list) {
+ir_node_t *new_ir_read(var_list_t *list) {
     int i;
     int error=0;
     ir_node_t *new_ir;
@@ -521,7 +533,7 @@ ir_node_t *new_read_stmt(var_list_t *list) {
     }
 
     if (error) {
-        return new_lost_node("__BAD_READ_STMT__");
+        return new_lost_ir_node("__BAD_READ_STMT__");
         //return NULL;
     }
 
@@ -559,7 +571,7 @@ ir_node_t *new_read_stmt(var_list_t *list) {
                 yyerror("UNEXPECTED_ERROR: 44-42");
                 exit(EXIT_FAILURE);
             }
-            new_ir = link_stmt_to_stmt(new_ir,read_stmt);
+            new_ir = link_ir_to_ir(new_ir,read_stmt);
             break;
         default:
             yyerror("UNEXPECTED_ERROR: 44-44");
@@ -569,7 +581,7 @@ ir_node_t *new_read_stmt(var_list_t *list) {
     return read_stmt;
 }
 
-ir_node_t *new_write_stmt(expr_list_t *list) {
+ir_node_t *new_ir_write(expr_list_t *list) {
     int i;
     int error=0;
     ir_node_t *new_ir;
@@ -597,7 +609,7 @@ ir_node_t *new_write_stmt(expr_list_t *list) {
     }
 
     if (error) {
-        return new_lost_node("__BAD_WRITE_STMT__");
+        return new_lost_ir_node("__BAD_WRITE_STMT__");
         //return NULL;
     }
 
@@ -638,7 +650,7 @@ ir_node_t *new_write_stmt(expr_list_t *list) {
             yyerror("UNEXPECTED_ERROR: 44-45");
             exit(EXIT_FAILURE);
         }
-        new_ir = link_stmt_to_stmt(new_ir,write_stmt);
+        new_ir = link_ir_to_ir(new_ir,write_stmt);
     }
     return write_stmt;
 }
@@ -707,7 +719,7 @@ ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
 
         dummy_expr = expr_from_variable(dummy_var_l);
 
-        new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_array,dummy_expr),new_stmt);
+        new_stmt = link_ir_to_ir(new_ir_assign(dummy_var_array,dummy_expr),new_stmt);
     }
     return new_stmt;
 }
@@ -757,7 +769,7 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
 
         dummy_expr = expr_from_variable(dummy_var_l);
 
-        new_stmt = link_stmt_to_stmt(new_assign_stmt(dummy_var_record,dummy_expr),new_stmt);
+        new_stmt = link_ir_to_ir(new_ir_assign(dummy_var_record,dummy_expr),new_stmt);
     }
     return new_stmt;
 }

@@ -3,12 +3,15 @@
 
 #include "statements.h"
 #include "symbol_table.h" //ladybug's symbol table
+#include "ir.h"
 
 statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 int statement_root_module_current;
 
 void init_statements() {
     int i;
+
+    init_ir();
 
     for(i=0; i<MAX_NUM_OF_MODULES; i++) {
         statement_root_module[i] = NULL;
@@ -172,20 +175,22 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
     }
 }
 
-void link_statement_to_module(statement_t *new_statement) {
-    link_statements(new_statement,statement_root_module[statement_root_module_current]);
-}
+void link_statement_to_module_and_return(statement_t *new_statement) {
+    statement_root_module[statement_root_module_current] =
+        link_statements(new_statement,statement_root_module[statement_root_module_current]);
 
-void new_statement_module() {
-    statement_root_module_current++;
-}
+    return_to_previous_ir_tree();
 
-void return_to_previous_statement_module() {
     if (statement_root_module_current==0) {
         return;
     }
 
     statement_root_module_current--;
+}
+
+void new_statement_module(char *label) {
+    statement_root_module_current++;
+    new_ir_tree(label);
 }
 
 //const char* statement_type_to_string(statement_t *statement);

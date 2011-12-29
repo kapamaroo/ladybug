@@ -13,73 +13,7 @@
 #include "err_buff.h"
 #include "reg.h"
 
-char label_buf[MAX_LABEL_SIZE];
-
-char *new_label_literal(char *label) {
-    if (!label) {
-        return new_label_unique(DEFAULT_LABEL_PREFIX);
-    }
-    return strdup(label);
-}
-
-char *new_label_unique(char *prefix) {
-    static int n = 0;
-
-    if (!prefix) {
-        prefix = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"L_%s_%d",prefix,n);
-    n++;
-    return strdup(label_buf);
-}
-
-char *new_label_true(char *branch_label) {
-    if (!branch_label) {
-        branch_label = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"%s_true",branch_label);
-    return strdup(label_buf);
-}
-
-char *new_label_false(char *branch_label) {
-    if (!branch_label) {
-        branch_label = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"%s_false",branch_label);
-    return strdup(label_buf);
-}
-
-char *new_label_loop_to_cond(char *branch_label) {
-    if (!branch_label) {
-        branch_label = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"%s_cond",branch_label);
-    return strdup(label_buf);
-}
-
-char *new_label_exit_branch(char *branch_label) {
-    if (!branch_label) {
-        branch_label = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"%s_exit",branch_label);
-    return strdup(label_buf);
-}
-
-char *new_label_subprogram(char *sub_name) {
-    if (!sub_name) {
-        sub_name = DEFAULT_LABEL_PREFIX;
-    }
-
-    snprintf(label_buf,MAX_LABEL_SIZE,"%s",sub_name);
-    return strdup(label_buf);
-}
-
-ir_node_t *new_lost_node(char *error) {
+ir_node_t *new_lost_ir_node(char *error) {
     ir_node_t *new_ir;
 
     new_ir = new_ir_node_t(NODE_LOST_NODE);
@@ -188,12 +122,12 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 break;
             case OP_DIV:
                 tmp_node = ir_move_reg(&R_lo);
-                new_node = link_stmt_to_stmt(tmp_node,new_node);
+                new_node = link_ir_to_ir(tmp_node,new_node);
                 new_node->data_is = TYPE_INT;
                 break;
             case OP_MOD:
                 tmp_node = ir_move_reg(&R_hi);
-                new_node = link_stmt_to_stmt(tmp_node,new_node);
+                new_node = link_ir_to_ir(tmp_node,new_node);
                 new_node->data_is = TYPE_INT;
                 break;
             case OP_AND:
@@ -268,7 +202,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_func_call = prepare_stack_and_call(sem_1->subprogram,ltree->expr_list);
 
             //finally we must read the return value after the actual call
-            new_node = link_stmt_to_stmt(new_node,new_func_call);
+            new_node = link_ir_to_ir(new_node,new_func_call);
         }
 
         new_node->data_is = ltree->datatype->is;
@@ -391,13 +325,13 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
 #if BISON_DEBUG_LEVEL >= 1
         yyerror("ERROR: null expr_list for subprogram call (debugging info)");
 #endif
-        return new_lost_node("__BAD_STACK_PREPARATION__");
+        return new_lost_ir_node("__BAD_STACK_PREPARATION__");
     }
 
     if (list->all_expr_num != subprogram->param_num) {
         sprintf(str_err,"invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
         yyerror(str_err);
-        return new_lost_node("__BAD_STACK_PREPARATION__");
+        return new_lost_ir_node("__BAD_STACK_PREPARATION__");
     }
 
     if (MAX_EXPR_LIST - list->expr_list_empty == subprogram->param_num) {
@@ -432,7 +366,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
                     yyerror(str_err);
                     free(tmp_var);
 
-                    return new_lost_node("__BAD_STACK_PREPARATION__");
+                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
                 }
 
                 if (el_datatype != subprogram->param[i]->datatype) {
@@ -440,7 +374,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
                     yyerror(str_err);
                     free(tmp_var);
 
-                    return new_lost_node("__BAD_STACK_PREPARATION__");
+                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
                 }
 
                 if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
@@ -448,7 +382,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
                     yyerror(str_err);
                     free(tmp_var);
 
-                    return new_lost_node("__BAD_STACK_PREPARATION__");
+                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
                 }
 
                 //mark temporarily the lvalue as PASS_VAL, in order for the calculate_lvalue() to work properly
@@ -480,24 +414,24 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
                     yyerror("arrays, records and set datatypes can only be passed by refference");
                     free(tmp_var);
 
-                    return new_lost_node("__BAD_STACK_PREPARATION__");
+                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
                 }
-                tmp_assign = new_assign_stmt(tmp_var,list->expr_list[i]);
+                tmp_assign = new_ir_assign(tmp_var,list->expr_list[i]);
             }
 #warning "if errors, we leak memory"
 
-            new_stack_init_node = link_stmt_to_stmt(tmp_assign,new_stack_init_node);
+            new_stack_init_node = link_ir_to_ir(tmp_assign,new_stack_init_node);
         }
         free(tmp_var);
 
         ir_jump_link = jump_and_link_to(subprogram->label);
-        new_stack_init_node = link_stmt_to_stmt(ir_jump_link,new_stack_init_node);
+        new_stack_init_node = link_ir_to_ir(ir_jump_link,new_stack_init_node);
 
         return new_stack_init_node;
     }
 
     //some expressions are invalid, but their number is correct, avoid some unreal error messages afterwards
-    return new_lost_node("__BAD_STACK_PREPARATION__");
+    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
 }
 
 var_t *new_normal_variable_from_guarded(var_t *guarded) {

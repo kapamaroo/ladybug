@@ -277,7 +277,7 @@ void print_all_modules() {
     ir_node_t *module;
 
     for(i=0;i<MAX_NUM_OF_MODULES;i++) {
-        module = ir_root_module[i];
+        module = ir_root_tree[i];
         print_module(module);
     }
 }
@@ -362,7 +362,7 @@ char *op_to_instruction(op_t op) {
     case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
     	//return "op_SIGN";
     default:
-        yyerror("UNEXPECTED_ERROR: 04");
+        printf("UNEXPECTED_ERROR: 04\n");
         exit(EXIT_FAILURE);
     }
 }

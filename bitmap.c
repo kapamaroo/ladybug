@@ -140,9 +140,9 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     }
 
     ir_final = NULL;
-    ir_final = link_stmt_to_stmt(bitmap1,ir_final);
-    ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-    ir_final = link_stmt_to_stmt(new_binary,ir_final);
+    ir_final = link_ir_to_ir(bitmap1,ir_final);
+    ir_final = link_ir_to_ir(bitmap2,ir_final);
+    ir_final = link_ir_to_ir(new_binary,ir_final);
 
     return ir_final;
 }
@@ -195,7 +195,7 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(factory);
 
-        new_binary = link_stmt_to_stmt(new_binary,tmp_node);
+        new_binary = link_ir_to_ir(new_binary,tmp_node);
     }
     else if (op==OP_MULT) {
         new_binary = new_ir_node_t(NODE_BINARY_AND);
@@ -205,9 +205,9 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
     }
 
     ir_final = NULL;
-    ir_final = link_stmt_to_stmt(bitmap1,ir_final);
-    ir_final = link_stmt_to_stmt(bitmap2,ir_final);
-    ir_final = link_stmt_to_stmt(new_binary,ir_final);
+    ir_final = link_ir_to_ir(bitmap1,ir_final);
+    ir_final = link_ir_to_ir(bitmap2,ir_final);
+    ir_final = link_ir_to_ir(new_binary,ir_final);
 
     return ir_final;
 }
@@ -265,7 +265,7 @@ ir_node_t *create_basic_bitmap(var_t *factory,expr_t *expr_set) {
             }
 
             tmp_node->ir_lval_dest = calculate_lvalue(factory);
-            ir_final = link_stmt_to_stmt(tmp_node,ir_final);
+            ir_final = link_ir_to_ir(tmp_node,ir_final);
         }
     }
 
