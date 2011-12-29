@@ -858,6 +858,7 @@ data_t *close_subset_type(expr_t *l1, expr_t *l2) {
         return NULL;
     }
 
+    //this also works in the case of char limits
     if (l2->ival - l1->ival + 1<=0 || l2->ival - l1->ival + 1>MAX_FIELDS) {
         yyerror("subset limits are incorrect");
         return NULL;
