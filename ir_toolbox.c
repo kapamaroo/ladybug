@@ -11,6 +11,7 @@
 #include "expressions.h"
 #include "expr_toolbox.h"
 #include "err_buff.h"
+#include "reg.h"
 
 char label_buf[MAX_LABEL_SIZE];
 
@@ -87,10 +88,39 @@ ir_node_t *new_lost_node(char *error) {
     return new_ir;
 }
 
+ir_node_t *ir_move_reg(reg_t *reg) {
+    ir_node_t *arch_node;
+    ir_node_t *arch_node2;
+    ir_node_t *move_node;
+
+    arch_node = new_ir_node_t(NODE_RVAL_ARCH);
+    arch_node->reg = &R_zero;
+
+    arch_node2 = new_ir_node_t(NODE_RVAL_ARCH);
+    arch_node2->reg = reg;
+
+    move_node = new_ir_node_t(NODE_RVAL);
+    move_node->op_rval = OP_PLUS;
+    move_node->ir_rval = arch_node;
+    move_node->ir_rval2 = arch_node2;
+
+    return move_node;
+}
+
+ir_node_t *expr_cond_to_ir_tree(expr_t *ltree) {
+    if (!ltree || ltree->datatype->is!=TYPE_BOOLEAN) {
+        printf("UNEXPECTED ERROR: boolean for assign\n");
+        exit(EXIT_FAILURE);
+    }
+    return NULL;
+}
+
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *new_node;
     ir_node_t *convert_node;
     ir_node_t *new_func_call;
+    ir_node_t *tmp_node;
+
     sem_t *sem_1;
 
     //we do not handle EXPR_STRING here, strings can be only in assignments (not inside expressions)
@@ -109,10 +139,18 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             //operator 'in' applies only to one set, see expr_distribute_inop_to_set() in expr_toolbox.c
             if (ltree->l2->expr_is==EXPR_LVAL) {
                 new_node = make_bitmap_inop_check(ltree);
+
+                //this should go inside the make_inop_check
+                new_node->data_is = TYPE_BOOLEAN;
+
                 return new_node;
             }
             else if (ltree->l2->expr_is==EXPR_SET || ltree->l2->expr_is==EXPR_NULL_SET) {
                 new_node = make_dynamic_inop_check(ltree);
+
+                //this should go inside make_dynamic_inop_check
+                new_node->data_is = TYPE_BOOLEAN;
+
                 return new_node;
             }
             else {
@@ -120,25 +158,10 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 exit(EXIT_FAILURE);
             }
         }
-        //else if (ltree->op==RELOP_B) {}
-        //else if (ltree->op==RELOP_BE) {}
-        //else if (ltree->op==RELOP_L) {}
-        //else if (ltree->op==RELOP_LE) {}
-        //else if (ltree->op==RELOP_NE) {}
-        //else if (ltree->op==RELOP_EQU) {}
-        //else if (ltree->op==OP_SIGN) {}
-        //else if (ltree->op==OP_PLUS) {}
-        //else if (ltree->op==OP_MINUS) {}
-        //else if (ltree->op==OP_MULT) {}
-        //else if (ltree->op==OP_RDIV) {}
-        //else if (ltree->op==OP_DIV) {}
-        //else if (ltree->op==OP_MOD) {}
-        //else if (ltree->op==OP_AND) {}
-        //else if (ltree->op==OP_OR) {}
-        //else if (ltree->op==OP_NOT) {}
         else { //it's all the same
             new_node = new_ir_node_t(NODE_RVAL);
             new_node->op_rval = ltree->op;
+            new_node->data_is = ltree->datatype->is;
 
             if (ltree->op!=OP_NOT) {
                 //speciall case for OP_SIGN, OP_NOT they use only the l2 expr, see expr_toolbox.c, expressions.c
@@ -147,14 +170,60 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
             new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
 
+            switch (ltree->op) {
+            case RELOP_B:
+            case RELOP_BE:
+            case RELOP_L:
+            case RELOP_LE:
+            case RELOP_NE:
+            case RELOP_EQU:
+                new_node->data_is = TYPE_BOOLEAN;
+                break;
+            case OP_PLUS:
+            case OP_MINUS:
+            case OP_MULT:
+                break;
+            case OP_RDIV:
+                new_node->data_is = TYPE_REAL;
+                break;
+            case OP_DIV:
+                tmp_node = ir_move_reg(&R_lo);
+                new_node = link_stmt_to_stmt(tmp_node,new_node);
+                new_node->data_is = TYPE_INT;
+                break;
+            case OP_MOD:
+                tmp_node = ir_move_reg(&R_hi);
+                new_node = link_stmt_to_stmt(tmp_node,new_node);
+                new_node->data_is = TYPE_INT;
+                break;
+            case OP_AND:
+                new_node->node_type = NODE_BINARY_AND;
+                break;
+            case OP_OR:
+                new_node->node_type = NODE_BINARY_OR;
+                break;
+            case OP_NOT:
+                new_node->node_type = NODE_BINARY_NOT;
+                break;
+            case OP_SIGN:
+                //this is a virtual operator, should never reach here
+                printf("UNEXPECTED_ERROR: expr_tree_to_ir_tree: OP_SIGN");
+                exit(EXIT_FAILURE);
+            default:
+                printf("UNEXPECTED ERROR: expr_tree_to_ir_tree: inop in RVAL\n");
+                exit(EXIT_FAILURE);
+            }
+
             if (ltree->convert_to==SEM_INTEGER) {
                 convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
                 convert_node->ir_rval = new_node;
+                convert_node->data_is = TYPE_INT;
                 return convert_node;
             }
             else if (ltree->convert_to==SEM_REAL) {
                 convert_node = new_ir_node_t(NODE_CONVERT_TO_REAL);
                 convert_node->ir_rval = new_node;
+                convert_node->data_is = TYPE_REAL;
                 return convert_node;
             }
             return new_node;
@@ -165,11 +234,13 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         new_node->ival = ltree->ival;
         new_node->fval = ltree->fval;
         new_node->cval = ltree->cval;
+        new_node->data_is = ltree->datatype->is;
         return new_node;
     }
     else if (ltree->expr_is==EXPR_NULL_SET) {
         new_node = new_ir_node_t(NODE_INIT_NULL_SET);
         new_node->ir_lval_dest = calculate_lvalue(ltree->var);
+        new_node->data_is = TYPE_INT;
         return new_node;
     }
     else if (ltree->expr_is==EXPR_SET) {
@@ -177,6 +248,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         //we enter here with an assign statement like:
         //"set_variable := [5,10..15,20] + lval_set * another_lval_set - [7,8]
         new_node = create_bitmap(ltree);
+        new_node->data_is = TYPE_INT;
         return new_node;
     }
     else if (ltree->expr_is==EXPR_LVAL || ltree->expr_is==EXPR_LOST) {
@@ -199,14 +271,18 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node = link_stmt_to_stmt(new_node,new_func_call);
         }
 
+        new_node->data_is = ltree->datatype->is;
+
         if (ltree->convert_to==SEM_INTEGER) {
             convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
             convert_node->ir_rval = new_node;
+            convert_node->data_is = TYPE_INT;
             return convert_node;
         }
         else if (ltree->convert_to==SEM_REAL) {
             convert_node = new_ir_node_t(NODE_CONVERT_TO_REAL);
             convert_node->ir_rval = new_node;
+            convert_node->data_is = TYPE_REAL;
             return convert_node;
         }
         return new_node;
@@ -453,6 +529,15 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
     //explicit datatype matching
     if (vd==ld) {
         return 1;
+    }
+
+    //synonym datatype matching
+    if (vd->is==ld->is) {
+        return 1;
+    }
+    else if (vd->is==TYPE_BOOLEAN) {
+        //we can only assign booleans to booleans
+        return 0;
     }
 
     //compatible datatype matching
