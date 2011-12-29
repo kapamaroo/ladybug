@@ -12,10 +12,12 @@
 #include "expressions.h"
 #include "subprograms.h"
 #include "mem.h"
-#include "ir.h"
+    //#include "ir.h"
+#include "statements.h"
 #include "err_buff.h"
 #include "ir_printer.h"
 #include "main_app.h"
+
 
     int yylex(void);
     void yyerror(const char *msg);
@@ -35,7 +37,8 @@
      struct sem_t *info;
      struct iter_t *iter_space;
      struct dim_t *dim;
-     struct ir_node_t *ir_node;
+     //struct ir_node_t *ir_node;
+     struct statement_t *statement;
 
      struct expr_list_t *expr_list;
      struct var_list_t *var_list;
@@ -138,25 +141,27 @@
 %type <type> standard_type
 %type <type> type_def
 
-%type <ir_node> statements
-%type <ir_node> statement
-%type <ir_node> assignment
-%type <ir_node> if_statement
-%type <ir_node> while_statement
-%type <ir_node> for_statement
-%type <ir_node> with_statement
-%type <ir_node> subprogram_call
-%type <ir_node> io_statement
-%type <ir_node> comp_statement
-%type <ir_node> if_tail
+%type <statement> statements
+%type <statement> statement
+%type <statement> assignment
+%type <statement> if_statement
+%type <statement> while_statement
+%type <statement> for_statement
+%type <statement> with_statement
+%type <statement> subprogram_call
+%type <statement> io_statement
+%type <statement> comp_statement
+%type <statement> if_tail
 
 %error-verbose
 %start program
 %%
 
 program: header declarations subprograms comp_statement DOT {
-    link_stmt_to_tree($4);
-    return_to_previous_module();
+    //link_stmt_to_tree($4);
+    link_statement_to_module($4);
+    //return_to_previous_module();
+    return_to_previous_statement_module();
     //no previous module here, this just appends the return node
  }
 ;
@@ -305,7 +310,7 @@ pass: VAR {$$ = PASS_REF;}
 comp_statement: T_BEGIN statements END {$$ = new_comp_stmt($2);}
 ;
 
-statements: statements SEMI statement {$$ = link_stmt_to_stmt($3,$1);}
+statements: statements SEMI statement {$$ = link_statements($3,$1);}
 | statement {$$ = $1;}
 ;
 
@@ -320,36 +325,36 @@ statement: assignment
 | /* empty */ {$$ = NULL;}
 ;
 
-assignment: variable ASSIGN expression {$$ = new_assign_stmt($1,$3);}
-| variable ASSIGN STRING {$$ = new_assign_stmt($1,expr_from_STRING($3));}
+assignment: variable ASSIGN expression {$$ = statement_assignment($1,$3);}
+| variable ASSIGN STRING {$$ = statement_assignment($1,expr_from_STRING($3));}
 ;
 
-if_statement: IF expression THEN {check_if_boolean($2);} statement if_tail {$$ = new_if_stmt($2,$5,$6);}
+if_statement: IF expression THEN {check_if_boolean($2);} statement if_tail {$$ = statement_if($2,$5,$6);}
 ;
 
 if_tail: ELSE statement {$$ = $2;}
 | /* empty */ {$$ = NULL;}
 ;
 
-while_statement: WHILE expression {check_if_boolean($2);} DO statement {$$ = new_while_stmt($2,$5);}
+while_statement: WHILE expression {check_if_boolean($2);} DO statement {$$ = statement_while($2,$5);}
 ;
 
-for_statement: FOR ID ASSIGN iter_space DO {protect_guard_var($2);} statement {$$ = new_for_stmt($2,$4,$7);unprotect_guard_var($2);}
+for_statement: FOR ID ASSIGN iter_space DO {protect_guard_var($2);} statement {$$ = statement_for($2,$4,$7);unprotect_guard_var($2);}
 ;
 
 iter_space: expression TO expression {$$ = make_iter_space($1,1,$3);}
 | expression DOWNTO expression {$$ = make_iter_space($1,-1,$3);}
 ;
 
-with_statement: WITH variable DO {start_new_with_statement_scope($2);} statement {$$ = new_with_stmt($5); close_last_opened_with_statement_scope();}
+with_statement: WITH variable DO {start_new_with_statement_scope($2);} statement {$$ = statement_with($2,$5); close_last_opened_with_statement_scope();}
 ;
 
-subprogram_call: ID {$$ = new_procedure_call($1,NULL);}
-| ID LPAREN expressions RPAREN {$$ = new_procedure_call($1,$3);}
+subprogram_call: ID {$$ = statement_call($1,NULL);}
+| ID LPAREN expressions RPAREN {$$ = statement_call($1,$3);}
 ;
 
-io_statement: READ LPAREN read_list RPAREN {$$ = new_read_stmt($3);}
-| WRITE LPAREN write_list RPAREN {$$ = new_write_stmt($3);}
+io_statement: READ LPAREN read_list RPAREN {$$ = statement_read($3);}
+| WRITE LPAREN write_list RPAREN {$$ = statement_write($3);}
 ;
 
 read_list: read_list COMMA read_item {$$ = var_list_add($1,$3);}
@@ -377,7 +382,8 @@ int main(int argc, char *argv[]) {
     init_mem();
     init_symbol_table();
     init_scope();
-    init_ir();
+    //init_ir();
+    init_statements();
     init_err_buff();
 
     if (argc>1) {
@@ -401,7 +407,7 @@ int main(int argc, char *argv[]) {
     switch (status) {
     case 0:
         if (!err_num) {
-            print_all_modules();
+            //print_all_modules();
             exit(EXIT_SUCCESS);
         } else {
             printf("Please correct the errors.\n");
