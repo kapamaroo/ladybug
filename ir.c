@@ -66,13 +66,6 @@ void return_to_previous_module() {
     ir_root = ir_root_module[--ir_root_module_current];
 }
 
-void check_for_return_value(func_t *subprogram,ir_node_t *body) {
-    if (body->last->return_point==0) {
-        sprintf(str_err,"ERROR: control reaches end of function '%s' without return value",subprogram->func_name);
-        yyerror(str_err);
-    }
-}
-
 ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     ir_node_t *new_node;
 
@@ -145,7 +138,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->jump_label = NULL;
     new_node->error = NULL;
     new_node->lval = NULL;
-    new_node->return_point = 0;
     return new_node;
 }
 
@@ -156,10 +148,6 @@ void link_stmt_to_tree(ir_node_t *new_node) {
 ir_node_t *link_stmt_to_stmt(ir_node_t *child,ir_node_t *parent) {
     //return the head of the linked list
     if (parent && child) {
-        //if child's return_point is not set, propagate the parent's return_point value
-        if (child->last->return_point==0) {
-            child->last->return_point = parent->last->return_point;
-        }
         parent->last->next = child;
         child->prev = parent->last;
         parent->last = child->last;
@@ -249,23 +237,23 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         }
         break;
     case TYPE_BOOLEAN:
-        if (l->datatype->is!=TYPE_BOOLEAN) {
-	    yyerror("assignment to boolean with nonboolean datatype");
-	    return new_lost_node("__BAD_ASSIGN_STMT_boolean__");
-            //return NULL;
-        }
+#warning implement me
+        //we must assign either 1 or 0
+        printf("IMPLEMENT ME: assign to boolean");
+        exit(EXIT_FAILURE);
         break;
     case TYPE_CHAR:
+        //if expr is char we suppose it has a valid value
         if (l->datatype->is!=TYPE_CHAR) {
-#warning INFO: allow the next only if we can assign scalar types to chars
-            //v->cond_assign = make_ASCII_bound_checks(v,l);
+            //#warning INFO: allow the next only if we can assign scalar types to chars
+            v->cond_assign = make_ASCII_bound_checks(v,l);
         }
         break;
     case TYPE_ENUM:
         //enumerations are integers
         //assign for enumerations
-#warning INFO: allow the next only if we can assign scalar types to enumerations
-        //v->cond_assign = make_enum_subset_bound_checks(v,l);
+        //#warning INFO: allow the next only if we can assign scalar types to enumerations
+        v->cond_assign = make_enum_subset_bound_checks(v,l);
         break;
     case TYPE_SUBSET:
         v->cond_assign = make_enum_subset_bound_checks(v,l);
@@ -293,11 +281,11 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
         }
         return new_stmt;
     case TYPE_SET:
-        //not a special case any more
-        //new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
-        //new_stmt->address = calculate_lvalue(v);
-        //new_stmt->ir_lval = expr_tree_to_ir_tree(l); // create_bitmap(l);
-        //return new_stmt;
+        //new_stmt = new_ir_node_t(NODE_ASSIGN);
+        new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
+        new_stmt->address = calculate_lvalue(v);
+        new_stmt->ir_lval = create_bitmap(l);
+        return new_stmt;
     case TYPE_VOID: //keep the compiler happy
         printf("UNEXPECTED ERROR: TYPE_VOID in assignment\n");
         exit(EXIT_FAILURE);
@@ -308,10 +296,6 @@ ir_node_t *new_assign_stmt(var_t *v, expr_t *l) {
     new_stmt = new_ir_node_t(NODE_ASSIGN);
     new_stmt->address = calculate_lvalue(v);
     new_stmt->ir_rval = expr_tree_to_ir_tree(l);
-
-    if (v->id_is==ID_RETURN) {
-        new_stmt->return_point = 1;
-    }
 
     if (v->cond_assign) {
         //we must do some checks before the assignment, convert to branch node
@@ -366,10 +350,6 @@ ir_node_t *new_if_stmt(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) 
 	jump_exit_branch = jump_to(ir_exit_if->label);
         false_stmt = link_stmt_to_stmt(jump_exit_branch,false_stmt);
 
-	//propagate return_point to the last statement
-	if (true_stmt->last->return_point && false_stmt->last->return_point) {
-            ir_exit_if->return_point = 1;
-	}
     } else {
         // only true_stmt
         /* pseudo assembly

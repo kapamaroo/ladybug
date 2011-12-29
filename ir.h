@@ -2,10 +2,9 @@
 #define _INTERMEDIATE_REPRESENTATION_H
 
 #include "semantics.h"
+#include "statements.h"
 #include "reg.h"
 
-//module zero is the main program
-#define MAX_NUM_OF_MODULES 128
 #define NEED_BACKPATCH NULL
 
 typedef enum ir_node_type_t {
@@ -37,6 +36,7 @@ typedef enum ir_node_type_t {
     NODE_LVAL,			//memory address with possible offset
     NODE_HARDCODED_LVAL,	//immediate memory address, with possible offset
     NODE_RVAL,
+    NODE_RVAL_ARCH,             //get a RVAL directly from a register (usually a REG_POINTER register) see reg.h
     NODE_HARDCODED_RVAL,
     NODE_INIT_NULL_SET,
     NODE_ADD_ELEM_TO_SET,       //checks first if bigger or equal to zero
@@ -52,7 +52,6 @@ typedef struct ir_node_t {
     op_t op_rval;
     unsigned long virt_reg;
     reg_t *reg;
-    int return_point;
 
     struct ir_node_t *next;
     struct ir_node_t *prev;
@@ -76,6 +75,7 @@ typedef struct ir_node_t {
 
     char *error; //NODE_LOST_NODE uses this
 
+    type_t data_is; //standard type
     mem_t *lval; //generate *address and *offset from here (this should be removed)
     int ival;	 //hardcoded int
     float fval;	 //hardcoded real
@@ -90,8 +90,6 @@ extern ir_node_t *ir_root;
 void init_ir();
 void new_module(func_t *subprogram);
 void return_to_previous_module();
-void check_for_return_value(func_t *subprogram,ir_node_t *body);
-
 
 ir_node_t *new_ir_node_t(ir_node_type_t node_type);
 void link_stmt_to_tree(ir_node_t *new_node);

@@ -7,6 +7,7 @@
 #include "symbol_table.h"
 #include "mem.h"
 #include "err_buff.h"
+#include "statements.h"
 
 param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
     int i;
@@ -62,6 +63,13 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
     }
 }
 
+void check_for_return_value(func_t *subprogram,statement_t *body) {
+    if (body->last->return_point==0) {
+        sprintf(str_err,"ERROR: control reaches end of function '%s' without return value",subprogram->func_name);
+        yyerror(str_err);
+    }
+}
+
 void subprogram_init(sem_t *sem_sub) {
     func_t *subprogram;
 
@@ -87,10 +95,10 @@ void subprogram_init(sem_t *sem_sub) {
     start_new_scope(subprogram);
     configure_stack_size_and_param_lvalues(subprogram);
     declare_formal_parameters(subprogram); //declare them inside the new scope
-    new_module(subprogram);
+    new_statement_module();
 }
 
-void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
+void subprogram_finit(sem_t *subprogram,statement_t *body) {
     //mark subprogram as well-declared, if needed
     if (subprogram->id_is == ID_FORWARDED_FUNC) {
         subprogram->id_is = ID_FUNC;
@@ -102,8 +110,8 @@ void subprogram_finit(sem_t *subprogram,ir_node_t *body) {
 
     close_current_scope();
 
-    link_stmt_to_tree(body);
-    return_to_previous_module();
+    link_statement_to_module(body);
+    return_to_previous_statement_module();
 }
 
 sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) {
