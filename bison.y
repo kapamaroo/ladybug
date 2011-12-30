@@ -15,6 +15,7 @@
     //#include "ir.h"
 #include "statements.h"
 #include "err_buff.h"
+#include "generator.h"
 #include "ir_printer.h"
 #include "main_app.h"
 
@@ -304,7 +305,7 @@ pass: VAR {$$ = PASS_REF;}
 | /* empty */ {$$ = PASS_VAL;}
 ;
 
-comp_statement: T_BEGIN statements END {$$ = new_comp_stmt($2);}
+comp_statement: T_BEGIN statements END {$$ = $2;}
 ;
 
 statements: statements SEMI statement {$$ = link_statements($3,$1);}
@@ -336,7 +337,7 @@ if_tail: ELSE statement {$$ = $2;}
 while_statement: WHILE expression {check_if_boolean($2);} DO statement {$$ = statement_while($2,$5);}
 ;
 
-for_statement: FOR ID ASSIGN iter_space DO {protect_guard_var($2);} statement {$$ = statement_for($2,$4,$7);unprotect_guard_var($2);}
+for_statement: FOR ID ASSIGN iter_space DO {$<var>$ = protect_guard_var($2);} statement {$$ = statement_for($<var>6,$4,$7);unprotect_guard_var($<var>6);}
 ;
 
 iter_space: expression TO expression {$$ = make_iter_space($1,1,$3);}
@@ -346,8 +347,8 @@ iter_space: expression TO expression {$$ = make_iter_space($1,1,$3);}
 with_statement: WITH variable DO {start_new_with_statement_scope($2);} statement {$$ = statement_with($2,$5); close_last_opened_with_statement_scope();}
 ;
 
-subprogram_call: ID {$$ = statement_call($1,NULL);}
-| ID LPAREN expressions RPAREN {$$ = statement_call($1,$3);}
+subprogram_call: ID {func_t *s = find_subprogram($1);$$ = statement_call(s,NULL);}
+| ID LPAREN expressions RPAREN {func_t *s = find_subprogram($1);$$ = statement_call(s,$3);}
 ;
 
 io_statement: READ LPAREN read_list RPAREN {$$ = statement_read($3);}
@@ -378,8 +379,6 @@ int main(int argc, char *argv[]) {
 
     init_mem();
     init_symbol_table();
-    init_scope();
-    //init_ir();
     init_statements();
     init_err_buff();
 
@@ -404,7 +403,23 @@ int main(int argc, char *argv[]) {
     switch (status) {
     case 0:
         if (!err_num) {
+            /* high level optimizations go here
+             * high level code is at
+             * statement_t *statement_root_module[MAX_NUM_OF_MODULES];
+             */
+
+            /* EOF (end of frontend) :) */
+            generate_all_modules();
+            /* Hello backend! */
+
+            /* low level optimizations go here
+             * low level code is at
+             * ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
+             */
+
+            /**** print final code ****/
             print_all_modules();
+
             exit(EXIT_SUCCESS);
         } else {
             printf("Please correct the errors.\n");
