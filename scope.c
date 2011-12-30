@@ -16,13 +16,7 @@ with_stmt_scope_t *tail_scope_with;
 void init_scope() {
     int i;
 
-    sem_main_program = sm_insert("");
-    sem_main_program->id_is = ID_PROGRAM_NAME;
-    main_program = (func_t*)malloc(sizeof(func_t));
-    main_program->func_name = sem_main_program->name;
-    sem_main_program->subprogram = main_program;
-
-    scope_stack[0].scope_owner = main_program;
+    scope_stack[0].scope_owner = sem_main_program->subprogram;
     scope_stack[0].start_index = 0;
     scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
     scope_stack[0].lost_symbols_empty = MAX_LOST_SYMBOLS;
@@ -46,7 +40,7 @@ void start_new_scope(func_t *scope_owner) {
     int i;
 
     //the main_scope is created in init_symbol_table()
-    //create scopes nested to main_program's scope
+    //create scopes nested to main program's scope
 
     //create new scope even if symbol table is full, let the next sm_insert() handle this case
 
