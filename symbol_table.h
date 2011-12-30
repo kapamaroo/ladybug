@@ -73,8 +73,8 @@ sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL 
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
 void sm_remove(char *id); //remove this symbol from the most nested scope it is found
 
-void protect_guard_var(char *id);
-void unprotect_guard_var(char *id);
+var_t *protect_guard_var(char *id);
+void unprotect_guard_var(var_t *var);
 
 void declare_consts(char *id,expr_t *l);
 void declare_vars(data_t *type);
@@ -88,6 +88,8 @@ var_t *refference_to_variable_or_enum_element(char *id);
 var_t *refference_to_array_element(var_t *v, expr_list_t *list);
 var_t *refference_to_record_element(var_t *v, char *id);
 sem_t *reference_to_forwarded_function(char *id);
+
+func_t *find_subprogram(char *id);
 
 var_t *lost_var_reference();
 int enum_num_of_id(const data_t *data,const char *id);

@@ -136,6 +136,8 @@ void init_symbol_table() {
     printf("Initializing symbol table.. ");
 #endif
 
+    init_scope();
+
     idf_free_memory = 0; //at the beggining there is no memory
     idf_init();
 
@@ -951,7 +953,7 @@ int check_for_id_in_datatype(data_t *datatype,const char *id) {
     return -1;
 }
 
-void protect_guard_var(char *id) {
+var_t *protect_guard_var(char *id) {
     sem_t *sem_2;
 
     sem_2 = sm_find(id);
@@ -959,6 +961,7 @@ void protect_guard_var(char *id) {
         if (sem_2->id_is==ID_VAR) {
             if (sem_2->var->datatype->is==TYPE_INT) {
                 sem_2->var->id_is = ID_VAR_GUARDED;
+                return sem_2->var;
             }
             else {
                 sprintf(str_err,"control variable '%s' must be integer",id);
@@ -977,17 +980,39 @@ void protect_guard_var(char *id) {
     //else
     //nothing, error is printed from sm_insert
     //yyerror("the name of the control variable is declared before in this scope");
+    return NULL;
 }
 
-void unprotect_guard_var(char *id) {
-    sem_t *sem_2;
+void unprotect_guard_var(var_t *var) {
+    if (var) {
+        var->id_is = ID_VAR;
+    }
+}
 
-    sem_2 = sm_find(id);
-    if (sem_2) {
-        if (sem_2->id_is==ID_VAR_GUARDED) {
-            sem_2->var->id_is = ID_VAR;
+func_t *find_subprogram(char *id) {
+    sem_t *sem_1;
+
+    sem_1 = sm_find(id);
+    if (sem_1) {
+        //it is possible to call a subprogram before defining its body, so check for _FORWARDED_ subprograms too
+        //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
+        if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
+            sprintf(str_err,"invalid '%s' function call, expected procedure",id);
+            yyerror(str_err);
+            //continue as usual
+        } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
+            return sem_1->subprogram;
+        } else {
+            yyerror("ID is not a subprogram.");
+        }
+    } else {
+        if (!sm_find_lost_symbol(id)) {
+            sm_insert_lost_symbol(id);
+            sprintf(str_err,"undeclared subprogram '%s'",id);
+            yyerror(str_err);
         }
     }
+    return NULL;
 }
 
 var_t *lost_var_reference() {
