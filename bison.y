@@ -12,7 +12,7 @@
 #include "expressions.h"
 #include "subprograms.h"
 #include "mem.h"
-    //#include "ir.h"
+#include "ir.h"
 #include "statements.h"
 #include "err_buff.h"
 #include "generator.h"
@@ -380,6 +380,7 @@ int main(int argc, char *argv[]) {
     init_mem();
     init_symbol_table();
     init_statements();
+    init_ir();
     init_err_buff();
 
     if (argc>1) {
