@@ -19,7 +19,6 @@ sem_t **sm_table;
 //sem_t *sm_table[MAX_SYMBOLS];
 
 sem_t *sem_main_program;
-func_t *main_program;
 
 sem_t *sem_INTEGER;
 sem_t *sem_REAL;
@@ -129,12 +128,28 @@ void idf_init() {
     idf_free_memory = 0;
 }
 
+void set_main_program_name(char *name) {
+    free(sem_main_program->name);
+    sem_main_program->name = strdup(name);
+    sem_main_program->subprogram->func_name = sem_main_program->name;
+}
+
 void init_symbol_table() {
     data_t *void_datatype; //datatype of lost symbols
 
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("Initializing symbol table.. ");
 #endif
+
+    sm_empty = MAX_SYMBOLS;
+    sm_table = sm_array;
+
+    sem_main_program = sm_insert("");
+    sem_main_program->id_is = ID_PROGRAM_NAME;
+    sem_main_program->subprogram = (func_t*)malloc(sizeof(func_t));
+
+    //do not set the name here, it is going to change
+    //sem_main_program->subprogram->func_name = sem_main_program->name;
 
     init_scope();
 
@@ -148,9 +163,6 @@ void init_symbol_table() {
     void_datatype->def_datatype = void_datatype;
     void_datatype->data_name = "__void_datatype__";
     void_datatype->memsize = 0;
-
-    sm_empty = MAX_SYMBOLS;
-    sm_table = sm_array;
 
     //insert the standard types
     sem_INTEGER = sm_insert("integer");
@@ -213,11 +225,6 @@ void init_symbol_table() {
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("OK\n");
 #endif
-}
-
-void set_main_program_name(char *name) {
-    free(sem_main_program->name);
-    sem_main_program->name = strdup(name);
 }
 
 sem_t *sm_find(const char *id) {
@@ -289,46 +296,47 @@ void sm_remove(char *id) {
     symbol = sm_find(id);
 
     if (!symbol) {
-        yyerror("trying to remove null symbol from symbol table (debugging info)");
-        return;
+        printf("INTERNAL ERROR: trying to remove null symbol from symbol table\n");
+        exit(EXIT_FAILURE);
     }
+
+    //INFO: do not free() the elements, just remove them from symbol_table
 
     switch (symbol->id_is) {
     case ID_VAR_GUARDED:
     case ID_RETURN:
     case ID_VAR:
-        //INFO: do not remove the lvalue, it is used from the ir.c //BUG FIXED
-        free(symbol->var);
+        //free(symbol->var);
         break;
     case ID_LOST:
     case ID_PROGRAM_NAME:
         break;
     case ID_STRING:
-        free(symbol->var->cstr);
+        //free(symbol->var->cstr);
         break;
     case ID_CONST:
         break;
     case ID_FUNC:
     case ID_PROC:
-        for (i=0;i<symbol->subprogram->param_num;i++) {
-            free(symbol->subprogram->param[i]->name);
-            free(symbol->subprogram->param[i]);
-        }
-        free(symbol->subprogram);
+        //for (i=0;i<symbol->subprogram->param_num;i++) {
+        //    free(symbol->subprogram->param[i]->name);
+        //    free(symbol->subprogram->param[i]);
+        //}
+        //free(symbol->subprogram);
         break;
     case ID_TYPEDEF:
-        for (i=0;i<symbol->comp->field_num;i++) {
-            free(symbol->comp->field_name[i]);
-        }
+        //for (i=0;i<symbol->comp->field_num;i++) {
+        //    free(symbol->comp->field_name[i]);
+        //}
         break;
     case ID_FORWARDED_FUNC:
     case ID_FORWARDED_PROC:
         scope_owner = get_current_scope_owner();
-        sprintf(str_err,"subprogram '%s' without body in scope of %s.",id,scope_owner->func_name);
+        sprintf(str_err,"subprogram '%s' without body in module %s.",id,scope_owner->func_name);
         yyerror(str_err);
         break;
     }
-    free(symbol->name);
+    //free(symbol->name);
     free(symbol);
     symbol = NULL;
     sm_empty++;
@@ -555,7 +563,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
         else if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
             //the name of the function acts like a variable
             scope_owner = get_current_scope_owner();
-            if (scope_owner==main_program) {
+            if (scope_owner==sem_main_program->subprogram) {
                 yyerror("the main program does not return any value");
                 return lost_var_reference();
             }

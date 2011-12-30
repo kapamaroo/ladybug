@@ -29,7 +29,6 @@ typedef struct idf_t {
 extern sem_t **sm_table;
 
 extern sem_t *sem_main_program;
-extern func_t *main_program;
 
 //pointers to standard type structures
 extern sem_t *sem_INTEGER;
