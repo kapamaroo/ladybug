@@ -62,14 +62,6 @@ void new_ir_tree(char *label) {
 }
 
 void return_to_previous_ir_tree() {
-    ir_node_t *ir_return;
-
-    //append return node
-    //this also works for main program
-    ir_return = new_ir_node_t(NODE_RETURN_SUBPROGRAM);
-    ir_root_tree[ir_root_tree_current] =
-        link_ir_to_ir(ir_return,ir_root_tree[ir_root_tree_current]);
-
     if (ir_root_tree_current==0) {
         return;
     }
@@ -408,8 +400,7 @@ ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
     return while_node;
 }
 
-ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
-    sem_t *sem_guard;
+ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
     var_t *var_from_guarded;
 
     ir_node_t *dark_init_for;
@@ -422,9 +413,7 @@ ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
     expr_t *right_cond;
     expr_t *total_cond;
 
-    sem_guard = sm_find(guard_var);
-
-    if ((!sem_guard || sem_guard->id_is!=ID_VAR_GUARDED) || !range || !true_stmt) {
+    if (!var || !range || !true_stmt) {
         //parse errors or empty for_statement, ignore statement
         return new_lost_ir_node("__BAD_FOR_STMT__");
         //return NULL;
@@ -435,7 +424,7 @@ ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt) {
        new_ir_while(total_cond,true_stmt);
      */
 
-    var_from_guarded = new_normal_variable_from_guarded(sem_guard->var);
+    var_from_guarded = new_normal_variable_from_guarded(var);
     expr_guard = expr_from_variable(var_from_guarded);
 
     left_cond = expr_relop_equ_addop_mult(range->start,RELOP_LE,expr_guard);
@@ -462,35 +451,14 @@ ir_node_t *new_ir_with(ir_node_t *body) {
     return body;
 }
 
-ir_node_t *new_procedure_call(char *id,expr_list_t *list) {
-    sem_t *sem_1;
+ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list) {
     ir_node_t *new_proc_call;
 
-    sem_1 = sm_find(id);
-    if (sem_1) {
-        //it is possible to call a subprogram before defining its body, so check for _FORWARDED_ subprograms too
-        //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
-        if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
-            sprintf(str_err,"invalid '%s' function call, expected procedure",id);
-            yyerror(str_err);
-            //continue as usual
-        } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            new_proc_call = prepare_stack_and_call(sem_1->subprogram,list);
-            return new_proc_call;
-        } else {
-            yyerror("ID is not a subprogram.");
-        }
-    } else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared subprogram '%s'",id);
-            yyerror(str_err);
-        }
-    }
-    return new_lost_ir_node("__BAD_PROCEDURE_STMT__");
+    new_proc_call = prepare_stack_and_call(subprogram,list);
+    return new_proc_call;
 }
 
-ir_node_t *new_comp_stmt(ir_node_t *body) {
+ir_node_t *new_ir_comp_stmt(ir_node_t *body) {
     return body;
 }
 
@@ -773,3 +741,13 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
     }
     return new_stmt;
 }
+
+ir_node_t *new_lost_ir_node(char *error) {
+    ir_node_t *new_ir;
+
+    new_ir = new_ir_node_t(NODE_LOST_NODE);
+    new_ir->error = error;
+
+    return new_ir;
+}
+

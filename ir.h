@@ -97,9 +97,9 @@ ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent);
 ir_node_t *new_ir_assign(var_t *v, expr_t *l);
 ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt);
 ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt);
-ir_node_t *new_ir_for(char *guard_var,iter_t *range,ir_node_t *true_stmt);
+ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt);
 ir_node_t *new_ir_with(ir_node_t *body);
-ir_node_t *new_ir_procedure_call(char *id,expr_list_t *list);
+ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list);
 ir_node_t *new_ir_comp_stmt(ir_node_t *body);
 //ir_node_t *new_io_statement is divided to read and write
 ir_node_t *new_ir_read(var_list_t *list);
@@ -107,5 +107,7 @@ ir_node_t *new_ir_write(expr_list_t *list);
 
 ir_node_t *jump_and_link_to(char *jump_label);
 ir_node_t *jump_to(char *jump_label);
+
+ir_node_t *new_lost_ir_node(char *error);
 
 #endif
