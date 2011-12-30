@@ -82,47 +82,32 @@ statement_t *statement_assignment(var_t *var, expr_t *expr) {
 
 //statement_t *statement_assignment_str(var_t *var, char *string) {}
 
-statement_t *statement_for(char *id, iter_t *iter_space, statement_t *loop) {
+statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
     statement_t *new_for;
-    sem_t *sem_guard;
 
-    sem_guard = sm_find(id);
-    if ((!sem_guard || sem_guard->id_is!=ID_VAR_GUARDED)) {
-        //bad id for variable
+    if (!var) {
+        //bad for
         return new_statement_t(ST_BadStatement);
     }
 
     new_for = new_statement_t(ST_For);
-    new_for->_for.from = iter_space->start;
-    new_for->_for.to = iter_space->stop;
-    new_for->_for.var = sem_guard->var;
+    new_for->_for.var = var;
+    new_for->_for.iter = iter_space;
     new_for->_for.loop = loop;
-
-    if (iter_space->step->ival==1) {
-        new_for->_for.type = FT_To;
-    } else {
-        new_for->_for.type = FT_DownTo;
-    }
 
     return new_for;
 }
 
-statement_t *statement_call(char *id, expr_list_t *expr_params) {
+statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params) {
     statement_t *new_call;
-    sem_t *sem_sub;
 
-    sem_sub = sm_find(id);
-
-    if (!sem_sub || (sem_sub->id_is != ID_PROC &&
-                     sem_sub->id_is != ID_FORWARDED_PROC &&
-                     sem_sub->id_is != ID_FUNC &&
-                     sem_sub->id_is != ID_FORWARDED_FUNC)) {
+    if (!subprogram) {
         //bad call
         return new_statement_t(ST_BadStatement);
     }
 
     new_call = new_statement_t(ST_Call);
-    new_call->_call.subprogram = sem_sub->subprogram;
+    new_call->_call.subprogram = subprogram;
     new_call->_call.expr_params = expr_params;
 
     return new_call;

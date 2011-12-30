@@ -52,10 +52,11 @@ struct statement_assignment_t {
 };
 
 struct statement_for_t {
-    expr_t *from, *to;
+    //enum IterSpaceType type;
+    //expr_t *from, *to;
+    iter_t *iter;
     var_t *var;
     struct statement_t *loop;
-    enum IterSpaceType type;
 };
 
 struct statement_call_t {
@@ -109,8 +110,8 @@ statement_t *statement_if(expr_t *condition, statement_t *_true, statement_t *_f
 statement_t *statement_while(expr_t *condition, statement_t *loop);
 statement_t *statement_assignment(var_t *var, expr_t *expr);
 //statement_t *statement_assignment_str(var_t *var, char *string);
-statement_t *statement_for(char *id, iter_t *iter_space, statement_t *loop);
-statement_t *statement_call(char *id, expr_list_t *expr_params);
+statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop);
+statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
 statement_t *statement_with(var_t *var, statement_t *statement);
 statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
