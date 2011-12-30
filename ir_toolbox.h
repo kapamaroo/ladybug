@@ -13,8 +13,5 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list);
 
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree);
 ir_node_t *calculate_lvalue(var_t *v);
-var_t *new_normal_variable_from_guarded(var_t *guarded);
-
-int check_assign_similar_comp_datatypes(data_t* vd,data_t *ld);
 
 #endif

@@ -18,6 +18,8 @@ unsigned long unique_virt_reg;
 ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
 int ir_root_tree_current;
 
+ir_node_t *new_ir_assign_str(var_t *v, expr_t *l);
+ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l);
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
 
@@ -166,67 +168,27 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
 ir_node_t *new_ir_assign(var_t *v, expr_t *l) {
     ir_node_t *new_stmt;
 
-    func_t *scope_owner;
-
-    //check for valid assignment
-    if (!v || v->id_is==ID_LOST) {
-        //parse errors, error is printed from the 'variable' rule
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-        //return NULL;
-    } else if (!l) {
-#if BISON_DEBUG_LEVEL >= 1
-        //should never reach here
-        yyerror("null expression in assignment (debugging info)");
-#endif
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-        //return NULL;
-    }
-
-    if (l->expr_is==EXPR_LOST) {
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-        //return NULL;
-    }
-
-    if (v->id_is == ID_VAR_GUARDED) {
-        sprintf(str_err,"forbidden assignment to '%s' which controls a `for` statement",v->name);
-        yyerror(str_err);
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-        //return NULL;
-    }
-
-    if (v->id_is != ID_RETURN && v->id_is != ID_VAR) {
-        sprintf(str_err,"trying to assign to symbol '%s' which is not a variable",v->name);
-        yyerror(str_err);
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-        //return NULL;
-    }
-
-    if (v->id_is==ID_RETURN) {
-        scope_owner = get_current_scope_owner();
-        if (scope_owner->return_value->scope!=get_current_scope()) {
-            //v->name is the same with function's name because that's how functions return their value
-            sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
-            yyerror(str_err);
-            return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-            //return NULL;
-        }
-    }
-
-
-    //reminder: expressions hava standard datatypes or set datatype
-    if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
-        sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
-        yyerror(str_err);
-        return new_lost_ir_node("__BAD_ASSIGN_STMT__");
-    }
-
     if (TYPE_IS_STRING(v->datatype)) {
-        //strings terminate with 0, copy until array is full
-        new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
-        new_stmt->address = calculate_lvalue(v);
-        new_stmt->ir_lval = calculate_lvalue(l->var);
-        return new_stmt;
+        new_stmt = new_ir_assign_str(v,l);
+    } else {
+        new_stmt = new_ir_assign_expr(v,l);
     }
+
+    return new_stmt;
+}
+
+ir_node_t *new_ir_assign_str(var_t *v, expr_t *l) {
+    ir_node_t *new_stmt;
+
+    //strings terminate with 0, copy until array is full
+    new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
+    new_stmt->address = calculate_lvalue(v);
+    new_stmt->ir_lval = calculate_lvalue(l->var);
+    return new_stmt;
+}
+
+ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
+    ir_node_t *new_stmt;
 
     switch (v->datatype->is) {
     case TYPE_INT:
@@ -314,26 +276,6 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_node_t *jump_exit_branch;
     ir_node_t *ir_exit_if;
 
-    if (!cond) {
-        yyerror("UNEXPECTED_ERROR: 63-1");
-        exit(EXIT_FAILURE);
-    }
-
-    if (cond->datatype->is!=TYPE_BOOLEAN || !true_stmt) {
-        //parse errors or empty if statement, ignore statement
-        return new_lost_ir_node("__BAD_IF_STMT__");
-        //return NULL;
-    }
-
-    if (cond->expr_is==EXPR_HARDCODED_CONST) {
-        //ignore if statement, we already know the result
-        if (cond->ival) {
-            return true_stmt;  //TRUE
-        } else {
-            return false_stmt; //FALSE
-        }
-    }
-
     ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_exit_if->label = new_label_unique("IF_EXIT");
 
@@ -380,12 +322,6 @@ ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
     ir_node_t *while_node;
     ir_node_t *jump_loop_branch;
 
-    if (!cond || !true_stmt) {
-        //parse errors or empty while statement, ignore statement
-        return new_lost_ir_node("__BAD_WHILE_STMT__");
-        //return NULL;
-    }
-
     /* pseudo assembly
        LABEL_ENTER
        new_ir_if(cond,true_stmt);
@@ -401,8 +337,6 @@ ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
 }
 
 ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
-    var_t *var_from_guarded;
-
     ir_node_t *dark_init_for;
     ir_node_t *dark_cond_step; //append this to true_stmt
     ir_node_t *for_node;
@@ -413,29 +347,25 @@ ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
     expr_t *right_cond;
     expr_t *total_cond;
 
-    if (!var || !range || !true_stmt) {
-        //parse errors or empty for_statement, ignore statement
-        return new_lost_ir_node("__BAD_FOR_STMT__");
-        //return NULL;
-    }
-
     /* pseudo assembly
        INIT_FOR
        new_ir_while(total_cond,true_stmt);
      */
 
-    var_from_guarded = new_normal_variable_from_guarded(var);
-    expr_guard = expr_from_variable(var_from_guarded);
+    expr_guard = expr_from_variable(var);
+    expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
 
     left_cond = expr_relop_equ_addop_mult(range->start,RELOP_LE,expr_guard);
     right_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
     total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
 
-    dark_init_for = new_ir_assign(var_from_guarded,range->start);
-    dark_init_for->label = new_label_unique("FOR_ENTER");
+    //this is a hack, if we ever do multithreading this is not gona work
+    var->id_is = ID_VAR;
+    dark_init_for = new_ir_assign(var,range->start);
+    dark_cond_step = new_ir_assign(var,expr_step);
+    var->id_is = ID_VAR_GUARDED;
 
-    expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
-    dark_cond_step = new_ir_assign(expr_guard->var,expr_step);
+    dark_init_for->label = new_label_unique("FOR_ENTER");
 
     true_stmt = link_ir_to_ir(dark_cond_step,true_stmt);
 
@@ -469,41 +399,11 @@ ir_node_t *new_ir_comp_stmt(ir_node_t *body) {
  */
 ir_node_t *new_ir_read(var_list_t *list) {
     int i;
-    int error=0;
     ir_node_t *new_ir;
     ir_node_t *read_stmt;
     ir_node_t *ir_result_lval;
     var_t *v;
     data_t *d;
-
-    //print every possible error (if any) before returning NULL
-    for(i=0;i<MAX_VAR_LIST-list->var_list_empty;i++) {
-        v = list->var_list[i];
-        if (v->id_is==ID_LOST) {
-            error++;
-        } else if (v->id_is==ID_VAR_GUARDED) {
-            sprintf(str_err,"in read, control variable '%s' of 'for statement' is read only",v->name);
-            yyerror(str_err);
-            error++;
-        } else if (v->id_is==ID_CONST) {
-            sprintf(str_err,"in read, trying to change constant '%s'",v->name);
-            yyerror(str_err);
-            error++;
-        } else if (v->id_is==ID_RETURN) {
-            sprintf(str_err,"in read, return value '%s' can be set only with assignment",v->name);
-            yyerror(str_err);
-            error++;
-        } else if (!TYPE_IS_STANDARD(v->datatype) && !TYPE_IS_STRING(v->datatype)) {
-            sprintf(str_err,"in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->data_name);
-            yyerror(str_err);
-            error++;
-        }
-    }
-
-    if (error) {
-        return new_lost_ir_node("__BAD_READ_STMT__");
-        //return NULL;
-    }
 
     //we are error free here!
     read_stmt = NULL;
@@ -551,35 +451,10 @@ ir_node_t *new_ir_read(var_list_t *list) {
 
 ir_node_t *new_ir_write(expr_list_t *list) {
     int i;
-    int error=0;
     ir_node_t *new_ir;
     ir_node_t *write_stmt;
     expr_t *l;
     data_t *d;
-
-    //print every possible error
-    for(i=0;i<MAX_EXPR_LIST-list->expr_list_empty;i++) {
-        l = list->expr_list[i];
-        if (l->expr_is==EXPR_LOST) {
-            error++;
-        }
-        else if (l->expr_is==EXPR_SET || EXPR_NULL_SET) {
-            sprintf(str_err,"in write, can only print standard types or strings, this is a set");
-            yyerror(str_err);
-            error++;
-        }
-        else if (!TYPE_IS_STANDARD(l->datatype) && l->expr_is!=EXPR_STRING) {
-            //EXPR_RVAL, EXPR_HARDCODED_CONST, EXPR_LVAL, EXPR_STRING
-            sprintf(str_err,"in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->data_name);
-            yyerror(str_err);
-            error++;
-        }
-    }
-
-    if (error) {
-        return new_lost_ir_node("__BAD_WRITE_STMT__");
-        //return NULL;
-    }
 
     //we are error free here!
     write_stmt = NULL;
@@ -750,4 +625,3 @@ ir_node_t *new_lost_ir_node(char *error) {
 
     return new_ir;
 }
-

@@ -14,16 +14,10 @@ enum StatementType {
     ST_For,
     ST_Call,
     ST_Assignment,
-    ST_Case,
     ST_With,
     ST_Read,
     ST_Write,
     ST_BadStatement
-};
-
-enum AssignmentType {
-    AT_Expression,
-    AT_String
 };
 
 enum IterSpaceType {
@@ -43,12 +37,8 @@ struct statement_while_t {
 };
 
 struct statement_assignment_t {
-    enum AssignmentType type;
     var_t *var;
-    union {
-        expr_t *expr;
-        char *string;
-    };
+    expr_t *expr;
 };
 
 struct statement_for_t {
@@ -106,9 +96,10 @@ extern int statement_root_module_current;
 
 void init_statements();
 
-statement_t *statement_if(expr_t *condition, statement_t *_true, statement_t *_false);
-statement_t *statement_while(expr_t *condition, statement_t *loop);
-statement_t *statement_assignment(var_t *var, expr_t *expr);
+statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
+
+statement_t *statement_while(expr_t *cond, statement_t *loop);
+statement_t *statement_assignment(var_t *v, expr_t *l);
 //statement_t *statement_assignment_str(var_t *var, char *string);
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop);
 statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
