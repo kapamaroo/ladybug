@@ -134,13 +134,13 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
         //if EXPR_LVAL we already printed a warning from expr_from_variable(), see expr_toolbox.c
         if (!TYPE_IS_ARITHMETIC(l1->datatype) && l1->expr_is!=EXPR_LVAL) {
-            sprintf(str_err,"WARNING: doing math with '%s' value",l1->datatype->data_name);
-            yyerror(str_err);
+            sprintf(str_err,"doing math with '%s' value",l1->datatype->data_name);
+            yywarning(str_err);
         }
 
         if (!TYPE_IS_ARITHMETIC(l2->datatype) && l2->expr_is!=EXPR_LVAL) {
-            sprintf(str_err,"WARNING: doing math with '%s' value",l2->datatype->data_name);
-            yyerror(str_err);
+            sprintf(str_err,"doing math with '%s' value",l2->datatype->data_name);
+            yywarning(str_err);
         }
         //continue as normal
 
@@ -374,7 +374,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     if (l2->expr_is==EXPR_HARDCODED_CONST && l2->ival==0) {
-        yyerror("ERROR: division by zero");
+        yyerror("division by zero");
         return expr_from_hardcoded_int(0);
     }
 

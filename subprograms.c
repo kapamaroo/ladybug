@@ -39,7 +39,7 @@ param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
     }
 
     if (mode==PASS_VAL && TYPE_IS_COMPOSITE(type)) {
-        yyerror("ERROR: arrays, records and set datatypes can only be passed by refference");
+        yyerror("arrays, records and set datatypes can only be passed by refference");
     }
     else if (list->param_empty>=MAX_IDF-idf_empty) {
         for (i=0;i<MAX_IDF-idf_empty;i++) {
@@ -74,7 +74,7 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
 
 void check_for_return_value(func_t *subprogram,statement_t *body) {
     if (body->last->return_point==0) {
-        sprintf(str_err,"ERROR: control reaches end of function '%s' without return value",subprogram->func_name);
+        sprintf(str_err,"control reaches end of function '%s' without return value",subprogram->func_name);
         yyerror(str_err);
     }
 }
@@ -89,7 +89,7 @@ void subprogram_init(sem_t *sem_sub) {
     if (sem_sub->id_is==ID_PROC || sem_sub->id_is==ID_FUNC) {
         //Multiple body definitions for a subprogram are forbidden
         //for more information see the comments in semantics.h
-        yyerror("ERROR: Multiple body definition for subprogram.");
+        sprintf(str_err,"Multiple body definition for subprogram %s.",sem_sub->name);
         return;
     }
 

@@ -54,8 +54,8 @@ int idf_insert(char *id) {
     //every identifier's id must be unique in the scope
     idf_t *new_idf;
     if (!idf_empty) {
-        yyerror("ERROR: identifier table is full, cannot insert new id's.");
-        return 0;
+        printf("INTERNAL ERROR: identifier table is full, cannot insert new id's.");
+        exit(EXIT_FAILURE);
     }
     else if (idf_find(id)) {
         sprintf(str_err,"identifier `%s` already exists",id);
@@ -490,8 +490,7 @@ void sm_insert_lost_symbol(char *id) {
         scope_stack[sm_scope].lost_symbols_empty--;
     }
     else {
-        sprintf(str_err,"FATAL_ERROR: reached maximun lost symbols from current scope");
-        yyerror(str_err);
+        printf("FATAL_ERROR: reached maximun lost symbols from current scope");
         exit(EXIT_FAILURE);
     }
 }
@@ -588,7 +587,7 @@ var_t *refference_to_variable_or_enum_element(char *id) {
             return new_enum_const;
         }
         else {
-            sprintf(str_err,"id '%s' exists but it is not a variable or constant",id);
+            sprintf(str_err,"'%s' is not a variable or constant",id);
             yyerror(str_err);
             return lost_var_reference();
         }
@@ -663,7 +662,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
         return lost_var_reference();
     }
 
-    yyerror("UNEXPECTED_ERROR: 42");
+    printf("UNEXPECTED_ERROR: 42\n");
     exit(EXIT_FAILURE);
 }
 
@@ -720,7 +719,7 @@ var_t *refference_to_record_element(var_t *v, char *id) {
         }
     }
     else {
-        yyerror("INTERNAL_ERROR: 43");
+        printf("INTERNAL_ERROR: 43\n");
         exit(EXIT_FAILURE);
     }
 }

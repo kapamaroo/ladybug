@@ -435,7 +435,7 @@ int main(int argc, char *argv[]) {
 void yyerror(const char *msg) {
     err_num++;
 
-    printf("%s:%d: %s\n",current_file,yylineno,msg);
+    printf("%s:%d:error: %s\n",current_file,yylineno,msg);
 
 #if LOG_TO_FILE == 1
     fprintf(log_file,"%s\n",msg);

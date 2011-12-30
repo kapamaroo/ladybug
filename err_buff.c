@@ -12,3 +12,7 @@ void init_err_buff() {
     log_file = fopen(LOG_FILENAME,"w");
 #endif
 }
+
+void yywarning(char *msg) {
+    printf("%s:%d:warning: %s\n",current_file,yylineno,msg);
+}

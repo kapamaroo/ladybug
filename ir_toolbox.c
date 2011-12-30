@@ -313,9 +313,8 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
     int i;
 
     if (!list && subprogram->param_num!=0) {
-#if BISON_DEBUG_LEVEL >= 1
-        yyerror("ERROR: null expr_list for subprogram call (debugging info)");
-#endif
+        sprintf(str_err,"'%s' subprogram takes %d parameters",subprogram->func_name,subprogram->param_num);
+        yyerror(str_err);
         return new_lost_ir_node("__BAD_STACK_PREPARATION__");
     }
 

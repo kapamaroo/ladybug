@@ -80,7 +80,7 @@ expr_t *expr_from_variable(var_t *v) {
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
         //reminder: arrays and record types are allowed only for asignments
         if (v->datatype->is==TYPE_ARRAY || v->datatype->is==TYPE_RECORD) {
-            sprintf(str_err,"ERROR: doing math with '%s' of composite datatype '%s'",v->name,v->datatype->data_name);
+            sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->data_name);
             yyerror(str_err);
             l->expr_is = EXPR_LOST;
             l->var = lost_var_reference();
@@ -92,8 +92,8 @@ expr_t *expr_from_variable(var_t *v) {
         //so we can use their __actual__ datatype
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
             //this is actually a warning, maybe we need a yywarning?
-            sprintf(str_err,"WARNING: expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->data_name);
-            yyerror(str_err);
+            sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->data_name);
+            yywarning(str_err);
 
             //pass the __actual__ datatype (integer,char,boolean, or enumeration)
             //reminder: def_datatype is always standard scalar, see limit_from_id() below
@@ -105,8 +105,8 @@ expr_t *expr_from_variable(var_t *v) {
         ////final correction, this may override the subset datatype in the case of char subset
         ////if (!TYPE_IS_ARITHMETIC(v->datatype)) {
         //if (v->datatype->is==TYPE_CHAR) {
-        //    sprintf(str_err,"WARNING: doing math with '%s' variable",v->datatype->data_name);
-        //    yyerror(str_err); //maybe a yywarning?
+        //    sprintf(str_err,"doing math with '%s' variable",v->datatype->data_name);
+        //    yywarning(str_err);
         //    l->datatype = SEM_INTEGER;
         //}
 
@@ -175,15 +175,16 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
             new_expr->expr_list = list;
             return new_expr;
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            sprintf(str_err,"ERROR: invalid procedure call '%s', expected function",id);
+            sprintf(str_err,"invalid procedure call '%s', expected function",id);
             yyerror(str_err);
         } else {
-            yyerror("ID is not a subprogram.");
+            sprintf(str_err,"'%s' is not subprogram",id);
+            yyerror(str_err);
         }
     } else {
         if (!sm_find_lost_symbol(id)) {
             sm_insert_lost_symbol(id);
-            sprintf(str_err,"ERROR: undeclared subprogram '%s'",id);
+            sprintf(str_err,"undeclared subprogram '%s'",id);
             yyerror(str_err);
         }
     }
@@ -815,8 +816,8 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
 
     if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) { //optimization
         if (l1->ival>l2->ival) {
-            sprintf(str_err,"WARNING: ignore invalid range %d..%d, (%d > %d)",l1->ival,l2->ival,l1->ival,l2->ival);
-            yyerror(str_err);
+            sprintf(str_err,"ignore invalid range %d..%d, (%d > %d)",l1->ival,l2->ival,l1->ival,l2->ival);
+            yywarning(str_err);
             return NULL;
         }
     }

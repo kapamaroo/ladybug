@@ -13,8 +13,12 @@ extern int err_num;
 extern FILE *log_file;
 extern char str_err[MAX_ERROR_BUFFER];
 
-//yyerror is declared in bison.y
+//yyerror,yylineno are declared in bison.y
+extern char *current_file;
+extern int yylineno;
 extern void yyerror(const char *msg);
+
+void yywarning(char *msg);
 
 void init_err_buff();
 
