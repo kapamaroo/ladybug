@@ -13,15 +13,6 @@
 #include "err_buff.h"
 #include "reg.h"
 
-ir_node_t *new_lost_ir_node(char *error) {
-    ir_node_t *new_ir;
-
-    new_ir = new_ir_node_t(NODE_LOST_NODE);
-    new_ir->error = error;
-
-    return new_ir;
-}
-
 ir_node_t *ir_move_reg(reg_t *reg) {
     ir_node_t *arch_node;
     ir_node_t *arch_node2;
