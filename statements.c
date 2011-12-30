@@ -93,8 +93,7 @@ statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false)
     statement_t *new_if;
 
     if (!cond) {
-        yyerror("UNEXPECTED_ERROR: 63-1");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 63-1");
     }
 
     if (cond->expr_is==EXPR_LOST || cond->datatype->is!=TYPE_BOOLEAN) {
@@ -148,14 +147,12 @@ statement_t *statement_while(expr_t *cond, statement_t *loop) {
     statement_t *new_while;
 
     if (!cond) {
-        yyerror("UNEXPECTED_ERROR: 63-5");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 63-5");
     }
 
     if (cond->expr_is==EXPR_LOST) {
         //parse errors or empty while statement, ignore statement
         return new_statement_t(ST_BadStatement);
-        //return NULL;
     }
 
     if (!loop) {
@@ -177,8 +174,7 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 
     if (!v || !l) {
         //should never reach here
-        printf("UNEXPECTED ERROR: null expression in assignment\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR: null expression in assignment");
     }
 
     //check for valid assignment
@@ -238,8 +234,7 @@ statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
     }
 
     if (var->id_is!=ID_VAR_GUARDED) {
-        printf("INTERNAL_ERROR: variable is not a guard variable, check 'new_for_statement()'");
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: variable is not a guard variable, check 'new_for_statement()'");
     }
 
     if (!loop) {

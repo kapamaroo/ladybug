@@ -95,8 +95,7 @@ void subprogram_init(sem_t *sem_sub) {
 
     if (sem_sub->id_is!=ID_FORWARDED_PROC && sem_sub->id_is!=ID_FORWARDED_FUNC) {
         //sanity check, should never reach here
-        printf("UNEXPECTED ERROR 21\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR 21");
     }
 
     subprogram = sem_sub->subprogram;

@@ -61,8 +61,7 @@ void start_new_scope(func_t *scope_owner) {
         return;
     }
     else {
-        yyerror("FATAL_ERROR: reached max scope depth");
-        exit(EXIT_FAILURE);
+        die("FATAL_ERROR: reached max scope depth");
     }
 }
 
@@ -73,9 +72,7 @@ void close_current_scope() {
 
     if (sm_scope<0) {
         //there is no main scope any more
-        sprintf(str_err,"INTERNAL_ERROR: no scope to delete.");
-        yyerror(str_err);
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: no scope to delete");
     }
     sm_clean_current_scope();
 
@@ -192,8 +189,7 @@ void close_last_opened_with_statement_scope() {
     if (!root_scope_with || !tail_scope_with) {
         //root_scope_with and tail_scope_with are not initialised,
         //someone called this function without calling the start_new_with_statement_scope() first
-        yyerror("INTERNAL_ERROR: trying to close null with statement scope (debugging info)");
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: trying to close null with statement scope");
     }
 
     if (tail_scope_with->conflicts>0) {

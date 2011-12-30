@@ -14,8 +14,7 @@ expr_t *expr_from_variable(var_t *v) {
 
     if (!v) {
         //error in variable declaration
-        yyerror("INTERNAL_ERROR: 44");
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: 44");
     }
 
     //simple sanity check
@@ -27,8 +26,7 @@ expr_t *expr_from_variable(var_t *v) {
     case ID_FORWARDED_PROC:
     case ID_TYPEDEF:
     case ID_PROGRAM_NAME:
-        printf("UNEXPECTED ERROR: expr_from_variable: bad id\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR: expr_from_variable: bad id");
     default:
         break;
     }
@@ -52,8 +50,7 @@ expr_t *expr_from_variable(var_t *v) {
             l = expr_from_hardcoded_boolean(v->cval);
         }
         else {
-            yyerror("UNEXPECTED_ERROR: 38");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED_ERROR: 38");
         }
         return l;
     }
@@ -114,8 +111,7 @@ expr_t *expr_from_variable(var_t *v) {
         return l;
     }
 
-    printf("UNEXPECTED ERROR: expr_from_variable()");
-    exit(EXIT_FAILURE);
+    die("UNEXPECTED ERROR: expr_from_variable()");
 }
 
 expr_t *expr_from_STRING(char *id) {
@@ -348,8 +344,7 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
 
         return new_cond;
     default:
-        printf("UNEXPECTED_ERROR: 51-2");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 51-2");
     }
 }
 
@@ -392,15 +387,13 @@ char *op_literal(op_t op) {
     case OP_NOT:       	// 'not'
         return "not";
     default:
-        yyerror("UNEXPECTED_ERROR: 04");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 04");
     }
 }
 
 int check_if_boolean(expr_t *l) {
     if (!l) {
-        yyerror("UNEXPECTED_ERROR: 03");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 03");
     }
     else if (l->datatype->is==TYPE_BOOLEAN) {
         return 1;
@@ -501,8 +494,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
                 break;
             default:
                 //should never reach here
-                printf("UNEXPECTED ERROR 30\n");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED ERROR 30");
             }
         } else {
             sprintf(str_err,"reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
@@ -545,8 +537,7 @@ expr_t *make_array_refference(expr_list_t *list,data_t *data) {
             break;
         default:
             //should never reach here
-            printf("UNEXPECTED ERROR 30-30\n");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED ERROR 30-30");
         }
         total_offset = expr_muldivandop(total_offset,OP_MULT,datadef_size); //multiply with sizeof datadef type
     }
@@ -590,8 +581,7 @@ expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
                 break;
             default:
                 //should never reach here
-                printf("UNEXPECTED ERROR 30\n");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED ERROR 30");
             }
         }
         return total_cond;

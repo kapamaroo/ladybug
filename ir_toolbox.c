@@ -34,8 +34,7 @@ ir_node_t *ir_move_reg(reg_t *reg) {
 
 ir_node_t *expr_cond_to_ir_tree(expr_t *ltree) {
     if (!ltree || ltree->datatype->is!=TYPE_BOOLEAN) {
-        printf("UNEXPECTED ERROR: boolean for assign\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR: boolean for assign");
     }
     return NULL;
 }
@@ -54,9 +53,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
     if (!ltree) {
         //this at the worst case MUST be EXPR_LOST
-        yyerror("UNEXPECTED_ERROR: 99-1: NULL expr_tree_to_ir_tree()");
-        exit(EXIT_FAILURE);
-        //return NULL;
+        die("UNEXPECTED_ERROR: 99-1: NULL expr_tree_to_ir_tree()");
     }
 
     if (ltree->expr_is==EXPR_RVAL) {
@@ -79,8 +76,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 return new_node;
             }
             else {
-                yyerror("UNEXPECTED_ERROR: 99-2: expr_tree_to_ir_tree()");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED_ERROR: 99-2: expr_tree_to_ir_tree()");
             }
         }
         else { //it's all the same
@@ -132,11 +128,9 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 break;
             case OP_SIGN:
                 //this is a virtual operator, should never reach here
-                printf("UNEXPECTED_ERROR: expr_tree_to_ir_tree: OP_SIGN");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED_ERROR: expr_tree_to_ir_tree: OP_SIGN");
             default:
-                printf("UNEXPECTED ERROR: expr_tree_to_ir_tree: inop in RVAL\n");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED ERROR: expr_tree_to_ir_tree: inop in RVAL");
             }
 
             if (ltree->convert_to==SEM_INTEGER) {
@@ -179,8 +173,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     else if (ltree->expr_is==EXPR_LVAL || ltree->expr_is==EXPR_LOST) {
         //if (ltree->datatype->is==TYPE_SET) {
 	//    //we handle differently the lvalue sets, see new_assignment() in ir.c
-        //    yyerror("UNEXPECTED_ERROR: 99-3: EXPR_LVAL of TYPE_SET in expr_tree_to_ir_tree()");
-        //    exit(EXIT_FAILURE);
+        //    die("UNEXPECTED_ERROR: 99-3: EXPR_LVAL of TYPE_SET in expr_tree_to_ir_tree()");
         //}
 
         //load the lvalue of every datatype
@@ -213,8 +206,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         return new_node;
     }
     else {
-        yyerror("UNEXPECTED_ERROR: 99-5: UNKNOWN EXPR type in expr_tree_to_ir_tree()");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 99-5: UNKNOWN EXPR type in expr_tree_to_ir_tree()");
     }
 }
 
@@ -225,8 +217,7 @@ ir_node_t *calculate_lvalue(var_t *v) {
     expr_t *address_expr;
 
     if (!v) {
-        printf("UNEXPECTED_ERROR: 74-1\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 74-1");
     }
 
     //calculate the reference address

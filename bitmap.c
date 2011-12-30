@@ -55,8 +55,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     ir_node_t *ir_final;
 
     if (!expr_set || expr_set->expr_is==EXPR_LOST) {
-        yyerror("UNEXPECTED_ERROR: 72-1");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 72-1");
     }
 
     if (expr_set->expr_is==EXPR_LVAL && expr_set->datatype->is==TYPE_SET) {
@@ -69,8 +68,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     }
 
     if (expr_set->expr_is!=EXPR_SET) {
-        yyerror("UNEXPECTED_ERROR: 72-2");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 72-2");
     }
 
     normalize_expr_set(expr_set);
@@ -114,8 +112,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
     }
     else if (op==OP_MINUS) {
         //should never reach here, we cannot assign an expression of set datatype
-        yyerror("UNEXPECTED_ERROR: 71-1");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 71-1");
         /*
           tmp_node = new_ir_node_t(NODE_BINARY_NOT);
           tmp_node->ir_lval = calculate_lvalue(rr);
@@ -135,8 +132,7 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
         return new_binary;
     }
     else {
-        yyerror("UNEXPECTED_ERROR: 71-2 :bad operator in create_bitmap()");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 71-2 :bad operator in create_bitmap()");
     }
 
     ir_final = NULL;
@@ -345,8 +341,7 @@ void normalize_expr_set(expr_t* expr_set){
         }
         return;
     }
-    yyerror("UNEXPECTED_ERROR: 85-1");
-    exit(EXIT_FAILURE);
+    die("UNEXPECTED_ERROR: 85-1");
 }
 
 ir_node_t *make_bitmap_inop_check(expr_t *expr_inop) {

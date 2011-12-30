@@ -262,8 +262,7 @@ void print_ir_node(ir_node_t *ir_node) {
         print_ir_node(ir_node->ir_lval);
         return;
     default:
-        printf("INTERNAL_ERROR: UNKNOWN NODE TYPE\n");
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: UNKNOWN NODE TYPE");
     }
 
     //if (ir_node->next) {
@@ -362,7 +361,6 @@ char *op_to_instruction(op_t op) {
     case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
     	//return "op_SIGN";
     default:
-        printf("UNEXPECTED_ERROR: 04\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 04");
     }
 }

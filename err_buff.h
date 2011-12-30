@@ -19,6 +19,7 @@ extern int yylineno;
 extern void yyerror(const char *msg);
 
 void yywarning(char *msg);
+void die(char *msg);
 
 void init_err_buff();
 

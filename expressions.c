@@ -112,8 +112,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
     //continue only with scalar or arithmetic datatypes
     if (TYPE_IS_COMPOSITE(l1->datatype) || TYPE_IS_COMPOSITE(l2->datatype)) {
-        printf("UNEXPECTED ERROR: composite type in expression\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR: composite type in expression");
     }
 
     if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
@@ -228,8 +227,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
                 }
                 break;
             default:
-                printf("UNEXPECTED ERROR: expressions.c : bad operator\n");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED ERROR: expressions.c : bad operator");
                 break;
             }
             //we don't need the previous hardcoded values any more
@@ -363,8 +361,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         case OP_RDIV:
             return expr_from_hardcoded_real(0);
         default:
-            yyerror("UNEXPECTED_ERROR: 89-1");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED_ERROR: 89-1");
         }
     }
 
@@ -384,8 +381,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         case OP_DIV:  return expr_from_hardcoded_int(l1->ival / l2->ival);
         case OP_MOD:  return expr_from_hardcoded_int(l1->ival % l2->ival);
         default:
-            yyerror("UNEXPECTED_ERROR: 89-2-1");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED_ERROR: 89-2-1");
         }
     }
 
@@ -438,8 +434,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
 
         return new_expr;
     default:
-        yyerror("UNEXPECTED_ERROR: 89-4");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 89-4");
     }
 }
 

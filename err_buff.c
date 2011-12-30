@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "build_flags.h"
 #include "err_buff.h"
 
@@ -15,4 +18,15 @@ void init_err_buff() {
 
 void yywarning(char *msg) {
     printf("%s:%d:warning: %s\n",current_file,yylineno,msg);
+#if LOG_TO_FILE == 1
+    fprintf(log_file,"%s:%d:warning: %s\n",current_file,yylineno,msg);
+#endif
+}
+
+void die(char *msg) {
+    printf("%s\n",msg);
+#if LOG_TO_FILE == 1
+    fprintf(log_file,"%s\n",msg);
+#endif
+    exit(EXIT_FAILURE);
 }

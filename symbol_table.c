@@ -54,8 +54,7 @@ int idf_insert(char *id) {
     //every identifier's id must be unique in the scope
     idf_t *new_idf;
     if (!idf_empty) {
-        printf("INTERNAL ERROR: identifier table is full, cannot insert new id's.");
-        exit(EXIT_FAILURE);
+        die("INTERNAL ERROR: identifier table is full, cannot insert new id's.");
     }
     else if (idf_find(id)) {
         sprintf(str_err,"identifier `%s` already exists",id);
@@ -296,8 +295,7 @@ void sm_remove(char *id) {
     symbol = sm_find(id);
 
     if (!symbol) {
-        printf("INTERNAL ERROR: trying to remove null symbol from symbol table\n");
-        exit(EXIT_FAILURE);
+        die("INTERNAL ERROR: trying to remove null symbol from symbol table");
     }
 
     //INFO: do not free() the elements, just remove them from symbol_table
@@ -348,12 +346,10 @@ void declare_consts(char *id,expr_t *l) {
     char *lost_id;
 
     if (!l) {
-        yyerror("UNEXPECTED_ERROR: 11");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 11");
     }
     if (!l->datatype) {
-        yyerror("UNEXPECTED_ERROR: 12");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: 12");
     }
 
     if (l->expr_is!=EXPR_HARDCODED_CONST) {
@@ -490,8 +486,7 @@ void sm_insert_lost_symbol(char *id) {
         scope_stack[sm_scope].lost_symbols_empty--;
     }
     else {
-        printf("FATAL_ERROR: reached maximun lost symbols from current scope");
-        exit(EXIT_FAILURE);
+        die("FATAL_ERROR: reached maximun lost symbols from current scope");
     }
 }
 
@@ -612,10 +607,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
     var_t *new_var;
 
     if (!list) {
-#if BISON_DEBUG_LEVEL >= 1
-        yyerror("UNEXPECTED_ERROR: null expr_list for array refference (debugging info)");
-#endif
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED_ERROR: null expr_list for array refference");
     }
 
     if (v) {
@@ -662,8 +654,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
         return lost_var_reference();
     }
 
-    printf("UNEXPECTED_ERROR: 42\n");
-    exit(EXIT_FAILURE);
+    die("UNEXPECTED_ERROR: 42");
 }
 
 var_t *refference_to_record_element(var_t *v, char *id) {
@@ -719,8 +710,7 @@ var_t *refference_to_record_element(var_t *v, char *id) {
         }
     }
     else {
-        printf("INTERNAL_ERROR: 43\n");
-        exit(EXIT_FAILURE);
+        die("INTERNAL_ERROR: 43");
     }
 }
 
@@ -848,8 +838,7 @@ data_t *close_subset_type(expr_t *l1, expr_t *l2) {
     int i;
 
     if (!l1 || !l2) {
-        printf("INTERNAL ERROR: null expression in subset definition\n");
-        return NULL;
+        die("INTERNAL ERROR: null expression in subset definition");
     }
 
     if (!TYPE_IS_SUBSET_VALID(l1->datatype) || !TYPE_IS_SUBSET_VALID(l2->datatype)) {

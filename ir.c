@@ -253,8 +253,7 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
         new_stmt->ir_lval = create_bitmap(l);
         return new_stmt;
     case TYPE_VOID: //keep the compiler happy
-        printf("UNEXPECTED ERROR: TYPE_VOID in assignment\n");
-        exit(EXIT_FAILURE);
+        die("UNEXPECTED ERROR: TYPE_VOID in assignment");
     }
 
     /**** some common assign actions */
@@ -436,14 +435,12 @@ ir_node_t *new_ir_read(var_list_t *list) {
                 new_ir->ir_lval = ir_result_lval;
                 new_ir->ival = v->datatype->dim[0]->range;
             } else {
-                yyerror("UNEXPECTED_ERROR: 44-42");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED_ERROR: 44-42");
             }
             new_ir = link_ir_to_ir(new_ir,read_stmt);
             break;
         default:
-            yyerror("UNEXPECTED_ERROR: 44-44");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED_ERROR: 44-44");
         }
     }
     return read_stmt;
@@ -485,13 +482,11 @@ ir_node_t *new_ir_write(expr_list_t *list) {
                 new_ir->ir_rval = expr_tree_to_ir_tree(l);
             }
             else {
-                yyerror("UNEXPECTED_ERROR: 44-46");
-                exit(EXIT_FAILURE);
+                die("UNEXPECTED_ERROR: 44-46");
             }
         }
         else {
-            yyerror("UNEXPECTED_ERROR: 44-45");
-            exit(EXIT_FAILURE);
+            die("UNEXPECTED_ERROR: 44-45");
         }
         new_ir = link_ir_to_ir(new_ir,write_stmt);
     }
