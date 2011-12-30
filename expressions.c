@@ -302,6 +302,13 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
         return expr_from_hardcoded_boolean(0);
     }
 
+    //if l2 is alerady OP_NOT return the initial expr;
+    if (op==OP_NOT && l2->op==OP_NOT) {
+        //reminder: hardcoded expressions have op==OP_IGNORE
+        //there is no case for l2 to be hardcoded in here
+        return l2->l2;
+    }
+
     if (op==OP_AND && l2->expr_is==EXPR_HARDCODED_CONST && l1->expr_is==EXPR_HARDCODED_CONST) {
         return expr_from_hardcoded_boolean((l1->ival+l2->ival==2)?1:0); //and
     }
@@ -311,19 +318,20 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     else if (op==OP_NOT && l2->expr_is==EXPR_HARDCODED_CONST) {
         return expr_from_hardcoded_boolean((l2->ival)?0:1); //not
     }
-    else { //no hardcoded value
+    else {
+        //no hardcoded value
+
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->datatype = SEM_BOOLEAN;
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
-
+        new_expr->l1 = l1;
         new_expr->l2 = l2;
         l2->parent = new_expr;
 
         if (op!=OP_NOT) {
-            //the first parameter for OP_NOT is NULL
-            new_expr->l1 = l1;
+            //in this case l1 is NULL
             l1->parent = new_expr;
         }
         return new_expr;
