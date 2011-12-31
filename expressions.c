@@ -389,10 +389,10 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
     case OP_RDIV:
         //the `/` op always returns real
         if (l1->expr_is==EXPR_HARDCODED_CONST) { l1->datatype = SEM_REAL; }
-        else { l1->convert_to = SEM_REAL; }
+        else if (l1->datatype->is!=TYPE_REAL) { l1->convert_to = SEM_REAL; }
 
         if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_REAL; }
-        else { l2->convert_to = SEM_REAL; }
+        else if (l2->datatype->is!=TYPE_REAL) { l2->convert_to = SEM_REAL; }
 
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
@@ -410,16 +410,16 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
     case OP_MOD:
         //applies only on integer expressions
         if (l1->datatype->is!=TYPE_INT || l2->datatype->is!=TYPE_INT) {
-            yyerror("`div`, 'mod' apply only to integers");
-#warning convert or not convert to integer?
+            yywarning("`div`, 'mod' apply only to integers");
+#warning this should be an error or a warning?
             //return expr_from_hardcoded_int(0);
         }
 
         if (l1->expr_is==EXPR_HARDCODED_CONST) { l1->datatype = SEM_INTEGER; }
-        else { l1->convert_to = SEM_INTEGER; }
+        else if (l1->datatype->is!=TYPE_INT) { l1->convert_to = SEM_INTEGER; }
 
         if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_INTEGER; }
-        else { l2->convert_to = SEM_INTEGER; }
+        else if (l2->datatype->is!=TYPE_INT) { l2->convert_to = SEM_INTEGER; }
 
         new_expr = (expr_t*)malloc(sizeof(expr_t));
         new_expr->parent = new_expr;
@@ -435,6 +435,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         return new_expr;
     default:
         die("UNEXPECTED_ERROR: 89-4");
+        return NULL; //keep the compiler happy
     }
 }
 
