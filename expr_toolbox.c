@@ -112,6 +112,7 @@ expr_t *expr_from_variable(var_t *v) {
     }
 
     die("UNEXPECTED ERROR: expr_from_variable()");
+    return NULL; //keep the compiler happy
 }
 
 expr_t *expr_from_STRING(char *id) {
@@ -345,6 +346,7 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
         return new_cond;
     default:
         die("UNEXPECTED_ERROR: 51-2");
+        return NULL; //keep the compiler happy
     }
 }
 
@@ -388,6 +390,7 @@ char *op_literal(op_t op) {
         return "not";
     default:
         die("UNEXPECTED_ERROR: 04");
+        return NULL; //keep the compiler happy
     }
 }
 

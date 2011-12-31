@@ -38,8 +38,8 @@ reg_t R_sp = {.is = REG_POINTER,      .r = 29, .name = "$sp",   .alias = "r29" }
 reg_t R_fp = {.is = REG_POINTER,      .r = 30, .name = "$fp",   .alias = "r30" };
 reg_t R_ra = {.is = REG_POINTER,      .r = 31, .name = "$ra",   .alias = "r31" };
 
-reg_t R_hi = {.is = REG_POINTER,      .r = 32, .name = "hi",   .alias = "r32" };
-reg_t R_lo = {.is = REG_POINTER,      .r = 33, .name = "lo",   .alias = "r33" };
+reg_t R_hi = {.is = REG_POINTER,      .r = 32, .name = "$hi",   .alias = "r32" };
+reg_t R_lo = {.is = REG_POINTER,      .r = 33, .name = "$lo",   .alias = "r33" };
 
 void init_reg() {
     int i;

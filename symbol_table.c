@@ -55,6 +55,7 @@ int idf_insert(char *id) {
     idf_t *new_idf;
     if (!idf_empty) {
         die("INTERNAL ERROR: identifier table is full, cannot insert new id's.");
+        return 0; //keep the compiler happy
     }
     else if (idf_find(id)) {
         sprintf(str_err,"identifier `%s` already exists",id);
@@ -288,7 +289,7 @@ sem_t *sm_insert(const char *id) {
 }
 
 void sm_remove(char *id) {
-    int i;
+    //int i;
     sem_t *symbol;
     func_t *scope_owner;
 
@@ -655,6 +656,7 @@ var_t *refference_to_array_element(var_t *v, expr_list_t *list) {
     }
 
     die("UNEXPECTED_ERROR: 42");
+    return NULL; //keep the compiler happy
 }
 
 var_t *refference_to_record_element(var_t *v, char *id) {
@@ -711,6 +713,7 @@ var_t *refference_to_record_element(var_t *v, char *id) {
     }
     else {
         die("INTERNAL_ERROR: 43");
+        return NULL; //keep the compiler happy
     }
 }
 

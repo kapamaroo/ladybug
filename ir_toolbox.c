@@ -98,11 +98,12 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             case RELOP_LE:
             case RELOP_NE:
             case RELOP_EQU:
-                new_node->data_is = TYPE_BOOLEAN;
                 break;
             case OP_PLUS:
             case OP_MINUS:
             case OP_MULT:
+                tmp_node = ir_move_reg(&R_lo);
+                new_node = link_ir_to_ir(tmp_node,new_node);
                 break;
             case OP_RDIV:
                 new_node->data_is = TYPE_REAL;
@@ -205,9 +206,9 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         }
         return new_node;
     }
-    else {
-        die("UNEXPECTED_ERROR: 99-5: UNKNOWN EXPR type in expr_tree_to_ir_tree()");
-    }
+
+    die("UNEXPECTED_ERROR: 99-5: UNKNOWN EXPR type in expr_tree_to_ir_tree()");
+    return NULL; //keep the compiler happy
 }
 
 ir_node_t *calculate_lvalue(var_t *v) {
