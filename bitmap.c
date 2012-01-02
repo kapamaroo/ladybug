@@ -104,7 +104,9 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
 
     //result goes to x
     if (op==OP_PLUS) {
-        new_binary = new_ir_node_t(NODE_BINARY_OR);
+        //new_binary = new_ir_node_t(NODE_BINARY_OR);
+        new_binary = new_ir_node_t(NODE_RVAL);
+        new_binary->op_rval = OP_OR;
         new_binary->ir_lval = calculate_lvalue(ll);
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(x);
@@ -114,7 +116,10 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
         //should never reach here, we cannot assign an expression of set datatype
         die("UNEXPECTED_ERROR: 71-1");
         /*
-          tmp_node = new_ir_node_t(NODE_BINARY_NOT);
+          //tmp_node = new_ir_node_t(NODE_BINARY_NOT);
+          tmp_node = new_ir_node_t(NODE_RVAL);
+          tmp_node->op_rval = OP_NOT;
+
           tmp_node->ir_lval = calculate_lvalue(rr);
           tmp_node->ir_lval_dest = calculate_lvalue(rr);
           new_binary = new_ir_node_t(NODE_BINARY_AND);
@@ -125,7 +130,10 @@ ir_node_t *create_bitmap(expr_t *expr_set) {
         */
     }
     else if (op==OP_MULT) {
-        new_binary = new_ir_node_t(NODE_BINARY_AND);
+        //new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary = new_ir_node_t(NODE_RVAL);
+        new_binary->op_rval = OP_AND;
+
         new_binary->ir_lval = calculate_lvalue(ll);
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(x);
@@ -177,16 +185,26 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
     ll = tmp;
 
     if (op==OP_PLUS) {
-        new_binary = new_ir_node_t(NODE_BINARY_OR);
+        //new_binary = new_ir_node_t(NODE_BINARY_OR);
+        new_binary = new_ir_node_t(NODE_RVAL);
+        new_binary->op_rval = OP_OR;
+
         new_binary->ir_lval = calculate_lvalue(ll);
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(factory);
     }
     else if (op==OP_MINUS) {
-        tmp_node = new_ir_node_t(NODE_BINARY_NOT);
+        //tmp_node = new_ir_node_t(NODE_BINARY_NOT);
+        tmp_node = new_ir_node_t(NODE_RVAL);
+        tmp_node->op_rval = OP_NOT;
+
         tmp_node->ir_lval = calculate_lvalue(rr);
         tmp_node->ir_lval_dest = calculate_lvalue(rr);
-        new_binary = new_ir_node_t(NODE_BINARY_AND);
+
+        //new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary = new_ir_node_t(NODE_RVAL);
+        new_binary->op_rval = OP_AND;
+
         new_binary->ir_lval = calculate_lvalue(ll);
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(factory);
@@ -194,7 +212,10 @@ ir_node_t *bitmap_generator(var_t *factory,expr_t *expr_set) {
         new_binary = link_ir_to_ir(new_binary,tmp_node);
     }
     else if (op==OP_MULT) {
-        new_binary = new_ir_node_t(NODE_BINARY_AND);
+        //new_binary = new_ir_node_t(NODE_BINARY_AND);
+        new_binary = new_ir_node_t(NODE_RVAL);
+        new_binary->op_rval = OP_AND;
+
         new_binary->ir_lval = calculate_lvalue(ll);
         new_binary->ir_lval2 = calculate_lvalue(rr);
         new_binary->ir_lval_dest = calculate_lvalue(factory);
