@@ -10,6 +10,10 @@ char *op_to_instruction(op_t op);
 void print_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
 
+    if (ir_node->label) {
+        //printf("__%s__",ir_node->label);
+    }
+
     if (ir_node->node_type!=NODE_DUMMY_LABEL) {
         //printf("R_%ld__",ir_node->virt_reg);
     }
@@ -21,22 +25,36 @@ void print_ir_node(ir_node_t *ir_node) {
     case NODE_LOST_NODE:
         printf("%s ",ir_node->error);
         return;
+    case NODE_BRANCH_COND:
+        switch (ir_node->op_rval) {
+        case OP_OR:
+        case OP_AND:
+            print_ir_node(ir_node->ir_rval);
+            printf("\n\t\t\t");
+            print_ir_node(ir_node->ir_rval2);
+            break;
+        case OP_NOT:
+            die("UNEXPECTED ERROR: ir_printer: NODE_BRANCH_COND: not operator still alive??");
+            printf("__%s__\n\t\t\t",op_to_instruction(ir_node->op_rval));
+            break;
+        default:
+            //die("UNEXPENTED_ERROR: print branch ir");
+            //print_ir_node();
+            break;
+        }
+        return;
     case NODE_BRANCH:
-        print_ir_node(ir_node->ir_cond->ir_rval);
-        printf("\n\t\t\t");
-        print_ir_node(ir_node->ir_cond->ir_rval2);
-        //print_ir_node(ir_node->ir_cond);
-        printf("\n\t\t\t");
-        printf("%s $%ld, $%ld goto: %s",op_to_instruction(ir_node->ir_cond->op_rval),
-               ir_node->ir_cond->ir_rval->virt_reg,
-               ir_node->ir_cond->ir_rval2->virt_reg,
-               ir_node->jump_label);
+        //print_ir_node(ir_node->ir_cond->ir_rval);
+        //printf("\n\t\t\t");
+        //print_ir_node(ir_node->ir_cond->ir_rval2);
+
+        print_ir_node(ir_node->ir_cond);
         return;
     case NODE_JUMP_LINK:
-        printf("jal %s",ir_node->jump_label);
+        printf("jal %s",ir_node->ir_goto->label);
         return;
     case NODE_JUMP:
-        printf("j %s",ir_node->jump_label);
+        printf("j %s",ir_node->ir_goto->label);
         return;
     case NODE_RETURN_SUBPROGRAM:
         printf("jr $ra");
@@ -102,15 +120,15 @@ void print_ir_node(ir_node_t *ir_node) {
         print_ir_node(ir_node->address);
         printf("}");
         return;
-    case NODE_BINARY_AND:
-        printf("__&__");
-        return;
-    case NODE_BINARY_OR:
-        printf("__|__");
-        return;
-    case NODE_BINARY_NOT:
-        printf("__~__");
-        return;
+        //case NODE_BINARY_AND:
+        //printf("__&__");
+        //return;
+        //case NODE_BINARY_OR:
+        //printf("__|__");
+        //return;
+        //case NODE_BINARY_NOT:
+        //printf("__~__");
+        //return;
     case NODE_SHIFT_LEFT:
         printf("__shiftL__");
         return;
@@ -132,6 +150,10 @@ void print_ir_node(ir_node_t *ir_node) {
         //printf("}");
         return;
     case NODE_RVAL:
+        if (ir_node->label) {
+            printf("__%s__",ir_node->label);
+        }
+
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
             //first node of prepare_stack
             switch (ir_node->ir_rval->node_type) {
@@ -187,8 +209,21 @@ void print_ir_node(ir_node_t *ir_node) {
 
         printf("%s ",op_to_instruction(ir_node->op_rval));
 
-        if (ir_node->op_rval!=OP_MULT && ir_node->op_rval!=OP_DIV) {
+        //print my reg
+        switch (ir_node->op_rval) {
+        case RELOP_B:	// '>'
+        case RELOP_BE:	// '>='
+        case RELOP_L:	// '<'
+        case RELOP_LE:	// '<='
+        case RELOP_NE:	// '<>'
+        case RELOP_EQU:	// '='
+        case RELOP_IN:	// 'in'
+        case OP_MULT:   // '*'
+        case OP_DIV:    // 'div'
+            break;
+        default:
             printf("$%ld, ",ir_node->virt_reg);
+            break;
         }
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
@@ -198,13 +233,32 @@ void print_ir_node(ir_node_t *ir_node) {
             } else {
                 printf("$%ld, ",ir_node->ir_rval->last->virt_reg);
             }
-
         }
 
         if (ir_node->ir_rval2->last->node_type==NODE_RVAL_ARCH) {
             print_ir_node(ir_node->ir_rval2->last);
         } else {
-            printf("$%ld, ",ir_node->ir_rval2->last->virt_reg);
+            printf("$%ld",ir_node->ir_rval2->last->virt_reg);
+        }
+
+        //print label of branches
+        switch (ir_node->op_rval) {
+        case RELOP_B:	// '>'
+        case RELOP_BE:	// '>='
+        case RELOP_L:	// '<'
+        case RELOP_LE:	// '<='
+        case RELOP_NE:	// '<>'
+        case RELOP_EQU:	// '='
+        case RELOP_IN:	// 'in'
+        case OP_AND:    // 'and'
+        case OP_OR:     // 'or'
+            printf(" goto: %s",ir_node->ir_goto->label);
+            //printf("\n\t\t\t");
+            break;
+        case OP_NOT:    // 'not'
+            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: not operator still alive??");
+        default:
+            break;
         }
 
         if (ir_node->next) {
@@ -234,33 +288,40 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("check_inop_bitmapped");
         return;
     case NODE_ASSIGN:
-        //tmp = ir_node->ir_rval;
         switch (ir_node->ir_rval->node_type) {
+        case NODE_HARDCODED_RVAL:
+            printf("addi $%ld, $0, %0.2f",ir_node->ir_rval->virt_reg,ir_node->ir_rval->fval);
+            printf("\n\t\t\t");
+            break;
+        case NODE_RVAL:
+            print_ir_node(ir_node->ir_rval);
+            printf("\n\t\t\t");
+            break;
+        case NODE_RVAL_ARCH:
+            break;
         case NODE_ASSIGN:
         case NODE_JUMP_LINK:
-            //case NODE_LOAD:
-            //first node of prepare_stack
+        case NODE_LOAD:
+        default:
             tmp = ir_node->ir_rval;
             while (tmp) {
-                if (tmp->node_type==NODE_LOAD) { break; }
+                //if (tmp->node_type==NODE_LOAD) { break; }
                 print_ir_node(tmp);
-                    tmp = tmp->next;
-                    printf("\n\t\t\t");
+                printf("\n\t\t\t");
+                tmp = tmp->next;
             }
             break;
-        default:
-            break;
         }
 
-        if (ir_node->ir_rval->node_type==NODE_HARDCODED_RVAL) {
-            printf("addi $%ld, $0, %d",ir_node->ir_rval->last->virt_reg,ir_node->ir_rval->last->ival);
+        printf("sw ");
+
+        if (ir_node->ir_rval->last->node_type==NODE_RVAL_ARCH) {
+            print_ir_node(ir_node->ir_rval->last);
+            //printf(", ");
         } else {
-            print_ir_node(ir_node->ir_rval);
+            printf("$%ld",ir_node->ir_rval->last->virt_reg);
         }
-        printf("\n\t\t\t");
 
-        printf("sw $%ld",ir_node->ir_rval->last->virt_reg);
-        //print_ir_node(ir_node->ir_rval->last);
         printf(", {");
         print_ir_node(ir_node->address);
         printf("}");
@@ -275,8 +336,8 @@ void print_ir_node(ir_node_t *ir_node) {
         print_ir_node(ir_node->address);
         print_ir_node(ir_node->ir_lval);
         return;
-    default:
-        die("INTERNAL_ERROR: UNKNOWN NODE TYPE");
+        //default:
+        //die("INTERNAL_ERROR: UNKNOWN NODE TYPE");
     }
 
     //if (ir_node->next) {
@@ -369,7 +430,7 @@ char *op_to_instruction(op_t op) {
     case OP_OR:		// 'or'
     	return "or";
     case OP_NOT:       	// 'not'
-        return "xor"; //$reg xor 11111111111
+        return "not"; //$reg xor 11111111111
     case OP_IGNORE:
         //return "__op_IGNORE__";
     case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
