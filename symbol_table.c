@@ -18,8 +18,6 @@ sem_t *sm_array[MAX_SYMBOLS];
 sem_t **sm_table;
 //sem_t *sm_table[MAX_SYMBOLS];
 
-sem_t *sem_main_program;
-
 sem_t *sem_INTEGER;
 sem_t *sem_REAL;
 sem_t *sem_BOOLEAN;
@@ -128,10 +126,17 @@ void idf_init() {
     idf_free_memory = 0;
 }
 
-void set_main_program_name(char *name) {
-    free(sem_main_program->name);
-    sem_main_program->name = strdup(name);
-    sem_main_program->subprogram->func_name = sem_main_program->name;
+func_t *create_main_program(char *name) {
+    sem_t *sem_main_program;
+
+    sem_main_program = sm_insert(name);
+    sem_main_program->id_is = ID_PROGRAM_NAME;
+
+    //see scope.h
+    main_program->func_name = sem_main_program->name;
+    sem_main_program->subprogram = main_program;
+
+    return sem_main_program->subprogram;
 }
 
 void init_symbol_table() {
@@ -144,14 +149,10 @@ void init_symbol_table() {
     sm_empty = MAX_SYMBOLS;
     sm_table = sm_array;
 
-    sem_main_program = sm_insert("");
-    sem_main_program->id_is = ID_PROGRAM_NAME;
-    sem_main_program->subprogram = (func_t*)malloc(sizeof(func_t));
-
-    //do not set the name here, it is going to change
-    //sem_main_program->subprogram->func_name = sem_main_program->name;
-
     init_scope();
+
+    main_program = (func_t*)malloc(sizeof(func_t));
+    start_new_scope(main_program);
 
     idf_free_memory = 0; //at the beggining there is no memory
     idf_init();
@@ -547,7 +548,6 @@ sem_t *reference_to_forwarded_function(char *id) {
 var_t *refference_to_variable_or_enum_element(char *id) {
     sem_t *sem_1;
     var_t *new_enum_const;
-    func_t *scope_owner;
     char *lost_id;
 
     sem_1 = sm_find(id);
@@ -557,11 +557,6 @@ var_t *refference_to_variable_or_enum_element(char *id) {
         }
         else if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
             //the name of the function acts like a variable
-            scope_owner = get_current_scope_owner();
-            if (scope_owner==sem_main_program->subprogram) {
-                yyerror("the main program does not return any value");
-                return lost_var_reference();
-            }
             return sem_1->subprogram->return_value;
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {

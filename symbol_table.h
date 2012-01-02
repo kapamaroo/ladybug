@@ -28,8 +28,6 @@ typedef struct idf_t {
 
 extern sem_t **sm_table;
 
-extern sem_t *sem_main_program;
-
 //pointers to standard type structures
 extern sem_t *sem_INTEGER;
 extern sem_t *sem_REAL;
@@ -66,7 +64,7 @@ int calculate_number_of_set_elements(data_t *type);
 int check_for_id_in_datatype(data_t *datatype,const char *id);
 
 void init_symbol_table();
-void set_main_program_name(char *name);
+func_t *create_main_program(char *name);
 
 sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL for the whole implementation
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
