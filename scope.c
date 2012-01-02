@@ -9,6 +9,7 @@
 
 int sm_scope;
 scope_t scope_stack[MAX_SCOPE+1];
+func_t *main_program;
 
 with_stmt_scope_t *root_scope_with;
 with_stmt_scope_t *tail_scope_with;
@@ -16,21 +17,12 @@ with_stmt_scope_t *tail_scope_with;
 void init_scope() {
     int i;
 
-    scope_stack[0].scope_owner = sem_main_program->subprogram;
-    scope_stack[0].start_index = 0;
-    scope_stack[0].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
-    scope_stack[0].lost_symbols_empty = MAX_LOST_SYMBOLS;
-
-    for (i=0;i<MAX_LOST_SYMBOLS;i++) {
-        scope_stack[0].lost_symbols[i] = NULL;
-    }
-
     root_scope_with = NULL;
     tail_scope_with = NULL;
 
-    sm_scope = 0; //main scope
+    sm_scope = -1; //no scope yet
 
-    for (i=1;i<MAX_SCOPE+1;i++) {
+    for (i=0;i<MAX_SCOPE+1;i++) {
         scope_stack[i].scope_owner = NULL;
         scope_stack[i].lost_symbols = NULL;
     }
@@ -54,7 +46,12 @@ void start_new_scope(func_t *scope_owner) {
             scope_stack[sm_scope].lost_symbols[i] = NULL;
         }
 
-        scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
+        if (sm_scope==0) {
+            scope_stack[sm_scope].start_index = 0;
+        } else {
+            scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
+        }
+
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
         printf("__start_new_scope_%d\n",sm_scope);
 #endif
