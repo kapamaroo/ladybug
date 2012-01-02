@@ -10,14 +10,6 @@
 #include "err_buff.h"
 #include "statements.h"
 
-char *new_label_subprogram(char *sub_name) {
-    //char label_buf[MAX_LABEL_SIZE];
-
-    //snprintf(label_buf,MAX_LABEL_SIZE,"S_%s",sub_name);
-    //return strdup(label_buf);
-    return strdup(sub_name);
-}
-
 param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
     int i;
     param_t *new_param;
@@ -99,12 +91,11 @@ void subprogram_init(sem_t *sem_sub) {
     }
 
     subprogram = sem_sub->subprogram;
-    subprogram->label = new_label_subprogram(subprogram->func_name);
 
     start_new_scope(subprogram);
     configure_stack_size_and_param_lvalues(subprogram);
     declare_formal_parameters(subprogram); //declare them inside the new scope
-    new_statement_module(subprogram->label);
+    new_statement_module(subprogram);
 }
 
 void subprogram_finit(sem_t *subprogram,statement_t *body) {
