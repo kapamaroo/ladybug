@@ -10,6 +10,7 @@
 
 statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 int statement_root_module_current;
+int statement_root_module_next_free;
 
 void init_statements() {
     int i;
@@ -19,6 +20,60 @@ void init_statements() {
     }
 
     statement_root_module_current = 0;
+    statement_root_module_next_free = 0;
+}
+
+statement_t *link_statements(statement_t *child, statement_t *parent) {
+    //return the head of the linked list
+    if (parent && child) {
+        //if child's return_point is not set, propagate the parent's return_point value
+        if (child->last->return_point==0) {
+            child->last->return_point = parent->last->return_point;
+
+        }
+
+        parent->last->join = child;
+        if (parent->type==ST_If) {
+            parent->_if._true->last->join = child;
+            if (parent->_if._false) {
+                parent->_if._false->last->join = child;
+            }
+        }
+
+        parent->last->next = child;
+        child->prev = parent->last;
+        parent->last = child->last;
+
+        return parent;
+    } else if (!parent) {
+        return child;
+    } else {
+        return parent;
+    }
+}
+
+void link_statement_to_module_and_return(statement_t *new_statement) {
+    statement_root_module[statement_root_module_next_free] =
+        link_statements(new_statement,statement_root_module[statement_root_module_next_free]);
+
+    return_to_previous_ir_tree();
+
+    statement_root_module_next_free++;
+
+    if (statement_root_module_current==0) {
+        return;
+    }
+
+    statement_root_module_current--;
+}
+
+void new_statement_module(func_t *subprogram) {
+    if (statement_root_module_next_free==MAX_NUM_OF_MODULES) {
+        die("CANNOT HANDLE SO MUCH MODULES YET");
+    }
+
+    statement_root_module_current++;
+    new_ir_tree(subprogram);
 }
 
 int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
@@ -358,52 +413,3 @@ statement_t *statement_write(expr_list_t *expr_list) {
 
     return new_write;
 }
-
-statement_t *link_statements(statement_t *child, statement_t *parent) {
-    //return the head of the linked list
-    if (parent && child) {
-        //if child's return_point is not set, propagate the parent's return_point value
-        if (child->last->return_point==0) {
-            child->last->return_point = parent->last->return_point;
-
-        }
-
-        parent->last->join = child;
-        if (parent->type==ST_If) {
-            parent->_if._true->last->join = child;
-            if (parent->_if._false) {
-                parent->_if._false->last->join = child;
-            }
-        }
-
-        parent->last->next = child;
-        child->prev = parent->last;
-        parent->last = child->last;
-
-        return parent;
-    } else if (!parent) {
-        return child;
-    } else {
-        return parent;
-    }
-}
-
-void link_statement_to_module_and_return(statement_t *new_statement) {
-    statement_root_module[statement_root_module_current] =
-        link_statements(new_statement,statement_root_module[statement_root_module_current]);
-
-    return_to_previous_ir_tree();
-
-    if (statement_root_module_current==0) {
-        return;
-    }
-
-    statement_root_module_current--;
-}
-
-void new_statement_module(char *label) {
-    statement_root_module_current++;
-    new_ir_tree(label);
-}
-
-//const char* statement_type_to_string(statement_t *statement);
