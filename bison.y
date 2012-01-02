@@ -115,6 +115,7 @@
  //%type <subprogram> subprogram
  //%type <subprogram> subprograms
 
+%type <subprogram> header
 %type <iter_space> iter_space
 %type <pass_mode> pass
 %type <info> sub_header
@@ -158,13 +159,10 @@
 %start program
 %%
 
-program: header declarations subprograms comp_statement DOT {
-    //link_ir_to_tree($4);
-    link_statement_to_module_and_return($4);
- }
+program: header {new_statement_module($1);} declarations subprograms comp_statement DOT {link_statement_to_module_and_return($5);}
 ;
 
-header: PROGRAM ID SEMI {set_main_program_name($2);}//scope for main program is set by the symbol table init function
+header: PROGRAM ID SEMI {$$ = create_main_program($2);}
 ;
 
 declarations: constdefs typedefs vardefs
