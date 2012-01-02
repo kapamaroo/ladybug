@@ -166,6 +166,7 @@ typedef struct func_t {
     int stack_size; //formal parameters + return value + whatever
     //scope_t *scope; //a subprogram belongs to the previous scope
     char *label;
+    int unique_id; //index of ir_root_tree (low level info)
 } func_t;
 
 typedef enum op_t {
