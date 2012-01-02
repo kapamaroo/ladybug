@@ -29,14 +29,131 @@ ir_node_t *ir_move_reg(reg_t *reg) {
     move_node->ir_rval = arch_node;
     move_node->ir_rval2 = arch_node2;
 
+    //consider integer
+    move_node->data_is = TYPE_INT;
+
     return move_node;
 }
 
-ir_node_t *expr_cond_to_ir_tree(expr_t *ltree) {
-    if (!ltree || ltree->datatype->is!=TYPE_BOOLEAN) {
-        die("UNEXPECTED ERROR: boolean for assign");
+op_t op_invert_cond(op_t op) {
+    //invert the check
+
+    switch (op) {
+    case RELOP_B:       // '>'
+        return RELOP_LE;
+    case RELOP_BE:      // '>='
+        return RELOP_L;
+    case RELOP_L:       // '<'
+        return RELOP_BE;
+    case RELOP_LE:      // '<='
+        return RELOP_B;
+    case RELOP_NE:      // '<>'
+        return RELOP_EQU;
+    case RELOP_EQU:     // '='
+        return RELOP_NE;
+    case OP_AND:       	// 'and'
+    	return OP_OR;
+    case OP_OR:		// 'or'
+    	return OP_AND;
+    case RELOP_IN:	// 'in'
+    default:
+        die("UNEXPECTED_ERROR: op_invert_cond");
+        return OP_IGNORE; //keep the compiler happy
     }
-    return NULL;
+}
+
+ir_node_t *eliminate_notop_from_ir_cond(ir_node_t *ir_cond) {
+    static int unmatched_not=0;
+
+    if (ir_cond->op_rval==OP_NOT) {
+        unmatched_not++;
+        ir_cond = eliminate_notop_from_ir_cond(ir_cond->ir_rval2);
+        unmatched_not--;
+        return ir_cond;
+    }
+
+    //eliminate OP_NOT
+    if (ir_cond->ir_rval->op_rval==OP_NOT) {
+        unmatched_not++;
+        ir_cond->ir_rval = eliminate_notop_from_ir_cond(ir_cond->ir_rval->ir_rval2);
+        unmatched_not--;
+    }
+
+    if (ir_cond->ir_rval2->op_rval==OP_NOT) {
+        unmatched_not++;
+        ir_cond->ir_rval2 = eliminate_notop_from_ir_cond(ir_cond->ir_rval2->ir_rval2);
+        unmatched_not--;
+    }
+
+    if (unmatched_not%2==1) {
+        switch (ir_cond->op_rval) {
+        case RELOP_B:
+        case RELOP_BE:
+        case RELOP_L:
+        case RELOP_LE:
+        case RELOP_NE:
+        case RELOP_EQU:
+            break;
+        case OP_AND:
+        case OP_OR:
+            ir_cond->ir_rval = eliminate_notop_from_ir_cond(ir_cond->ir_rval);
+            ir_cond->ir_rval2 = eliminate_notop_from_ir_cond(ir_cond->ir_rval2);
+        break;
+        case OP_NOT:
+            die("UNEXPECTED ERROR: ir_rval_to_ir_cond: not operator still alive");
+        default:
+            die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+        }
+
+        //printf("%s --> %s\n",op_literal(ir_cond->op_rval),op_literal(op_invert_cond(ir_cond->op_rval)));
+        ir_cond->op_rval = op_invert_cond(ir_cond->op_rval);
+    }
+
+    return ir_cond;
+}
+
+ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
+    switch (ir_rval->op_rval) {
+    case RELOP_B:
+    case RELOP_BE:
+    case RELOP_L:
+    case RELOP_LE:
+    case RELOP_NE:
+    case RELOP_EQU:
+        return ir_rval;
+    case OP_AND:
+    case OP_OR:
+        ir_rval->ir_rval = ir_tree_to_ir_cond(ir_rval->ir_rval);
+        ir_rval->ir_rval2 = ir_tree_to_ir_cond(ir_rval->ir_rval2);
+        //do not break;
+    case OP_NOT:
+        ir_rval->ir_rval2 = ir_tree_to_ir_cond(ir_rval->ir_rval2);
+        ir_rval->node_type = NODE_BRANCH_COND;
+        break;
+    default:
+        die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+    }
+
+    return ir_rval;
+}
+
+ir_node_t *expr_tree_to_ir_cond(expr_t *ltree) {
+    ir_node_t *ir_cond;
+
+    ir_cond = expr_tree_to_ir_tree(ltree);
+
+    if (ir_cond->data_is!=TYPE_BOOLEAN) {
+        die("UNEXPECTED ERROR: expr_tree_to_ir_cond(): not boolean");
+    }
+
+    if (ir_cond->op_rval==OP_IGNORE) {
+        die("UNEXPECTED ERROR: expr_tree_to_ir_cond(): boolean const or load value with no comparison to zero");
+    }
+
+    ir_cond = ir_tree_to_ir_cond(ir_cond);
+    ir_cond = eliminate_notop_from_ir_cond(ir_cond);
+
+    return ir_cond;
 }
 
 ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
@@ -44,6 +161,8 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *convert_node;
     ir_node_t *new_func_call;
     ir_node_t *tmp_node;
+
+    expr_t *tmp_expr;
 
     sem_t *sem_1;
 
@@ -80,16 +199,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             }
         }
         else { //it's all the same
-            new_node = new_ir_node_t(NODE_RVAL);
-            new_node->op_rval = ltree->op;
-            new_node->data_is = ltree->datatype->is;
-
-            if (ltree->op!=OP_NOT) {
-                //speciall case for OP_SIGN, OP_NOT they use only the l2 expr, see expr_toolbox.c, expressions.c
-                new_node->ir_rval = expr_tree_to_ir_tree(ltree->l1);
-            }
-
-            new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
+            tmp_node = NULL;
 
             switch (ltree->op) {
             case RELOP_B:
@@ -98,34 +208,33 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             case RELOP_LE:
             case RELOP_NE:
             case RELOP_EQU:
+                //default is IR_RVAL, if we need only to compare them we must set them as NODE_BRANCH_COND
                 break;
             case OP_PLUS:
             case OP_MINUS:
             case OP_MULT:
                 tmp_node = ir_move_reg(&R_lo);
-                new_node = link_ir_to_ir(tmp_node,new_node);
                 break;
             case OP_RDIV:
-                new_node->data_is = TYPE_REAL;
                 break;
             case OP_DIV:
                 tmp_node = ir_move_reg(&R_lo);
-                new_node = link_ir_to_ir(tmp_node,new_node);
-                new_node->data_is = TYPE_INT;
                 break;
             case OP_MOD:
                 tmp_node = ir_move_reg(&R_hi);
-                new_node = link_ir_to_ir(tmp_node,new_node);
-                new_node->data_is = TYPE_INT;
                 break;
             case OP_AND:
-                new_node->node_type = NODE_BINARY_AND;
-                break;
             case OP_OR:
-                new_node->node_type = NODE_BINARY_OR;
-                break;
+                if (ltree->l1->expr_is==EXPR_LVAL || ltree->l1->expr_is==EXPR_HARDCODED_CONST) {
+                    tmp_expr = expr_from_hardcoded_boolean(0);
+                    ltree->l1 = expr_relop_equ_addop_mult(ltree->l1,RELOP_NE,tmp_expr);
+                }
+                //do not break here
             case OP_NOT:
-                new_node->node_type = NODE_BINARY_NOT;
+                if (ltree->l2->expr_is==EXPR_LVAL || ltree->l2->expr_is==EXPR_HARDCODED_CONST) {
+                    tmp_expr = expr_from_hardcoded_boolean(0);
+                    ltree->l2 = expr_relop_equ_addop_mult(ltree->l2,RELOP_NE,tmp_expr);
+                }
                 break;
             case OP_SIGN:
                 //this is a virtual operator, should never reach here
@@ -133,6 +242,20 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             default:
                 die("UNEXPECTED ERROR: expr_tree_to_ir_tree: inop in RVAL");
             }
+
+            new_node = new_ir_node_t(NODE_RVAL);
+            new_node->op_rval = ltree->op;
+            new_node->data_is = ltree->datatype->is;
+
+            if (ltree->op!=OP_NOT) {
+                //special case for OP_NOT it uses only the l2 expr, see expr_toolbox.c, expressions.c
+                new_node->ir_rval = expr_tree_to_ir_tree(ltree->l1);
+            }
+
+            new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
+
+            //this ignores the tmp_node if NULL
+            new_node = link_ir_to_ir(tmp_node,new_node);
 
             if (ltree->convert_to==SEM_INTEGER) {
                 convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
@@ -150,11 +273,16 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         }
     }
     else if (ltree->expr_is==EXPR_HARDCODED_CONST) {
-        new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
-        new_node->ival = ltree->ival;
-        new_node->fval = ltree->fval;
-        new_node->cval = ltree->cval;
-        new_node->data_is = ltree->datatype->is;
+        if (ltree->ival==0 || ltree->fval==0 || ltree->cval==0) {
+            new_node = new_ir_node_t(NODE_RVAL_ARCH);
+            new_node->reg = &R_zero;
+        } else {
+            new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
+            new_node->ival = ltree->ival;
+            new_node->fval = ltree->fval;
+            new_node->cval = ltree->cval;
+            new_node->data_is = ltree->datatype->is;
+        }
         return new_node;
     }
     else if (ltree->expr_is==EXPR_NULL_SET) {
@@ -168,7 +296,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         //we enter here with an assign statement like:
         //"set_variable := [5,10..15,20] + lval_set * another_lval_set - [7,8]
         new_node = create_bitmap(ltree);
-        new_node->data_is = TYPE_INT;
+        new_node->data_is = TYPE_SET;
         return new_node;
     }
     else if (ltree->expr_is==EXPR_LVAL || ltree->expr_is==EXPR_LOST) {
@@ -406,7 +534,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
         }
         free(tmp_var);
 
-        ir_jump_link = jump_and_link_to(subprogram->label);
+        ir_jump_link = jump_and_link_to(subprogram);
         new_stack_init_node = link_ir_to_ir(ir_jump_link,new_stack_init_node);
 
         return new_stack_init_node;
