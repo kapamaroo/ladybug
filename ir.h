@@ -11,6 +11,7 @@ typedef enum ir_node_type_t {
     NODE_DUMMY_LABEL,	        //empty statement, with label only
     NODE_LOST_NODE,              //on parse errors generate this node
     NODE_BRANCH,
+    NODE_BRANCH_COND,	        //only for branches, not exactly NODE_RVAL (it handles differently some operators)
     NODE_JUMP_LINK,	        //jump and link
     NODE_JUMP,		        //jump only
     NODE_RETURN_SUBPROGRAM,      //return control to caller
@@ -28,15 +29,13 @@ typedef enum ir_node_type_t {
     NODE_CONVERT_TO_REAL,	//if it is neccessary
     NODE_MEMCPY,		//for assignment of identical arrays and records
     NODE_LOAD,		        //load a NODE_LVAL or NODE_HARDCODED_LVAL
-    NODE_BINARY_AND,	        //AND for sets (operator *,OP_MULT)
-    NODE_BINARY_OR,	        //OR for sets (operator +,OP_PLUS), inverts the bits
-    NODE_BINARY_NOT,    	//NOT for sets (operator -,OP_MINUS)
     NODE_SHIFT_LEFT,
     NODE_SHIFT_RIGHT,
     NODE_LVAL,			//memory address with possible offset
     NODE_HARDCODED_LVAL,	//immediate memory address, with possible offset
     NODE_RVAL,
     NODE_RVAL_ARCH,             //get a RVAL directly from a register (usually a REG_POINTER register) see reg.h
+                                //this is like NODE_HARDCODED_RVAL, but the value is already in a register
     NODE_HARDCODED_RVAL,
     NODE_INIT_NULL_SET,
     NODE_ADD_ELEM_TO_SET,       //checks first if bigger or equal to zero
@@ -70,8 +69,10 @@ typedef struct ir_node_t {
     struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_LOAD,NODE_ASSIGN* reads it
     struct ir_node_t *offset;  //NODE_LOAD adds this to *address
 
+    struct ir_node_t *ir_goto; //jump to this node
+
     char *label;               //the label of the node
-    char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
+    //    char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
 
     char *error; //NODE_LOST_NODE uses this
 
@@ -84,11 +85,11 @@ typedef struct ir_node_t {
 
 extern ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
 extern int ir_root_tree_current;
+extern int ir_root_tree_next_free;
 
 void init_ir();
-void new_ir_tree(char *label);
 
-void link_ir_to_tree(ir_node_t *new_node);
+void new_ir_tree(func_t *subprogram);
 void return_to_previous_ir_tree();
 
 ir_node_t *new_ir_node_t(ir_node_type_t node_type);
@@ -101,12 +102,11 @@ ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt);
 ir_node_t *new_ir_with(ir_node_t *body);
 ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list);
 ir_node_t *new_ir_comp_stmt(ir_node_t *body);
-//ir_node_t *new_io_statement is divided to read and write
 ir_node_t *new_ir_read(var_list_t *list);
 ir_node_t *new_ir_write(expr_list_t *list);
 
-ir_node_t *jump_and_link_to(char *jump_label);
-ir_node_t *jump_to(char *jump_label);
+ir_node_t *jump_and_link_to(func_t *subprogram);
+ir_node_t *jump_to(ir_node_t *ir_dest);
 
 ir_node_t *new_lost_ir_node(char *error);
 

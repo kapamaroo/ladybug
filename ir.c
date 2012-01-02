@@ -17,11 +17,13 @@ unsigned long unique_virt_reg;
 
 ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
 int ir_root_tree_current;
+int ir_root_tree_next_free;
 
 ir_node_t *new_ir_assign_str(var_t *v, expr_t *l);
 ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l);
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
+ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir_false);
 
 char *new_label_literal(char *label) {
     return strdup(label);
@@ -34,6 +36,14 @@ char *new_label_unique(char *prefix) {
     snprintf(label_buf,MAX_LABEL_SIZE,"L_%s_%d",prefix,n);
     n++;
     return strdup(label_buf);
+}
+
+char *new_label_subprogram(char *sub_name) {
+    //char label_buf[MAX_LABEL_SIZE];
+
+    //snprintf(label_buf,MAX_LABEL_SIZE,"S_%s",sub_name);
+    //return strdup(label_buf);
+    return strdup(sub_name);
 }
 
 void init_ir() {
@@ -49,18 +59,31 @@ void init_ir() {
     ir_root_tree[0] = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_root_tree[0]->label = new_label_literal("main");
     ir_root_tree_current = 0;
+    ir_root_tree_next_free = 0;
 
     init_bitmap();
 }
 
-void new_ir_tree(char *label) {
+ir_node_t *new_lost_ir_node(char *error) {
+    ir_node_t *new_ir;
+
+    new_ir = new_ir_node_t(NODE_LOST_NODE);
+    new_ir->error = error;
+
+    return new_ir;
+}
+
+void new_ir_tree(func_t *subprogram) {
     ir_node_t *ir_new;
 
-    ir_new = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_new->label = label;
+    subprogram->unique_id = ir_root_tree_next_free;
 
+    ir_new = new_ir_node_t(NODE_DUMMY_LABEL);
+    ir_new->label = new_label_subprogram(subprogram->func_name);
+
+    ir_root_tree[ir_root_tree_next_free] = ir_new;
     ir_root_tree_current++;
-    ir_root_tree[ir_root_tree_current] = ir_new;
+    ir_root_tree_next_free++;
 }
 
 void return_to_previous_ir_tree() {
@@ -69,11 +92,6 @@ void return_to_previous_ir_tree() {
     }
 
     ir_root_tree_current--;
-}
-
-void link_ir_to_tree(ir_node_t *new_node) {
-    ir_root_tree[ir_root_tree_current] =
-        link_ir_to_ir(new_node,ir_root_tree[ir_root_tree_current]);
 }
 
 ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent) {
@@ -144,6 +162,7 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     */
 
     new_node->virt_reg = ++unique_virt_reg;
+    new_node->op_rval = OP_IGNORE;
 
     new_node->ir_lval = NULL;
     new_node->ir_lval2 = NULL;
@@ -154,12 +173,13 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->address = NULL;
     new_node->offset = NULL;
     new_node->ir_lval_dest = NULL;
+    new_node->ir_goto = NULL;
 
     new_node->next = NULL;
     new_node->prev = NULL; //new_node;
     new_node->last = new_node;
     new_node->label = NULL;
-    new_node->jump_label = NULL;
+    //new_node->jump_label = NULL;
     new_node->error = NULL;
     new_node->lval = NULL;
     return new_node;
@@ -189,6 +209,10 @@ ir_node_t *new_ir_assign_str(var_t *v, expr_t *l) {
 
 ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
     ir_node_t *new_stmt;
+    ir_node_t *tmp1;
+    ir_node_t *tmp2;
+    expr_t *expr1;
+    expr_t *expr2;
 
     switch (v->datatype->is) {
     case TYPE_INT:
@@ -203,11 +227,24 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
         }
         break;
     case TYPE_BOOLEAN:
-#warning implement me
         //we must assign either 1 or 0
-        printf("IMPLEMENT ME: assign to boolean");
-        exit(EXIT_FAILURE);
-        break;
+        //convert statement to branch
+        //do NOT even think about recursion in this case! :)
+
+        //true
+        expr1 = expr_from_hardcoded_boolean(1);
+        tmp1 = new_ir_node_t(NODE_ASSIGN);
+        tmp1->address = calculate_lvalue(v);
+        tmp1->ir_rval = expr_tree_to_ir_tree(expr1);
+
+        //false
+        expr2 = expr_from_hardcoded_boolean(0);
+        tmp2 = new_ir_node_t(NODE_ASSIGN);
+        tmp2->address = tmp1->address;
+        tmp2->ir_rval = expr_tree_to_ir_tree(expr2);
+
+        new_stmt = new_ir_if(l,tmp1,tmp2);
+        return new_stmt;
     case TYPE_CHAR:
         //if expr is char we suppose it has a valid value
         if (l->datatype->is!=TYPE_CHAR) {
@@ -273,10 +310,12 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
 ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_node_t *if_node;
     ir_node_t *jump_exit_branch;
+    ir_node_t *ir_cond;
     ir_node_t *ir_exit_if;
 
     ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_exit_if->label = new_label_unique("IF_EXIT");
+    true_stmt = link_ir_to_ir(ir_exit_if,true_stmt); //true_stmt always exists
 
     if_node = new_ir_node_t(NODE_BRANCH);
 
@@ -289,11 +328,15 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
            EXIT_LABEL
         */
 
-        true_stmt->label = new_label_unique("TRUE_STMT");
-        if_node->jump_label = true_stmt->label;
+        //true_stmt->label = new_label_unique("TRUE_STMT");
+        //if_node->jump_label = true_stmt->label;
 
-	jump_exit_branch = jump_to(ir_exit_if->label);
+	jump_exit_branch = jump_to(ir_exit_if);
         false_stmt = link_ir_to_ir(jump_exit_branch,false_stmt);
+
+        //if_node->ir_cond = expr_tree_to_ir_tree(cond);
+        ir_cond = expr_tree_to_ir_cond(cond);
+        ir_cond = backpatch_ir_cond(ir_cond,true_stmt,false_stmt);
 
     } else {
         // only true_stmt
@@ -304,14 +347,17 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
         */
 
         cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
-        if_node->jump_label = ir_exit_if->label;
+        //if_node->jump_label = ir_exit_if->label;
+
+        //if_node->ir_cond = expr_tree_to_ir_tree(cond);
+        ir_cond = expr_tree_to_ir_cond(cond);
+        ir_cond = backpatch_ir_cond(ir_cond,ir_exit_if,true_stmt);
     }
 
-    true_stmt = link_ir_to_ir(ir_exit_if,true_stmt); //true_stmt always exists
+    //ir_cond->jump_label = if_node->jump_label;
+    if_node->ir_cond = ir_cond;
 
-    if_node->ir_cond = expr_tree_to_ir_tree(cond);
-
-    if_node = link_ir_to_ir(false_stmt,if_node);     //this ignores false_stmt if  NULL
+    if_node = link_ir_to_ir(false_stmt,if_node);     //this ignores false_stmt if NULL
     if_node = link_ir_to_ir(true_stmt,if_node);
 
     return if_node;
@@ -326,11 +372,13 @@ ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
        new_ir_if(cond,true_stmt);
      */
 
-    jump_loop_branch = jump_to(new_label_unique("WHILE_ENTER"));
+    jump_loop_branch = jump_to(NULL); //needs backpatch
     true_stmt = link_ir_to_ir(jump_loop_branch,true_stmt);
 
     while_node = new_ir_if(cond,true_stmt,NULL);
-    while_node->label = jump_loop_branch->jump_label;
+    while_node->label = new_label_unique("WHILE_ENTER");
+
+    jump_loop_branch->ir_goto = while_node; //do the backpatch
 
     return while_node;
 }
@@ -493,19 +541,19 @@ ir_node_t *new_ir_write(expr_list_t *list) {
     return write_stmt;
 }
 
-ir_node_t *jump_and_link_to(char *jump_label) {
+ir_node_t *jump_and_link_to(func_t *subprogram) {
     ir_node_t *new_jump_link;
 
     new_jump_link = new_ir_node_t(NODE_JUMP_LINK);
-    new_jump_link->jump_label = jump_label;
+    new_jump_link->ir_goto = ir_root_tree[subprogram->unique_id];
     return new_jump_link;
 }
 
-ir_node_t *jump_to(char *jump_label) {
+ir_node_t *jump_to(ir_node_t *ir_dest) {
     ir_node_t *new_jump_link;
 
     new_jump_link = new_ir_node_t(NODE_JUMP);
-    new_jump_link->jump_label = jump_label;
+    new_jump_link->ir_goto = ir_dest;
     return new_jump_link;
 }
 
@@ -612,11 +660,105 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
     return new_stmt;
 }
 
-ir_node_t *new_lost_ir_node(char *error) {
-    ir_node_t *new_ir;
+ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir_false) {
+    //if (!ir_true->label) {
+    //    ir_true->label = new_label_unique("_CHECK_");
+    //}
 
-    new_ir = new_ir_node_t(NODE_LOST_NODE);
-    new_ir->error = error;
+    //if (!ir_false->label) {
+    //    ir_false->label = new_label_unique("_CHECK_");
+    //}
 
-    return new_ir;
+    switch (ir_cond->op_rval) {
+    case RELOP_B:
+    case RELOP_BE:
+    case RELOP_L:
+    case RELOP_LE:
+    case RELOP_NE:
+    case RELOP_EQU:
+        //set the branch ir_node
+        if (!ir_true->label) {
+            ir_true->label = new_label_unique("CHECK");
+        }
+
+        ir_cond->last->ir_goto = ir_true;
+        return ir_cond;
+    case OP_AND:
+        //if (!ir_cond->ir_rval->label) {
+        //    ir_cond->ir_rval->label = new_label_unique("IF_AND_1");
+        //}
+
+        //if (!ir_cond->ir_rval2->label) {
+        //    ir_cond->ir_rval2->label = new_label_unique("IF_AND_2");
+        //}
+
+        //invert the first comparison and jump to false
+        //pseudo assembly of logical AND
+        //
+        //convert this:
+        //
+        //               beq a,b, goto: next_check
+        //               jump false
+        // next_check:   beq c,d, goto true
+        // false:        __false__
+        //               jump exit_branch
+        // true:         __true__
+        // exit_branch:
+        //
+        //to this:
+        //
+        //               bne a,b, goto false
+        //               beq c,d, goto true
+        // false:         __false__
+        //               jump exit_branch
+        // true:         __true__
+        // exit_branch:
+
+        //ir_cond->ir_rval->last->ir_goto = ir_false;
+        //ir_cond->ir_rval2->last->ir_goto = ir_true;
+
+        ir_cond->ir_rval2 = backpatch_ir_cond(ir_cond->ir_rval2,ir_true,ir_false);
+
+        switch (ir_cond->ir_rval->op_rval) {
+        case RELOP_B:
+        case RELOP_BE:
+        case RELOP_L:
+        case RELOP_LE:
+        case RELOP_NE:
+        case RELOP_EQU:
+            //printf("%s --> %s\n",op_literal(ir_cond->ir_rval->op_rval),op_literal(op_invert_cond(ir_cond->ir_rval->op_rval)));
+            ir_cond->ir_rval->op_rval =  op_invert_cond(ir_cond->ir_rval->op_rval);
+            ir_cond->ir_rval = backpatch_ir_cond(ir_cond->ir_rval,ir_false,ir_cond->ir_rval2);
+            break;
+        case OP_AND:
+            ir_cond->ir_rval = backpatch_ir_cond(ir_cond->ir_rval,ir_false,ir_cond->ir_rval2);
+            break;
+        case OP_OR:
+            ir_cond->ir_rval = backpatch_ir_cond(ir_cond->ir_rval,ir_cond->ir_rval2,ir_false);
+            break;
+        default:
+            break;
+        }
+
+        break;
+    case OP_OR:
+        //if (!ir_cond->ir_rval->label) {
+        //    ir_cond->ir_rval->label = new_label_unique("IF_OR_1");
+        //}
+
+        //if (ir_cond->ir_rval2->label) {
+        //    ir_cond->ir_rval2->label = new_label_unique("IF_OR_2");
+        //}
+
+        //ir_cond->ir_rval->last->ir_goto = ir_true;
+        //ir_cond->ir_rval2->last->ir_goto = ir_true;
+
+        ir_cond->ir_rval = backpatch_ir_cond(ir_cond->ir_rval,ir_true,ir_false);
+        ir_cond->ir_rval2 = backpatch_ir_cond(ir_cond->ir_rval2,ir_true,ir_false);
+        break;
+    case OP_NOT:
+    default:
+        die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+    }
+    return ir_cond;
 }
