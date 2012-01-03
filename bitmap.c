@@ -22,7 +22,7 @@ void init_bitmap() {
     datatype_max_sizeof_set.data_name = "__internal_bitmap_factory_datatype__";
     datatype_max_sizeof_set.memsize = 16*MEM_SIZEOF_CHAR; //we use only this
 
-    //these go to gp (we are in main scope)
+    //these go to gp
     ll = (var_t*)malloc(sizeof(var_t));
     ll->id_is = ID_VAR;
     ll->name = "__internal_bitmap_ll_";

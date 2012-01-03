@@ -84,13 +84,10 @@ typedef struct ir_node_t {
 } ir_node_t;
 
 extern ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
-extern int ir_root_tree_current;
-extern int ir_root_tree_next_free;
 
 void init_ir();
 
 void new_ir_tree(func_t *subprogram);
-void return_to_previous_ir_tree();
 
 ir_node_t *new_ir_node_t(ir_node_type_t node_type);
 ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent);

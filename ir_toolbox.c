@@ -164,8 +164,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
     expr_t *tmp_expr;
 
-    sem_t *sem_1;
-
     //we do not handle EXPR_STRING here, strings can be only in assignments (not inside expressions)
 
     //the EXPR_LOST is actually a EXPR_LVAL with parsing errors, just load from lost_var
@@ -311,8 +309,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         new_node->address = calculate_lvalue(ltree->var);
 
         if (ltree->var->id_is==ID_RETURN) {
-            sem_1 = sm_find(ltree->var->name);
-            new_func_call = prepare_stack_and_call(sem_1->subprogram,ltree->expr_list);
+            new_func_call = prepare_stack_and_call(ltree->var->scope->scope_owner,ltree->expr_list);
 
             //finally we must read the return value after the actual call
             new_node = link_ir_to_ir(new_node,new_func_call);

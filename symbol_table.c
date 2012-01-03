@@ -126,19 +126,6 @@ void idf_init() {
     idf_free_memory = 0;
 }
 
-func_t *create_main_program(char *name) {
-    sem_t *sem_main_program;
-
-    sem_main_program = sm_insert(name);
-    sem_main_program->id_is = ID_PROGRAM_NAME;
-
-    //see scope.h
-    main_program->func_name = sem_main_program->name;
-    sem_main_program->subprogram = main_program;
-
-    return sem_main_program->subprogram;
-}
-
 void init_symbol_table() {
     data_t *void_datatype; //datatype of lost symbols
 
@@ -150,9 +137,6 @@ void init_symbol_table() {
     sm_table = sm_array;
 
     init_scope();
-
-    main_program = (func_t*)malloc(sizeof(func_t));
-    start_new_scope(main_program);
 
     idf_free_memory = 0; //at the beggining there is no memory
     idf_init();
@@ -212,7 +196,7 @@ void init_symbol_table() {
     lost_var->id_is = ID_LOST;
     lost_var->name = "__lost_variable__";
     lost_var->datatype = void_datatype;
-    lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
+    //lost_var->scope = &scope_stack[0]; //lost symbols are adopted by main_program_scope
     lost_var->ival = 0;
     lost_var->fval = 0;
     lost_var->cval = 0;
@@ -271,7 +255,7 @@ sem_t *sm_insert(const char *id) {
     if ((!existing_sem || existing_sem->scope!=get_current_scope() || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)malloc(sizeof(sem_t));
         new_sem->name = strdup(id);
-        new_sem->scope = &scope_stack[sm_scope];
+        new_sem->scope = get_current_scope();
         new_sem->index = MAX_SYMBOLS-sm_empty;
         sm_table[MAX_SYMBOLS-sm_empty] = new_sem;
         sm_empty--;
@@ -472,20 +456,20 @@ void declare_formal_parameters(func_t *subprogram) {
 void sm_insert_lost_symbol(char *id) {
     char **pool;
     char *tmp;
-    int index;
+    scope_t *current_scope;
 
     tmp = sm_find_lost_symbol(id);
     if (tmp) {
         return;
     }
 
-    pool = scope_stack[sm_scope].lost_symbols;
-    index = scope_stack[sm_scope].lost_symbols_empty;
+    current_scope = get_current_scope();
+    pool = current_scope->lost_symbols;
 
-    if (index>0) {
+    if (current_scope->lost_symbols_empty>0) {
         tmp = strdup(id);
-        pool[MAX_LOST_SYMBOLS - index] = tmp;
-        scope_stack[sm_scope].lost_symbols_empty--;
+        pool[MAX_LOST_SYMBOLS - current_scope->lost_symbols_empty] = tmp;
+        current_scope->lost_symbols_empty--;
     }
     else {
         die("FATAL_ERROR: reached maximun lost symbols from current scope");
@@ -496,9 +480,12 @@ char *sm_find_lost_symbol(char *id) {
     char **pool;
     int index;
     int i;
+    scope_t *current_scope;
 
-    pool = scope_stack[sm_scope].lost_symbols;
-    index = MAX_LOST_SYMBOLS - scope_stack[sm_scope].lost_symbols_empty;
+    current_scope = get_current_scope();
+    pool = current_scope->lost_symbols;
+
+    index = MAX_LOST_SYMBOLS - current_scope->lost_symbols_empty;
 
     if (index>0) {
         for (i=index-1;i>=0;i--) {

@@ -92,10 +92,10 @@ typedef struct statement_t {
 } statement_t;
 
 extern statement_t *statement_root_module[MAX_NUM_OF_MODULES];
-extern int statement_root_module_current;
-extern int statement_root_module_next_free;
+extern int statement_root_module_current_free;
 
 void init_statements();
+func_t *create_main_program(char *name);
 
 statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
 
@@ -109,7 +109,7 @@ statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
-void link_statement_to_module_and_return(statement_t *new_statement);
+void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement);
 void new_statement_module(func_t *subprogram);
 
 const char* statement_type_to_string(statement_t *statement);

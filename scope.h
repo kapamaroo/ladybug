@@ -5,12 +5,7 @@
 
 #define MAX_SCOPE 10
 
-extern int sm_scope;
-extern scope_t scope_stack[MAX_SCOPE+1];
 extern func_t *main_program;
-//scope 0 is the scope of the main program and if the
-//symbol table is an array, it is the first element
-//scope_stack[n] points to the first element of n-th scope
 
 typedef struct with_stmt_scope_t {
     data_t *type; //record type of with statement

@@ -16,8 +16,6 @@
 unsigned long unique_virt_reg;
 
 ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
-int ir_root_tree_current;
-int ir_root_tree_next_free;
 
 ir_node_t *new_ir_assign_str(var_t *v, expr_t *l);
 ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l);
@@ -58,8 +56,6 @@ void init_ir() {
 
     ir_root_tree[0] = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_root_tree[0]->label = new_label_literal("main");
-    ir_root_tree_current = 0;
-    ir_root_tree_next_free = 0;
 
     init_bitmap();
 }
@@ -76,22 +72,10 @@ ir_node_t *new_lost_ir_node(char *error) {
 void new_ir_tree(func_t *subprogram) {
     ir_node_t *ir_new;
 
-    subprogram->unique_id = ir_root_tree_next_free;
-
     ir_new = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_new->label = new_label_subprogram(subprogram->func_name);
 
-    ir_root_tree[ir_root_tree_next_free] = ir_new;
-    ir_root_tree_current++;
-    ir_root_tree_next_free++;
-}
-
-void return_to_previous_ir_tree() {
-    if (ir_root_tree_current==0) {
-        return;
-    }
-
-    ir_root_tree_current--;
+    ir_root_tree[subprogram->unique_id] = ir_new;
 }
 
 ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent) {

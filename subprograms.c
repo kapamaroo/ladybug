@@ -4,7 +4,7 @@
 
 #include "build_flags.h"
 #include "subprograms.h"
-#include "scope.h"
+//#include "scope.h"
 #include "symbol_table.h"
 #include "mem.h"
 #include "err_buff.h"
@@ -92,25 +92,23 @@ void subprogram_init(sem_t *sem_sub) {
 
     subprogram = sem_sub->subprogram;
 
-    start_new_scope(subprogram);
+    new_statement_module(subprogram);
+
     configure_stack_size_and_param_lvalues(subprogram);
     declare_formal_parameters(subprogram); //declare them inside the new scope
-    new_statement_module(subprogram);
 }
 
-void subprogram_finit(sem_t *subprogram,statement_t *body) {
+void subprogram_finit(sem_t *sem_sub,statement_t *body) {
     //mark subprogram as well-declared, if needed
-    if (subprogram->id_is == ID_FORWARDED_FUNC) {
-        subprogram->id_is = ID_FUNC;
-        check_for_return_value(subprogram->subprogram,body);
+    if (sem_sub->id_is == ID_FORWARDED_FUNC) {
+        sem_sub->id_is = ID_FUNC;
+        check_for_return_value(sem_sub->subprogram,body);
     }
-    else if (subprogram->id_is == ID_FORWARDED_PROC) {
-        subprogram->id_is = ID_PROC;
+    else if (sem_sub->id_is == ID_FORWARDED_PROC) {
+        sem_sub->id_is = ID_PROC;
     }
 
-    close_current_scope();
-
-    link_statement_to_module_and_return(body);
+    link_statement_to_module_and_return(sem_sub->subprogram,body);
 }
 
 sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) {

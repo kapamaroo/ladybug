@@ -23,7 +23,7 @@ mem_t* mem_allocate_symbol(data_t *d) {
 
     scope_owner = get_current_scope_owner();
     t = MEM_GLOBAL;
-    if (scope_owner!=main_program) {
+    if (main_program && scope_owner!=main_program) {
         t = MEM_STACK;
     }
 

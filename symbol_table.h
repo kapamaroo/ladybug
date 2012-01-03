@@ -64,7 +64,6 @@ int calculate_number_of_set_elements(data_t *type);
 int check_for_id_in_datatype(data_t *datatype,const char *id);
 
 void init_symbol_table();
-func_t *create_main_program(char *name);
 
 sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL for the whole implementation
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name

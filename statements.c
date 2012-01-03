@@ -9,8 +9,7 @@
 #include "err_buff.h"
 
 statement_t *statement_root_module[MAX_NUM_OF_MODULES];
-int statement_root_module_current;
-int statement_root_module_next_free;
+int statement_root_module_current_free;
 
 void init_statements() {
     int i;
@@ -19,8 +18,7 @@ void init_statements() {
         statement_root_module[i] = NULL;
     }
 
-    statement_root_module_current = 0;
-    statement_root_module_next_free = 0;
+    statement_root_module_current_free = 0;
 }
 
 statement_t *link_statements(statement_t *child, statement_t *parent) {
@@ -52,28 +50,37 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
     }
 }
 
-void link_statement_to_module_and_return(statement_t *new_statement) {
-    statement_root_module[statement_root_module_next_free] =
-        link_statements(new_statement,statement_root_module[statement_root_module_next_free]);
+void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement) {
+    close_current_scope();
 
-    return_to_previous_ir_tree();
-
-    statement_root_module_next_free++;
-
-    if (statement_root_module_current==0) {
-        return;
-    }
-
-    statement_root_module_current--;
+    statement_root_module[subprogram->unique_id] =
+        link_statements(new_statement,statement_root_module[subprogram->unique_id]);
 }
 
 void new_statement_module(func_t *subprogram) {
-    if (statement_root_module_next_free==MAX_NUM_OF_MODULES) {
+    if (statement_root_module_current_free==MAX_NUM_OF_MODULES) {
         die("CANNOT HANDLE SO MUCH MODULES YET");
     }
 
-    statement_root_module_current++;
+    subprogram->unique_id = statement_root_module_current_free++;
+    start_new_scope(subprogram);
     new_ir_tree(subprogram);
+}
+
+func_t *create_main_program(char *name) {
+    sem_t *sem_main_program;
+
+    sem_main_program = sm_insert(name);
+    sem_main_program->id_is = ID_PROGRAM_NAME;
+
+    //see scope.h
+    main_program = (func_t*)malloc(sizeof(func_t));
+    main_program->func_name = sem_main_program->name;
+    sem_main_program->subprogram = main_program;
+
+    new_statement_module(main_program);
+
+    return sem_main_program->subprogram;
 }
 
 int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){

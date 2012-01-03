@@ -159,7 +159,7 @@
 %start program
 %%
 
-program: header {new_statement_module($1);} declarations subprograms comp_statement DOT {link_statement_to_module_and_return($5);}
+program: header declarations subprograms comp_statement DOT {link_statement_to_module_and_return($1,$4);}
 ;
 
 header: PROGRAM ID SEMI {$$ = create_main_program($2);}
