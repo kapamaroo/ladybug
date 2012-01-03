@@ -9,9 +9,7 @@
 
 typedef enum ir_node_type_t {
     NODE_DUMMY_LABEL,	        //empty statement, with label only
-    NODE_LOST_NODE,              //on parse errors generate this node
     NODE_BRANCH,
-    NODE_BRANCH_COND,	        //only for branches, not exactly NODE_RVAL (it handles differently some operators)
     NODE_JUMP_LINK,	        //jump and link
     NODE_JUMP,		        //jump only
     NODE_RETURN_SUBPROGRAM,      //return control to caller
@@ -62,8 +60,6 @@ typedef struct ir_node_t {
     struct ir_node_t *ir_rval;	//first rvalue to use
     struct ir_node_t *ir_rval2;	//second rvalue to use
 
-    struct ir_node_t *ir_cond;  //(if, for, while), bound checks
-
     struct ir_node_t *ir_lval_dest;	//for TYPESET nodes we need one more lvalue;
 
     struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_LOAD,NODE_ASSIGN* reads it
@@ -72,9 +68,6 @@ typedef struct ir_node_t {
     struct ir_node_t *ir_goto; //jump to this node
 
     char *label;               //the label of the node
-    //    char *jump_label;          //only for NODE_JUMP_LINK, NODE_JUMP, NODE_BRANCH
-
-    char *error; //NODE_LOST_NODE uses this
 
     type_t data_is; //standard type
     mem_t *lval; //generate *address and *offset from here (this should be removed)
@@ -104,7 +97,5 @@ ir_node_t *new_ir_write(expr_list_t *list);
 
 ir_node_t *jump_and_link_to(func_t *subprogram);
 ir_node_t *jump_to(ir_node_t *ir_dest);
-
-ir_node_t *new_lost_ir_node(char *error);
 
 #endif

@@ -22,10 +22,7 @@ void print_ir_node(ir_node_t *ir_node) {
     case NODE_DUMMY_LABEL:
         //printf("%s: ",ir_node->label);
         return;
-    case NODE_LOST_NODE:
-        printf("%s ",ir_node->error);
-        return;
-    case NODE_BRANCH_COND:
+    case NODE_BRANCH:
         switch (ir_node->op_rval) {
         case OP_OR:
         case OP_AND:
@@ -42,13 +39,6 @@ void print_ir_node(ir_node_t *ir_node) {
             //print_ir_node();
             break;
         }
-        return;
-    case NODE_BRANCH:
-        //print_ir_node(ir_node->ir_cond->ir_rval);
-        //printf("\n\t\t\t");
-        //print_ir_node(ir_node->ir_cond->ir_rval2);
-
-        print_ir_node(ir_node->ir_cond);
         return;
     case NODE_JUMP_LINK:
         printf("jal %s",ir_node->ir_goto->label);

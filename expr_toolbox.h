@@ -12,6 +12,7 @@ expr_t *expr_from_hardcoded_real(float value);
 expr_t *expr_from_hardcoded_boolean(int value);
 expr_t *expr_from_hardcoded_char(char value);
 
+int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list);
 expr_t *expr_from_function_call(char *id,expr_list_t *list);
 
 void normalize_expr_set(expr_t *expr_set);

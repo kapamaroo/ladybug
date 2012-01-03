@@ -5,6 +5,7 @@
 #include "symbol_table.h" //ladybug's symbol table
 #include "scope.h"
 #include "expressions.h" //maybe we need to invert the cond in if
+#include "expr_toolbox.h"
 #include "ir.h"
 #include "err_buff.h"
 
@@ -315,7 +316,7 @@ statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
 statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params) {
     statement_t *new_call;
 
-    if (!subprogram) {
+    if (!subprogram || !check_valid_subprogram_call(subprogram,expr_params)) {
         //bad call
         return new_statement_t(ST_BadStatement);
     }

@@ -60,15 +60,6 @@ void init_ir() {
     init_bitmap();
 }
 
-ir_node_t *new_lost_ir_node(char *error) {
-    ir_node_t *new_ir;
-
-    new_ir = new_ir_node_t(NODE_LOST_NODE);
-    new_ir->error = error;
-
-    return new_ir;
-}
-
 void new_ir_tree(func_t *subprogram) {
     ir_node_t *ir_new;
 
@@ -153,7 +144,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->ir_rval = NULL;
     new_node->ir_rval2 = NULL;
 
-    new_node->ir_cond = NULL;
     new_node->address = NULL;
     new_node->offset = NULL;
     new_node->ir_lval_dest = NULL;
@@ -163,8 +153,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->prev = NULL; //new_node;
     new_node->last = new_node;
     new_node->label = NULL;
-    //new_node->jump_label = NULL;
-    new_node->error = NULL;
     new_node->lval = NULL;
     return new_node;
 }
@@ -292,7 +280,6 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
 }
 
 ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
-    ir_node_t *if_node;
     ir_node_t *jump_exit_branch;
     ir_node_t *ir_cond;
     ir_node_t *ir_exit_if;
@@ -300,8 +287,6 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_exit_if->label = new_label_unique("IF_EXIT");
     true_stmt = link_ir_to_ir(ir_exit_if,true_stmt); //true_stmt always exists
-
-    if_node = new_ir_node_t(NODE_BRANCH);
 
     if (true_stmt && false_stmt) {
         /* pseudo assembly
@@ -311,9 +296,6 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
            TRUE_STMT
            EXIT_LABEL
         */
-
-        //true_stmt->label = new_label_unique("TRUE_STMT");
-        //if_node->jump_label = true_stmt->label;
 
 	jump_exit_branch = jump_to(ir_exit_if);
         false_stmt = link_ir_to_ir(jump_exit_branch,false_stmt);
@@ -331,20 +313,15 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
         */
 
         cond = expr_orop_andop_notop(NULL,OP_NOT,cond);
-        //if_node->jump_label = ir_exit_if->label;
 
-        //if_node->ir_cond = expr_tree_to_ir_tree(cond);
         ir_cond = expr_tree_to_ir_cond(cond);
         ir_cond = backpatch_ir_cond(ir_cond,ir_exit_if,true_stmt);
     }
 
-    //ir_cond->jump_label = if_node->jump_label;
-    if_node->ir_cond = ir_cond;
+    ir_cond = link_ir_to_ir(false_stmt,ir_cond);     //this ignores false_stmt if NULL
+    ir_cond = link_ir_to_ir(true_stmt,ir_cond);
 
-    if_node = link_ir_to_ir(false_stmt,if_node);     //this ignores false_stmt if NULL
-    if_node = link_ir_to_ir(true_stmt,if_node);
-
-    return if_node;
+    return ir_cond;
 }
 
 ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt) {
@@ -415,6 +392,7 @@ ir_node_t *new_ir_with(ir_node_t *body) {
 ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list) {
     ir_node_t *new_proc_call;
 
+    //we are error free here!
     new_proc_call = prepare_stack_and_call(subprogram,list);
     return new_proc_call;
 }

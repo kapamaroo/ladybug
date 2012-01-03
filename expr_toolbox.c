@@ -157,6 +157,69 @@ expr_t *expr_from_hardcoded_int(int value) {
     return new_expr;
 }
 
+int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list) {
+    int i;
+    data_t *el_datatype;
+
+    if (!list && subprogram->param_num!=0) {
+        sprintf(str_err,"'%s' subprogram takes %d parameters",subprogram->func_name,subprogram->param_num);
+        yyerror(str_err);
+        return 0;
+    }
+
+    if (list->all_expr_num != subprogram->param_num) {
+        sprintf(str_err,"subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
+        yyerror(str_err);
+        return 0;
+    }
+
+    if (MAX_EXPR_LIST - list->expr_list_empty != subprogram->param_num) {
+        //some expressions are invalid, but their number is correct, avoid some unreal error messages afterwards
+        return 0;
+    }
+
+    for (i=0;i<subprogram->param_num;i++) {
+        //continue ir generation
+        //if (list->expr_list[i]->expr_is==EXPR_LOST) {
+        //    //parse errors
+        //    free(tmp_var);
+        //    return NULL;
+        //}
+
+        el_datatype = list->expr_list[i]->datatype;
+
+        if (subprogram->param[i]->pass_mode==PASS_REF) {
+            //accept only lvalues
+            if (list->expr_list[i]->expr_is!=EXPR_LVAL) {
+                sprintf(str_err,"parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
+                yyerror(str_err);
+                return 0;
+            }
+
+            if (el_datatype != subprogram->param[i]->datatype) {
+                sprintf(str_err,"passing refference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
+                yyerror(str_err);
+                return 0;
+            }
+
+            if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
+                sprintf(str_err,"guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
+                yyerror(str_err);
+                return 0;
+            }
+        }
+        else { //PASS_VAL
+            //accept anything, if it's not rvalue we pass it's address
+            if (TYPE_IS_COMPOSITE(el_datatype)) {
+                yyerror("arrays, records and set datatypes can only be passed by refference");
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
 expr_t *expr_from_function_call(char *id,expr_list_t *list) {
     //functions can only be called inside expressions, so this ID must be a function, its type is its return type
     sem_t *sem_1;
@@ -168,9 +231,11 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
         if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
             //else we had parse errors
-            new_expr = expr_from_variable(sem_1->subprogram->return_value);
-            new_expr->expr_list = list;
-            return new_expr;
+            if (check_valid_subprogram_call(sem_1->subprogram,list)) {
+                new_expr = expr_from_variable(sem_1->subprogram->return_value);
+                new_expr->expr_list = list;
+                return new_expr;
+            }
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
             sprintf(str_err,"invalid procedure call '%s', expected function",id);
             yyerror(str_err);

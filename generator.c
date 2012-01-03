@@ -52,7 +52,8 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
     }
 
     if (s->type==ST_BadStatement) {
-        return new_lost_ir_node("__BAD_STATEMENT__");
+        //ignore statement
+        return NULL;
     }
 
     switch (s->type) {
@@ -92,7 +93,8 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
         ir_new = new_ir_write(s->_write.expr_list);
         break;
     case ST_BadStatement:
-        ir_new = new_lost_ir_node("__BAD_STATEMENT__");
+        //ignore statement
+        ir_new = NULL;
         break;
     }
     return ir_new;

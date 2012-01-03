@@ -128,7 +128,7 @@ ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
         //do not break;
     case OP_NOT:
         ir_rval->ir_rval2 = ir_tree_to_ir_cond(ir_rval->ir_rval2);
-        ir_rval->node_type = NODE_BRANCH_COND;
+        ir_rval->node_type = NODE_BRANCH;
         break;
     default:
         die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
@@ -424,120 +424,67 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
     ir_node_t *ir_jump_link;
     ir_node_t *tmp_assign;
 
-    data_t *el_datatype;
     var_t *tmp_var;
 
     int i;
 
-    if (!list && subprogram->param_num!=0) {
-        sprintf(str_err,"'%s' subprogram takes %d parameters",subprogram->func_name,subprogram->param_num);
-        yyerror(str_err);
-        return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-    }
+    //we are error free here!
+    new_stack_init_node = NULL;
 
-    if (list->all_expr_num != subprogram->param_num) {
-        sprintf(str_err,"invalid number of parameters: subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
-        yyerror(str_err);
-        return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-    }
-
-    if (MAX_EXPR_LIST - list->expr_list_empty == subprogram->param_num) {
-        new_stack_init_node = NULL;
-
-        tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
-        tmp_var->id_is = ID_VAR;
+    tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
+    tmp_var->id_is = ID_VAR;
 #warning do we need the scope of the callee here?
-        tmp_var->scope = get_current_scope();
-        tmp_var->cond_assign = NULL;
+    tmp_var->scope = get_current_scope();
+    tmp_var->cond_assign = NULL;
 
-        for (i=0;i<subprogram->param_num;i++) {
-            tmp_assign = NULL;
+    for (i=0;i<subprogram->param_num;i++) {
+        tmp_assign = NULL;
 
-            //continue ir generation
-            //if (list->expr_list[i]->expr_is==EXPR_LOST) {
-            //    //parse errors
-            //    free(tmp_var);
-            //    return NULL;
-            //}
+        //continue ir generation
+        //if (list->expr_list[i]->expr_is==EXPR_LOST) {
+        //    //parse errors
+        //    free(tmp_var);
+        //    return NULL;
+        //}
 
-            tmp_var->datatype = subprogram->param[i]->datatype;
-            tmp_var->name = subprogram->param[i]->name;
-            tmp_var->Lvalue = subprogram->param_Lvalue[i];
+        tmp_var->datatype = subprogram->param[i]->datatype;
+        tmp_var->name = subprogram->param[i]->name;
+        tmp_var->Lvalue = subprogram->param_Lvalue[i];
 
-            el_datatype = list->expr_list[i]->datatype;
+        if (subprogram->param[i]->pass_mode==PASS_REF) {
+            //mark temporarily the lvalue as PASS_VAL, in order for the calculate_lvalue() to work properly
+            //this is a very ugly way of doing things :( //FIXME
+            tmp_var->Lvalue->content_type = PASS_VAL;
 
-            if (subprogram->param[i]->pass_mode==PASS_REF) {
-                //accept only lvalues
-                if (list->expr_list[i]->expr_is!=EXPR_LVAL) {
-                    sprintf(str_err,"parameter '%s' must be variable to be passed by reference",subprogram->param[i]->name);
-                    yyerror(str_err);
-                    free(tmp_var);
+            //reminder: we are talking about stack Lvalues
+            //there are no offsets, parameters do not change position in stack
+            //this means that the address is HARDCODED_LVAL
 
-                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-                }
+            tmp_assign = new_ir_node_t(NODE_ASSIGN);
+            tmp_assign->address = calculate_lvalue(tmp_var);
+            tmp_assign->ir_rval = calculate_lvalue(list->expr_list[i]->var);
 
-                if (el_datatype != subprogram->param[i]->datatype) {
-                    sprintf(str_err,"passing refference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
-                    yyerror(str_err);
-                    free(tmp_var);
-
-                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-                }
-
-                if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
-                    sprintf(str_err,"guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
-                    yyerror(str_err);
-                    free(tmp_var);
-
-                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-                }
-
-                //mark temporarily the lvalue as PASS_VAL, in order for the calculate_lvalue() to work properly
-                //this is a very ugly way of doing things :( //FIXME
-                tmp_var->Lvalue->content_type = PASS_VAL;
-
-                //reminder: we are talking about stack Lvalues
-                //there are no offsets, parameters do not change position in stack
-                //this means that the address is HARDCODED_LVAL
-
-                tmp_assign = new_ir_node_t(NODE_ASSIGN);
-                tmp_assign->address = calculate_lvalue(tmp_var);
-                tmp_assign->ir_rval = calculate_lvalue(list->expr_list[i]->var);
-
-                //convert to RVAL
+            //convert to RVAL
 #warning should I mark the ir_rval as NODE_RVAL here?
-                tmp_assign->ir_rval->node_type = NODE_RVAL;
-                tmp_assign->ir_rval->ir_rval = tmp_assign->ir_rval->address;
-                if (tmp_assign->ir_rval->node_type==NODE_LVAL) {
-                    tmp_assign->ir_rval->ir_rval2 = tmp_assign->ir_rval->offset;
-                }
-
-                //restore the PASS_REF content_type
-                tmp_var->Lvalue->content_type = PASS_REF;
+            tmp_assign->ir_rval->node_type = NODE_RVAL;
+            tmp_assign->ir_rval->ir_rval = tmp_assign->ir_rval->address;
+            if (tmp_assign->ir_rval->node_type==NODE_LVAL) {
+                tmp_assign->ir_rval->ir_rval2 = tmp_assign->ir_rval->offset;
             }
-            else { //PASS_VAL
-                //accept anything, if it's not rvalue we pass it's address
-                if (TYPE_IS_COMPOSITE(el_datatype)) {
-                    yyerror("arrays, records and set datatypes can only be passed by refference");
-                    free(tmp_var);
 
-                    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
-                }
-                tmp_assign = new_ir_assign(tmp_var,list->expr_list[i]);
-            }
-#warning "if errors, we leak memory"
-
-            new_stack_init_node = link_ir_to_ir(tmp_assign,new_stack_init_node);
+            //restore the PASS_REF content_type
+            tmp_var->Lvalue->content_type = PASS_REF;
         }
-        free(tmp_var);
+        else { //PASS_VAL
+            tmp_assign = new_ir_assign(tmp_var,list->expr_list[i]);
+        }
 
-        ir_jump_link = jump_and_link_to(subprogram);
-        new_stack_init_node = link_ir_to_ir(ir_jump_link,new_stack_init_node);
-
-        return new_stack_init_node;
+        new_stack_init_node = link_ir_to_ir(tmp_assign,new_stack_init_node);
     }
+    free(tmp_var);
 
-    //some expressions are invalid, but their number is correct, avoid some unreal error messages afterwards
-    return new_lost_ir_node("__BAD_STACK_PREPARATION__");
+    ir_jump_link = jump_and_link_to(subprogram);
+    new_stack_init_node = link_ir_to_ir(ir_jump_link,new_stack_init_node);
+
+    return new_stack_init_node;
 }
-
