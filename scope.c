@@ -48,7 +48,7 @@ void start_new_scope(func_t *scope_owner) {
 
         scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
 
-        printf("__start_new_scope_%s_%d\n",scope_owner->func_name,sm_scope);
+        //printf("__start_new_scope_%s_%d\n",scope_owner->func_name,sm_scope);
         return;
     }
     else {
@@ -67,7 +67,7 @@ void close_current_scope() {
     }
     sm_clean_current_scope();
 
-    printf("__close_current_scope_%d\n",sm_scope);
+    //printf("__close_current_scope_%d\n",sm_scope);
     sm_scope--;
 }
 
