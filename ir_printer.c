@@ -27,11 +27,8 @@ void print_ir_node(ir_node_t *ir_node) {
             break;
         case OP_NOT:
             die("UNEXPECTED ERROR: ir_printer: NODE_BRANCH_COND: not operator still alive??");
-            printf("__%s__\n\t\t\t",op_to_instruction(ir_node->op_rval));
-            break;
         default:
-            //die("UNEXPENTED_ERROR: print branch ir");
-            //print_ir_node();
+            die("UNEXPENTED_ERROR: print branch ir");
             break;
         }
         return;
@@ -101,19 +98,8 @@ void print_ir_node(ir_node_t *ir_node) {
         return;
     case NODE_LOAD:
         printf("lw $%ld, ",ir_node->virt_reg);
-        printf("{");
         print_ir_node(ir_node->address);
-        printf("}");
         return;
-        //case NODE_BINARY_AND:
-        //printf("__&__");
-        //return;
-        //case NODE_BINARY_OR:
-        //printf("__|__");
-        //return;
-        //case NODE_BINARY_NOT:
-        //printf("__~__");
-        //return;
     case NODE_SHIFT_LEFT:
         printf("__shiftL__");
         return;
@@ -121,7 +107,6 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("__shiftR__");
         return;
     case NODE_LVAL:
-        //printf("__lval__");
         printf("[");
         print_ir_node(ir_node->offset);
         printf("]");
@@ -130,15 +115,10 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("}");
         return;
     case NODE_HARDCODED_LVAL:
-        //printf("{");
-        print_ir_node(ir_node->address);
-        //printf("}");
+        printf("(%d)%s",ir_node->ival,ir_node->reg->name);
+        //print_ir_node(ir_node->address);
         return;
     case NODE_RVAL:
-        if (ir_node->label) {
-            printf("__%s__",ir_node->label);
-        }
-
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
             //first node of prepare_stack
             switch (ir_node->ir_rval->node_type) {
@@ -152,9 +132,6 @@ void print_ir_node(ir_node_t *ir_node) {
                 break;
             case NODE_RVAL_ARCH:
                 break;
-            case NODE_ASSIGN:
-            case NODE_JUMP_LINK:
-            case NODE_LOAD:
             default:
                 tmp = ir_node->ir_rval;
                 while (tmp) {
@@ -178,9 +155,6 @@ void print_ir_node(ir_node_t *ir_node) {
             break;
         case NODE_RVAL_ARCH:
             break;
-        case NODE_ASSIGN:
-        case NODE_JUMP_LINK:
-        case NODE_LOAD:
         default:
             tmp = ir_node->ir_rval2;
             while (tmp) {
@@ -255,9 +229,6 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("%s",ir_node->reg->name);
         return;
     case NODE_HARDCODED_RVAL:
-        //printf("addi $%ld, $0, %0.2f",ir_node->virt_reg,ir_node->fval);
-        //printf("%0.2f",ir_node->fval);
-        //printf("__%ld__",ir_node->virt_reg);
         printf("%d",ir_node->ival);
         return;
     case NODE_INIT_NULL_SET:
@@ -302,14 +273,12 @@ void print_ir_node(ir_node_t *ir_node) {
 
         if (ir_node->ir_rval->last->node_type==NODE_RVAL_ARCH) {
             print_ir_node(ir_node->ir_rval->last);
-            //printf(", ");
+            printf(", ");
         } else {
-            printf("$%ld",ir_node->ir_rval->last->virt_reg);
+            printf("$%ld, ",ir_node->ir_rval->last->virt_reg);
         }
 
-        printf(", {");
         print_ir_node(ir_node->address);
-        printf("}");
         return;
     case NODE_ASSIGN_SET:
         printf("assign_set \t");
@@ -321,14 +290,7 @@ void print_ir_node(ir_node_t *ir_node) {
         print_ir_node(ir_node->address);
         print_ir_node(ir_node->ir_lval);
         return;
-        //default:
-        //die("INTERNAL_ERROR: UNKNOWN NODE TYPE");
     }
-
-    //if (ir_node->next) {
-    //    printf("\n\t\t\t");
-    //    print_ir_node(ir_node->next);
-    //}
 }
 
 void print_all_modules() {

@@ -352,6 +352,12 @@ ir_node_t *calculate_lvalue(var_t *v) {
         new_node->lval = v->Lvalue;
         new_node->ival = v->Lvalue->seg_offset->ival;
 
+        if (v->Lvalue->segment==MEM_GLOBAL) {
+            new_node->reg = &R_gp;
+        } else {
+            new_node->reg = &R_sp;
+        }
+
         //set the address so far
         new_node->address = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
 
@@ -368,6 +374,12 @@ ir_node_t *calculate_lvalue(var_t *v) {
             new_node = new_ir_node_t(NODE_HARDCODED_LVAL);
             new_node->lval = v->Lvalue;
             new_node->ival = v->Lvalue->seg_offset->ival + v->Lvalue->offset_expr->ival;
+
+            if (v->Lvalue->segment==MEM_GLOBAL) {
+                new_node->reg = &R_gp;
+            } else {
+                new_node->reg = &R_sp;
+            }
 
             //put the offset together with the *address
             address_expr = expr_relop_equ_addop_mult(v->Lvalue->seg_offset,OP_PLUS,v->Lvalue->offset_expr);
@@ -458,7 +470,7 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
 
             //reminder: we are talking about stack Lvalues
             //there are no offsets, parameters do not change position in stack
-            //this means that the address is HARDCODED_LVAL
+            //this means that a stack address is HARDCODED_LVAL
 
             tmp_assign = new_ir_node_t(NODE_ASSIGN);
             tmp_assign->address = calculate_lvalue(tmp_var);
