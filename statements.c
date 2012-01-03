@@ -76,7 +76,8 @@ func_t *create_main_program(char *name) {
 
     //see scope.h
     main_program = (func_t*)malloc(sizeof(func_t));
-    main_program->func_name = sem_main_program->name;
+    //main_program->func_name = sem_main_program->name;
+    main_program->func_name = "main";
     sem_main_program->subprogram = main_program;
 
     new_statement_module(main_program);
