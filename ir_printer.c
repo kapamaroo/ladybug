@@ -350,22 +350,16 @@ void print_module(ir_node_t *module) {
 
     ir_node = module;
 
-    //the very first label is the module name
-    print_ir_node(ir_node);
-    ir_node = ir_node->next;
-
     while(ir_node) {
         //every node can have a label
-
-        printf("\n");
         if (!ir_node->label) {
             printf("\t\t\t");
         }
 
         print_ir_node(ir_node);
         ir_node = ir_node->next;
+        printf("\n");
     }
-    printf("\n");
 }
 
 char *op_to_instruction(op_t op) {
