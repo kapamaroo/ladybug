@@ -11,16 +11,11 @@ void print_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
 
     if (ir_node->label) {
-        //printf("__%s__",ir_node->label);
-    }
-
-    if (ir_node->node_type!=NODE_DUMMY_LABEL) {
-        //printf("R_%ld__",ir_node->virt_reg);
+        printf("%-22s: ",ir_node->label);
     }
 
     switch(ir_node->node_type) {
     case NODE_DUMMY_LABEL:
-        //printf("%s: ",ir_node->label);
         return;
     case NODE_BRANCH:
         switch (ir_node->op_rval) {
@@ -356,35 +351,21 @@ void print_module(ir_node_t *module) {
     ir_node = module;
 
     //the very first label is the module name
-    //print_ir_node(ir_node);
-    //printf("%-22s: ",ir_node->label);
-    //ir_node = ir_node->next;
+    print_ir_node(ir_node);
+    ir_node = ir_node->next;
 
     while(ir_node) {
         //every node can have a label
-        if (ir_node->label) {
-            printf("%-22s: ",ir_node->label);
-        } else {
+
+        printf("\n");
+        if (!ir_node->label) {
             printf("\t\t\t");
         }
 
-        if (ir_node->node_type!=NODE_DUMMY_LABEL) {
-            print_ir_node(ir_node);
-            printf("\n");
-        } else {
-            print_ir_node(ir_node);
-            ir_node = ir_node->next;
-            if (ir_node) {
-                print_ir_node(ir_node);
-                printf("\n");
-            } else {
-                //we hit NULL, end of module
-                return;
-            }
-        }
-
+        print_ir_node(ir_node);
         ir_node = ir_node->next;
     }
+    printf("\n");
 }
 
 char *op_to_instruction(op_t op) {
