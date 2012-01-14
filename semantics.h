@@ -6,14 +6,10 @@
 #ifndef _SEMANTICS_H
 #define _SEMANTICS_H
 
-#define MACHINE_FAMILY "MIPS"
-#define MACHINE_ARCHITECTURE 32
-
 //set data types have a limit of 128 different objects :fixme
 #define MAX_FIELDS 128
 #define MAX_PARAMS 128
 #define MAX_SET_ELEM 128
-//main program's scope is 0
 #define MAX_ARRAY_DIMS 8
 #define MAX_EXPR_LIST (MAX_PARAMS>MAX_ARRAY_DIMS?MAX_PARAMS:MAX_ARRAY_DIMS)
 #define MAX_VAR_LIST MAX_EXPR_LIST
