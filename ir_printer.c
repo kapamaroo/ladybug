@@ -55,48 +55,6 @@ void print_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
         printf("jr $ra");
         return;
-        /*
-          case NODE_INPUT_INT:
-          printf("__read_int_to__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_INPUT_REAL:
-          printf("__read_real_to__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_INPUT_BOOLEAN:
-          printf("__read_boolean_to__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_INPUT_CHAR:
-          printf("__read_char_to__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_INPUT_STRING:
-          printf("__read_string_of_size__%d__to__",ir_node->ival);
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_OUTPUT_INT:
-          printf("__print_int_from__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_OUTPUT_REAL:
-          printf("__print_real_from__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_OUTPUT_BOOLEAN:
-          printf("__print_boolean_from__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_OUTPUT_CHAR:
-          printf("__print_char_from__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-          case NODE_OUTPUT_STRING:
-          printf("__print_string_from__");
-          print_ir_node(ir_node->ir_lval);
-          return;
-        */
     case NODE_SYSCALL:
         //the first instruction sets the label
         if (ir_node->label) {
@@ -367,22 +325,36 @@ void print_ir_node(ir_node_t *ir_node) {
 
         //print label of branches
         switch (ir_node->op_rval) {
-        case RELOP_B:	// '>'
-        case RELOP_BE:	// '>='
         case RELOP_L:	// '<'
         case RELOP_LE:	// '<='
-        case RELOP_NE:	// '<>'
         case RELOP_EQU:	// '='
-        case RELOP_IN:	// 'in'
+            if (ir_node->data_is==TYPE_REAL) {
+                final_tree_current = link_instructions(new_instr,final_tree_current);
+                new_instr = new_instruction(NULL,&I_bc1t);
+            }
+
             new_instr->goto_label = ir_node->ir_goto->label;
+
             printf(" goto: %s",ir_node->ir_goto->label);
-            //printf("\n\t\t\t");
+            break;
+        case RELOP_NE:	// '<>'
+        case RELOP_B:	// '>'
+        case RELOP_BE:	// '>='
+            if (ir_node->data_is==TYPE_REAL) {
+                final_tree_current = link_instructions(new_instr,final_tree_current);
+                new_instr = new_instruction(NULL,&I_bc1f);
+            }
+
+            new_instr->goto_label = ir_node->ir_goto->label;
+
+            printf(" goto: %s",ir_node->ir_goto->label);
             break;
         case OP_AND:    // 'and'
         case OP_OR:     // 'or'
-            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: logical and/or operator still alive??");
         case OP_NOT:    // 'not'
-            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: not operator still alive??");
+            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: logical and/or operator still alive??");
+        case RELOP_IN:	// 'in'
+            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: in operator still alive??");
         default:
             break;
         }
@@ -569,38 +541,32 @@ char *op_to_instruction_literal(op_t op) {
 mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype) {
     if (datatype==TYPE_REAL) {
         switch (op) {
-        case RELOP_B:	// '>'
-#warning set bc1f
+        case RELOP_LE:               // '<='
+        case RELOP_B:                // '>'
             return &I_c_le_s;
-        case RELOP_BE:	// '>='
-#warning set bc1f
+        case RELOP_L:                // '<'
+        case RELOP_BE:               // '>='
             return &I_c_lt_s;
-        case RELOP_L:	// '<'
-            return &I_c_lt_s;
-        case RELOP_LE:	// '<='
-            return &I_c_le_s;
-        case RELOP_NE:	// '<>'
-#warning set bc1f
+        case RELOP_EQU:	             // '='
+        case RELOP_NE:               // '<>'
             return &I_c_eq_s;
-        case RELOP_EQU:	// '='
-            return &I_c_eq_s;
-        case OP_PLUS:	// '+'
+        case OP_PLUS:                // '+'
             return &I_add_s;
-        case OP_MINUS:	// '-'
+        case OP_MINUS:               // '-'
             return &I_sub_s;
-        case OP_MULT:	// '*'
+        case OP_MULT:                // '*'
             return &I_mul_s;
-        case OP_RDIV:	// '/'
+        case OP_RDIV:                // '/'
             return &I_div_s;
-        case OP_AND:       	// 'and'
+        case OP_AND:       	     // 'and'
             //return &I_and;
-        case OP_OR:		// 'or'
+        case OP_OR:		     // 'or'
             //return &I_or;
-        case OP_NOT:       	// 'not'
+        case OP_NOT:       	     // 'not'
             //return &I_not;
-        case OP_DIV:       	// 'div'
+        case OP_DIV:       	     // 'div'
             //return &I_div;
-        case OP_MOD:       	// 'mod'
+        case OP_MOD:       	     // 'mod'
             //return &I_rem;
         case RELOP_IN:	// 'in'
             //return "in";
@@ -609,7 +575,7 @@ mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype) {
         case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
             //return "op_SIGN";
         default:
-            die("UNEXPECTED_ERROR: 04-1");
+            die("UNEXPECTED_ERROR: bad boolean operator in real ir_node");
             return NULL; //keep the compiler happy
         }
     } else {
