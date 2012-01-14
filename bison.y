@@ -16,7 +16,7 @@
 #include "statements.h"
 #include "err_buff.h"
 #include "generator.h"
-#include "ir_printer.h"
+#include "ir_parser.h"
 #include "main_app.h"
 #include "final_code.h"
 
@@ -403,23 +403,35 @@ int main(int argc, char *argv[]) {
     switch (status) {
     case 0:
         if (!err_num) {
-            /* high level optimizations go here
-             * high level code is at
-             * statement_t *statement_root_module[MAX_NUM_OF_MODULES];
-             */
+            /* Frontend @ statement_t *statement_root_module[MAX_NUM_OF_MODULES]; */
+
+
+
+            /* high level optimizations go here */
+
+
 
             /* EOF (end of frontend) :) */
             generate_all_modules();
-            /* Hello backend! */
+            /* IR @ ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES]; */
 
-            /* low level optimizations go here
-             * low level code is at
-             * ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
-             */
 
-            /**** print final code ****/
-            print_all_modules();
-            printf("###################################################################\n");
+
+            /* IR optimizations go here */
+
+
+
+            /* End of IR */
+            parse_all_modules();
+            /* Backend @ instr_t *final_tree[MAX_NUM_OF_MODULES]; */
+
+
+
+            /* low level optimizations go here */
+
+
+
+            /* End of Backend, Emit final code */
             print_assembly();
 
             exit(EXIT_SUCCESS);
