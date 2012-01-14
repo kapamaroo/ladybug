@@ -4,6 +4,7 @@
 #include "semantics.h"
 #include "statements.h"
 #include "reg.h"
+#include "services.h"
 
 #define NEED_BACKPATCH NULL
 
@@ -13,6 +14,8 @@ typedef enum ir_node_type_t {
     NODE_JUMP_LINK,	        //jump and link
     NODE_JUMP,		        //jump only
     NODE_RETURN_SUBPROGRAM,      //return control to caller
+    NODE_SYSCALL,
+    /*
     NODE_INPUT_INT,
     NODE_INPUT_REAL,
     NODE_INPUT_BOOLEAN,         //set non zero values as true
@@ -23,14 +26,14 @@ typedef enum ir_node_type_t {
     NODE_OUTPUT_BOOLEAN,
     NODE_OUTPUT_CHAR,           //print character (service 11)
     NODE_OUTPUT_STRING,
+    */
     NODE_CONVERT_TO_INT,	//if it is neccessary
     NODE_CONVERT_TO_REAL,	//if it is neccessary
     NODE_MEMCPY,		//for assignment of identical arrays and records
-    NODE_LOAD,		        //load a NODE_LVAL or NODE_HARDCODED_LVAL
+    NODE_LOAD,		        //load a NODE_LVAL
     NODE_SHIFT_LEFT,
     NODE_SHIFT_RIGHT,
     NODE_LVAL,			//memory address with possible offset
-    NODE_HARDCODED_LVAL,	//immediate memory address, with possible offset
     NODE_RVAL,
     NODE_RVAL_ARCH,             //get a RVAL directly from a register (usually a REG_POINTER register) see reg.h
                                 //this is like NODE_HARDCODED_RVAL, but the value is already in a register
@@ -50,6 +53,8 @@ typedef struct ir_node_t {
     unsigned long virt_reg;
     reg_t *reg;
 
+    char *label;               //the label of the node
+
     struct ir_node_t *next;
     struct ir_node_t *prev;
     struct ir_node_t *last;
@@ -62,15 +67,14 @@ typedef struct ir_node_t {
 
     struct ir_node_t *ir_lval_dest;	//for TYPESET nodes we need one more lvalue;
 
-    struct ir_node_t *address; //NODE_HARDCODED_LVAL,NODE_LVAL ititializes it, NODE_LOAD,NODE_ASSIGN* reads it
-    struct ir_node_t *offset;  //NODE_LOAD adds this to *address
+    struct ir_node_t *address; //NODE_LVAL ititializes it
+    struct ir_node_t *offset;  //this is always a HARDCODED_RVAL
 
     struct ir_node_t *ir_goto; //jump to this node
 
-    char *label;               //the label of the node
-
     type_t data_is; //standard type
-    mem_t *lval; //generate *address and *offset from here (this should be removed)
+    mips_service_t syscall_num; //OS service number
+
     int ival;	 //hardcoded int
     float fval;	 //hardcoded real
     char cval;   //hardcoded char
