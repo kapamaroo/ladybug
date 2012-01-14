@@ -18,7 +18,7 @@
 #include "generator.h"
 #include "ir_printer.h"
 #include "main_app.h"
-
+#include "final_code.h"
 
     int yylex(void);
     void yyerror(const char *msg);
@@ -379,6 +379,7 @@ int main(int argc, char *argv[]) {
     init_symbol_table();
     init_statements();
     init_ir();
+    init_final_code();
     init_err_buff();
 
     if (argc>1) {
@@ -418,6 +419,8 @@ int main(int argc, char *argv[]) {
 
             /**** print final code ****/
             print_all_modules();
+            printf("###################################################################\n");
+            print_assembly();
 
             exit(EXIT_SUCCESS);
         } else {
