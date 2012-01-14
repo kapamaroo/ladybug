@@ -6,16 +6,11 @@
 #include "final_code.h"
 #include "err_buff.h"
 
-char *op_to_instruction_literal(op_t op);
 mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype);
 
 void print_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
     instr_t *new_instr;
-
-    if (ir_node->label) {
-        printf("%-22s: ",ir_node->label);
-    }
 
     switch(ir_node->node_type) {
     case NODE_DUMMY_LABEL:
@@ -27,7 +22,6 @@ void print_ir_node(ir_node_t *ir_node) {
         case OP_OR:
         case OP_AND:
             print_ir_node(ir_node->ir_rval);
-            printf("\n\t\t\t");
             print_ir_node(ir_node->ir_rval2);
             break;
         case OP_NOT:
@@ -41,19 +35,16 @@ void print_ir_node(ir_node_t *ir_node) {
         new_instr = new_instruction(ir_node->label,&I_jal);
         new_instr->goto_label = ir_node->ir_goto->label;
         final_tree_current = link_instructions(new_instr,final_tree_current);
-        printf("jal %s",ir_node->ir_goto->label);
         return;
     case NODE_JUMP:
         new_instr = new_instruction(ir_node->label,&I_j);
         new_instr->goto_label = ir_node->ir_goto->label;
         final_tree_current = link_instructions(new_instr,final_tree_current);
-        printf("j %s",ir_node->ir_goto->label);
         return;
     case NODE_RETURN_SUBPROGRAM:
         new_instr = new_instruction(ir_node->label,&I_jr);
         new_instr->Rs = &R_ra;
         final_tree_current = link_instructions(new_instr,final_tree_current);
-        printf("jr $ra");
         return;
     case NODE_SYSCALL:
         //the first instruction sets the label
@@ -152,9 +143,6 @@ void print_ir_node(ir_node_t *ir_node) {
         new_instr->virt_Rd = ir_node->virt_reg;
         new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
         final_tree_current = link_instructions(new_instr,final_tree_current);
-
-        printf("\n\t\t\t");
-        printf("%s $%ld $%ld",I_cvt_w_s.name,ir_node->virt_reg,ir_node->ir_rval->last->virt_reg);
         return;
     case NODE_CONVERT_TO_REAL:
         if (ir_node->label) {
@@ -168,9 +156,6 @@ void print_ir_node(ir_node_t *ir_node) {
         new_instr->virt_Rd = ir_node->virt_reg;
         new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
         final_tree_current = link_instructions(new_instr,final_tree_current);
-
-        printf("\n\t\t\t");
-        printf("%s $%ld $%ld",I_cvt_s_w.name,ir_node->virt_reg,ir_node->ir_rval->last->virt_reg);
         return;
     case NODE_MEMCPY:
         printf("__memcpy__");
@@ -183,7 +168,6 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
-        printf("lw $%ld, ",ir_node->virt_reg);
         print_ir_node(ir_node->ir_lval);
 
         if (ir_node->data_is==TYPE_REAL) {
@@ -209,9 +193,7 @@ void print_ir_node(ir_node_t *ir_node) {
         return;
     case NODE_LVAL:
         print_ir_node(ir_node->offset);
-        printf("(");
         print_ir_node(ir_node->address);
-        printf(")");
         return;
     case NODE_RVAL:
         if (ir_node->label) {
@@ -228,13 +210,9 @@ void print_ir_node(ir_node_t *ir_node) {
                 new_instr->Rs = &R_zero;
                 new_instr->ival = ir_node->ir_rval->ival;
                 final_tree_current = link_instructions(new_instr,final_tree_current);
-
-                printf("addi $%ld, $0, %0.2f",ir_node->ir_rval->virt_reg,ir_node->ir_rval->fval);
-                printf("\n\t\t\t");
                 break;
             case NODE_RVAL:
                 print_ir_node(ir_node->ir_rval);
-                printf("\n\t\t\t");
                 break;
             case NODE_RVAL_ARCH:
                 break;
@@ -243,7 +221,6 @@ void print_ir_node(ir_node_t *ir_node) {
                 while (tmp) {
                     //if (tmp->node_type==NODE_LOAD) { break; }
                     print_ir_node(tmp);
-                    printf("\n\t\t\t");
                     tmp = tmp->next;
                 }
                 break;
@@ -257,13 +234,9 @@ void print_ir_node(ir_node_t *ir_node) {
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval2->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
-
-            printf("addi $%ld, $0, %0.2f",ir_node->ir_rval2->virt_reg,ir_node->ir_rval2->fval);
-            printf("\n\t\t\t");
             break;
         case NODE_RVAL:
             print_ir_node(ir_node->ir_rval2);
-            printf("\n\t\t\t");
             break;
         case NODE_RVAL_ARCH:
             break;
@@ -272,29 +245,8 @@ void print_ir_node(ir_node_t *ir_node) {
             while (tmp) {
                 //if (tmp->node_type==NODE_LOAD) { break; }
                 print_ir_node(tmp);
-                printf("\n\t\t\t");
                 tmp = tmp->next;
             }
-            break;
-        }
-
-        printf("%s ",op_to_instruction_literal(ir_node->op_rval));
-
-        //print my reg
-        switch (ir_node->op_rval) {
-        case RELOP_B:	// '>'
-        case RELOP_BE:	// '>='
-        case RELOP_L:	// '<'
-        case RELOP_LE:	// '<='
-        case RELOP_NE:	// '<>'
-        case RELOP_EQU:	// '='
-        case RELOP_IN:	// 'in'
-            break;
-        case OP_MULT:   // '*'
-        case OP_DIV:    // 'div'
-            //break;
-        default:
-            printf("$%ld, ",ir_node->virt_reg);
             break;
         }
 
@@ -305,25 +257,14 @@ void print_ir_node(ir_node_t *ir_node) {
         new_instr->Rd = ir_node->reg;
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
-            if (ir_node->ir_rval->last->node_type==NODE_RVAL_ARCH) {
-                new_instr->Rs = ir_node->ir_rval->last->reg;
-                print_ir_node(ir_node->ir_rval->last);
-                printf(", ");
-            } else {
-                new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
-                printf("$%ld, ",ir_node->ir_rval->last->virt_reg);
-            }
+            new_instr->Rs = ir_node->ir_rval->last->reg;
+            new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
         }
 
-        if (ir_node->ir_rval2->last->node_type==NODE_RVAL_ARCH) {
-            new_instr->Rt = ir_node->ir_rval2->last->reg;
-            print_ir_node(ir_node->ir_rval2->last);
-        } else {
-            new_instr->virt_Rt = ir_node->ir_rval2->last->virt_reg;
-            printf("$%ld",ir_node->ir_rval2->last->virt_reg);
-        }
+        new_instr->Rt = ir_node->ir_rval2->last->reg;
+        new_instr->virt_Rt = ir_node->ir_rval2->last->virt_reg;
 
-        //print label of branches
+        //set label of branches
         switch (ir_node->op_rval) {
         case RELOP_L:	// '<'
         case RELOP_LE:	// '<='
@@ -334,8 +275,6 @@ void print_ir_node(ir_node_t *ir_node) {
             }
 
             new_instr->goto_label = ir_node->ir_goto->label;
-
-            printf(" goto: %s",ir_node->ir_goto->label);
             break;
         case RELOP_NE:	// '<>'
         case RELOP_B:	// '>'
@@ -346,15 +285,12 @@ void print_ir_node(ir_node_t *ir_node) {
             }
 
             new_instr->goto_label = ir_node->ir_goto->label;
-
-            printf(" goto: %s",ir_node->ir_goto->label);
             break;
         case OP_AND:    // 'and'
         case OP_OR:     // 'or'
         case OP_NOT:    // 'not'
-            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: logical and/or operator still alive??");
         case RELOP_IN:	// 'in'
-            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: in operator still alive??");
+            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: logical and/or/not/in operator still alive??");
         default:
             break;
         }
@@ -362,15 +298,12 @@ void print_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
 
         if (ir_node->next) {
-            printf("\n\t\t\t");
             print_ir_node(ir_node->next);
         }
         return;
     case NODE_RVAL_ARCH:
-        printf("%s",ir_node->reg->name);
         return;
     case NODE_HARDCODED_RVAL:
-        printf("%d",ir_node->ival);
         return;
     case NODE_INIT_NULL_SET:
         printf("INIT_NULL_SET");
@@ -397,13 +330,9 @@ void print_ir_node(ir_node_t *ir_node) {
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
-
-            printf("addi $%ld, $0, %0.2f",ir_node->ir_rval->virt_reg,ir_node->ir_rval->fval);
-            printf("\n\t\t\t");
             break;
         case NODE_RVAL:
             print_ir_node(ir_node->ir_rval);
-            printf("\n\t\t\t");
             break;
         case NODE_RVAL_ARCH:
             break;
@@ -415,7 +344,6 @@ void print_ir_node(ir_node_t *ir_node) {
             while (tmp) {
                 //if (tmp->node_type==NODE_LOAD) { break; }
                 print_ir_node(tmp);
-                printf("\n\t\t\t");
                 tmp = tmp->next;
             }
             break;
@@ -424,8 +352,6 @@ void print_ir_node(ir_node_t *ir_node) {
         //parse the address first
         print_ir_node(ir_node->ir_lval);
 
-        printf("sw ");
-
         if (ir_node->data_is==TYPE_REAL) {
             //store directly from c1
             new_instr = new_instruction(NULL,&I_swc1);
@@ -433,14 +359,8 @@ void print_ir_node(ir_node_t *ir_node) {
             new_instr = new_instruction(NULL,&I_sw);
         }
 
-        if (ir_node->ir_rval->last->node_type==NODE_RVAL_ARCH) {
-            new_instr->Rs = ir_node->ir_rval->last->reg;
-            print_ir_node(ir_node->ir_rval->last);
-            printf(", ");
-        } else {
-            new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
-            printf("$%ld, ",ir_node->ir_rval->last->virt_reg);
-        }
+        new_instr->Rs = ir_node->ir_rval->last->reg;
+        new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
 
         new_instr->Rt = ir_node->ir_lval->address->last->reg;
         new_instr->virt_Rt = ir_node->ir_lval->address->last->virt_reg;
@@ -483,58 +403,8 @@ void print_module(ir_node_t *module) {
     ir_node = module;
 
     while(ir_node) {
-        //every node can have a label
-        if (!ir_node->label) {
-            printf("\t\t\t");
-        }
-
         print_ir_node(ir_node);
         ir_node = ir_node->next;
-        printf("\n");
-    }
-}
-
-char *op_to_instruction_literal(op_t op) {
-    switch (op) {
-    case RELOP_B:	// '>'
-        return "bgt";
-    case RELOP_BE:	// '>='
-        return "bge";
-    case RELOP_L:	// '<'
-    	return "blt";
-    case RELOP_LE:	// '<='
-    	return "ble";
-    case RELOP_NE:	// '<>'
-    	return "bne";
-    case RELOP_EQU:	// '='
-        return "beq";
-    case RELOP_IN:	// 'in'
-    	return "in";
-    case OP_PLUS:	// '+'
-    	return "add";
-    case OP_MINUS:	// '-'
-    	return "sub";
-    case OP_MULT:	// '*'
-    	return "mult";
-    case OP_RDIV:	// '/'
-    	return "fp.div";
-    case OP_DIV:       	// 'div'
-    	return "div";
-    case OP_MOD:       	// 'mod'
-    	return "div";
-    case OP_AND:       	// 'and'
-    	return "and";
-    case OP_OR:		// 'or'
-    	return "or";
-    case OP_NOT:       	// 'not'
-        return "not"; //$reg xor 11111111111
-    case OP_IGNORE:
-        //return "__op_IGNORE__";
-    case OP_SIGN: 	//dummy operator, to determine when the the OP_PLUS, OP_MINUS are used as sign
-    	//return "op_SIGN";
-    default:
-        die("UNEXPECTED_ERROR: 04");
-        return NULL; //keep the compiler happy
     }
 }
 
