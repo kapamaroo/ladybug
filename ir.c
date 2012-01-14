@@ -112,7 +112,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     case NODE_ASSIGN_SET:
     case NODE_ASSIGN_STRING:
     case NODE_INIT_NULL_SET: //assign zero
-    case NODE_HARDCODED_LVAL:
     case NODE_HARDCODED_RVAL:
         //do not give real reg here
         break;
@@ -153,7 +152,6 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     new_node->prev = NULL; //new_node;
     new_node->last = new_node;
     new_node->label = NULL;
-    new_node->lval = NULL;
     return new_node;
 }
 
@@ -174,8 +172,8 @@ ir_node_t *new_ir_assign_str(var_t *v, expr_t *l) {
 
     //strings terminate with 0, copy until array is full
     new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
-    new_stmt->address = calculate_lvalue(v);
-    new_stmt->ir_lval = calculate_lvalue(l->var);
+    new_stmt->ir_lval = calculate_lvalue(v);
+    new_stmt->ir_lval2 = calculate_lvalue(l->var);
     return new_stmt;
 }
 
@@ -206,13 +204,13 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
         //true
         expr1 = expr_from_hardcoded_boolean(1);
         tmp1 = new_ir_node_t(NODE_ASSIGN);
-        tmp1->address = calculate_lvalue(v);
+        tmp1->ir_lval = calculate_lvalue(v);
         tmp1->ir_rval = expr_tree_to_ir_tree(expr1);
 
         //false
         expr2 = expr_from_hardcoded_boolean(0);
         tmp2 = new_ir_node_t(NODE_ASSIGN);
-        tmp2->address = tmp1->address;
+        tmp2->ir_lval = tmp1->address;
         tmp2->ir_rval = expr_tree_to_ir_tree(expr2);
 
         new_stmt = new_ir_if(l,tmp1,tmp2);
@@ -256,10 +254,9 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
         }
         return new_stmt;
     case TYPE_SET:
-        //new_stmt = new_ir_node_t(NODE_ASSIGN);
         new_stmt = new_ir_node_t(NODE_ASSIGN_SET);
-        new_stmt->address = calculate_lvalue(v);
-        new_stmt->ir_lval = create_bitmap(l);
+        new_stmt->ir_lval = calculate_lvalue(v);
+        new_stmt->ir_lval2 = create_bitmap(l);
         return new_stmt;
     case TYPE_VOID: //keep the compiler happy
         die("UNEXPECTED ERROR: TYPE_VOID in assignment");
@@ -268,7 +265,7 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
     /**** some common assign actions */
 
     new_stmt = new_ir_node_t(NODE_ASSIGN);
-    new_stmt->address = calculate_lvalue(v);
+    new_stmt->ir_lval = calculate_lvalue(v);
     new_stmt->ir_rval = expr_tree_to_ir_tree(l);
 
     if (v->cond_assign) {
@@ -410,43 +407,49 @@ ir_node_t *new_ir_read(var_list_t *list) {
     int i;
     ir_node_t *new_ir;
     ir_node_t *read_stmt;
-    ir_node_t *ir_result_lval;
+    ir_node_t *tmp;
+    ir_node_t *full_addr;
+
     var_t *v;
     data_t *d;
 
     //we are error free here!
     read_stmt = NULL;
     for(i=0;i<MAX_VAR_LIST-list->var_list_empty;i++) {
-        new_ir = NULL;
         v = list->var_list[i];
         d = v->datatype;
+
+        new_ir = new_ir_node_t(NODE_SYSCALL);
+        full_addr = calculate_lvalue(v);
+
         switch (v->id_is) {
         case ID_VAR:
-            ir_result_lval = calculate_lvalue(v);
+            new_ir->address = full_addr;
+
             if (d->is==TYPE_INT) {
-                new_ir = new_ir_node_t(NODE_INPUT_INT);
-                new_ir->ir_lval = ir_result_lval;
+                new_ir->syscall_num = SVC_READ_INT;
             }
             else if (d->is==TYPE_REAL) {
-                new_ir = new_ir_node_t(NODE_INPUT_REAL);
-                new_ir->ir_lval = ir_result_lval;
+                new_ir->syscall_num = SVC_READ_REAL; //single float
             }
-            else if (d->is==TYPE_BOOLEAN) {
-                //read int and check the value
-                new_ir = new_ir_node_t(NODE_INPUT_BOOLEAN);
-                new_ir->ir_lval = ir_result_lval;
-            }
-            else if (d->is==TYPE_CHAR) {
-                new_ir = new_ir_node_t(NODE_INPUT_CHAR);
-                new_ir->ir_lval = ir_result_lval;
+            else if (d->is==TYPE_BOOLEAN || d->is==TYPE_CHAR) {
+                //read char and check the value
+                new_ir->syscall_num = SVC_READ_CHAR;
             }
             else if (TYPE_IS_STRING(d)) {
-                new_ir = new_ir_node_t(NODE_INPUT_STRING);
-                new_ir->ir_lval = ir_result_lval;
-                new_ir->ival = v->datatype->dim[0]->range;
+                new_ir->syscall_num = SVC_READ_STRING;
+
+                tmp = new_ir_node_t(NODE_RVAL);
+                tmp->op_rval = OP_PLUS;
+                tmp->ir_rval = full_addr->address;
+                tmp->ir_rval2 = full_addr->offset;
+
+                new_ir->ir_rval = tmp;
+                new_ir->ival = v->datatype->dim[0]->range;  //string size
             } else {
                 die("UNEXPECTED_ERROR: 44-42");
             }
+
             new_ir = link_ir_to_ir(new_ir,read_stmt);
             break;
         default:
@@ -460,36 +463,46 @@ ir_node_t *new_ir_write(expr_list_t *list) {
     int i;
     ir_node_t *new_ir;
     ir_node_t *write_stmt;
+    ir_node_t *tmp;
+    ir_node_t *full_addr;
     expr_t *l;
     data_t *d;
 
     //we are error free here!
     write_stmt = NULL;
     for(i=0;i<MAX_EXPR_LIST-list->expr_list_empty;i++) {
-        new_ir = NULL;
         l = list->expr_list[i];
+
+        new_ir = new_ir_node_t(NODE_SYSCALL);
+
         if (l->expr_is==EXPR_STRING) {
-            new_ir = new_ir_node_t(NODE_OUTPUT_STRING);
-            new_ir->ir_lval = calculate_lvalue(l->var);
+            new_ir->syscall_num = SVC_PRINT_STRING;
+            full_addr = calculate_lvalue(l->var);
+
+            tmp = new_ir_node_t(NODE_RVAL);
+            tmp->op_rval = OP_PLUS;
+            tmp->ir_rval = full_addr->address;
+            tmp->ir_rval2 = full_addr->offset;
+
+            new_ir->ir_rval = tmp;
         }
         else if (l->expr_is==EXPR_RVAL || l->expr_is==EXPR_HARDCODED_CONST || l->expr_is==EXPR_LVAL) {
             d = l->datatype;
 
+            new_ir->ir_rval = expr_tree_to_ir_tree(l);
+
             if (d->is==TYPE_INT) {
-                new_ir = new_ir_node_t(NODE_OUTPUT_INT);
-                new_ir->ir_rval = expr_tree_to_ir_tree(l);
+                new_ir->syscall_num = SVC_PRINT_INT;
             }
             else if (d->is==TYPE_REAL) {
-                new_ir = new_ir_node_t(NODE_OUTPUT_REAL);
-                new_ir->ir_rval = expr_tree_to_ir_tree(l);
+                new_ir->syscall_num = SVC_PRINT_REAL; //single float
             }
             else if (d->is==TYPE_BOOLEAN) {
-                new_ir = new_ir_node_t(NODE_OUTPUT_BOOLEAN);
-                new_ir->ir_rval = expr_tree_to_ir_tree(l);
+                //print as integer
+                new_ir->syscall_num = SVC_PRINT_CHAR;
             }
             else if (d->is==TYPE_CHAR) {
-                new_ir = new_ir_node_t(NODE_OUTPUT_CHAR);
-                new_ir->ir_rval = expr_tree_to_ir_tree(l);
+                new_ir->syscall_num = SVC_PRINT_CHAR;
             }
             else {
                 die("UNEXPECTED_ERROR: 44-46");
