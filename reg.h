@@ -16,7 +16,8 @@ typedef enum reg_type_t {
                       //r29,            $sp,      stac pointer
                       //r30             $fp,      frame pointer
                       //r31,            $ra,      return address
-                      //hi,lo
+    REG_ACC,          //hi,lo                     accumulator 64-bit
+    REG_FLOAT         //$f0-$f31                  floating arithmetic registers
 } reg_type_t;
 
 typedef struct reg_t {
@@ -25,6 +26,9 @@ typedef struct reg_t {
     char *name;
     char *alias;
 } reg_t;
+
+extern reg_t *arch[REG_NUM];
+extern reg_t *arch_fp[REG_NUM];
 
 extern reg_t R_zero;
 extern reg_t R_at;
@@ -58,9 +62,6 @@ extern reg_t R_gp;
 extern reg_t R_sp;
 extern reg_t R_fp;
 extern reg_t R_ra;
-
-extern reg_t R_hi;
-extern reg_t R_lo;
 
 void init_reg();
 reg_t *get_available_reg(reg_type_t type);
