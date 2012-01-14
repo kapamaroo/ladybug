@@ -6,8 +6,6 @@
 #include "reg.h"
 #include "services.h"
 
-#define NEED_BACKPATCH NULL
-
 typedef enum ir_node_type_t {
     NODE_DUMMY_LABEL,	        //empty statement, with label only
     NODE_BRANCH,
@@ -15,18 +13,6 @@ typedef enum ir_node_type_t {
     NODE_JUMP,		        //jump only
     NODE_RETURN_SUBPROGRAM,      //return control to caller
     NODE_SYSCALL,
-    /*
-    NODE_INPUT_INT,
-    NODE_INPUT_REAL,
-    NODE_INPUT_BOOLEAN,         //set non zero values as true
-    NODE_INPUT_CHAR,            //read character (service 12)
-    NODE_INPUT_STRING,
-    NODE_OUTPUT_INT,            //print integers and booleans
-    NODE_OUTPUT_REAL,
-    NODE_OUTPUT_BOOLEAN,
-    NODE_OUTPUT_CHAR,           //print character (service 11)
-    NODE_OUTPUT_STRING,
-    */
     NODE_CONVERT_TO_INT,	//if it is neccessary
     NODE_CONVERT_TO_REAL,	//if it is neccessary
     NODE_MEMCPY,		//for assignment of identical arrays and records

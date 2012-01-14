@@ -1,7 +1,8 @@
 #ifndef _REG_H
 #define _REG_H
 
-#define REG_NUM 32
+#define ARCH_REG_NUM 32
+#define ARCH_FP_REG_NUM 32
 
 typedef enum reg_type_t {
     REG_ZERO,         //r0,             $zero     always 0
@@ -27,8 +28,8 @@ typedef struct reg_t {
     char *alias;
 } reg_t;
 
-extern reg_t *arch[REG_NUM];
-extern reg_t *arch_fp[REG_NUM];
+extern reg_t *arch[ARCH_REG_NUM];
+extern reg_t *arch_fp[ARCH_FP_REG_NUM];
 
 extern reg_t R_zero;
 extern reg_t R_at;

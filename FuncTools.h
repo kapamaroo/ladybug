@@ -1,5 +1,5 @@
 #ifndef _FUNC_TOOLS_H
-#define  _FUNC_TOOLS_H
+#define _FUNC_TOOLS_H
 
 #define DEFAULT_STR_SIZE 64
 

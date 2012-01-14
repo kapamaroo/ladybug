@@ -1,7 +1,6 @@
 #ifndef _INSTRUCTION_SET
 #define _INSTRUCTION_SET
 
-#include "mips32.h"
 #include "reg.h"
 
 enum instr_type_t {

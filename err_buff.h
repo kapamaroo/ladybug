@@ -1,7 +1,7 @@
-#include <stdio.h>
-
 #ifndef _ERR_BUFF_H
 #define _ERR_BUFF_H
+
+#include <stdio.h> //FILE
 
 //number of errors before abord parsing (0 for infinite)
 #define ERR_NUM_LIMIT 0

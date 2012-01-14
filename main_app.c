@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "build_flags.h"
+#include "main_app.h"
 
 #if LEX_MAIN == 0
 

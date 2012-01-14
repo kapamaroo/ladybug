@@ -3,7 +3,6 @@
 
 #include "semantics.h"
 #include "mips32.h"
-//#include "bison.tab.h"
 
 extern int gp; //global static memory (heap)
 //extern int sp; //dynamic memory (stack)

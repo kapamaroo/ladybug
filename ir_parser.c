@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "ir.h"
-#include "ir_parser.h"
 #include "final_code.h"
 #include "err_buff.h"
 

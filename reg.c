@@ -2,12 +2,12 @@
 
 #include "reg.h"
 
-reg_t *arch[REG_NUM];
-reg_t *arch_fp[REG_NUM];
+reg_t *arch[ARCH_REG_NUM];
+reg_t *arch_fp[ARCH_FP_REG_NUM];
 
 reg_t *reg_pool_content[8];       //$s0-$s7
 reg_t *reg_pool_temp[10];         //$t0-$t7,$t8-$t9
-reg_t *reg_pool_float[REG_NUM];   //$f0-$f31
+reg_t *reg_pool_float[ARCH_FP_REG_NUM];   //$f0-$f31
 
 reg_t R_zero  = {.is = REG_ZERO,       .r = 0,  .name = "$zero", .alias = "r0" };
 reg_t R_at  = {.is = REG_RESERVED_ASM, .r = 1,  .name = "$at",   .alias = "r1" };
@@ -147,10 +147,6 @@ void init_reg() {
     arch_fp[30] = &FP_30;
     arch_fp[31] = &FP_31;
 
-    for(i=0;i<REG_NUM;i++) {
-        reg_pool_float[i] = arch_fp[i];
-    }
-
     for(i=0;i<8;i++) {
         reg_pool_temp[i] = arch[i+8];
         reg_pool_content[i] = arch[i+16];
@@ -159,7 +155,7 @@ void init_reg() {
     reg_pool_temp[8] = arch[24];
     reg_pool_temp[9] = arch[25];
 
-    for(i=0;i<REG_NUM;i++) {
+    for(i=0;i<ARCH_FP_REG_NUM;i++) {
         reg_pool_float[i] = arch_fp[i];
     }
 
@@ -187,7 +183,7 @@ reg_t *get_available_reg(reg_type_t type) {
             }
         }
     } else if (type==REG_FLOAT) {
-        for(i=0;i<REG_NUM;i++) {
+        for(i=0;i<ARCH_FP_REG_NUM;i++) {
             tmp = reg_pool_float[i];
             if (tmp) {
                 reg_pool_float[i] = NULL;

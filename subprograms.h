@@ -3,9 +3,7 @@
 
 #include "semantics.h"
 #include "symbol_table.h"
-//#include "ir.h"
 #include "statements.h"
-#include "bison.tab.h"
 
 param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type);
 
