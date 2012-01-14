@@ -1,0 +1,6 @@
+#ifndef _INTERMEDIATE_REPRESENTATION_PARSER_H
+#define _INTERMEDIATE_REPRESENTATION_PARSER_H
+
+void parse_all_modules();
+
+#endif

@@ -2,13 +2,13 @@
 #include <stdlib.h>
 
 #include "ir.h"
-#include "ir_printer.h"
+#include "ir_parser.h"
 #include "final_code.h"
 #include "err_buff.h"
 
 mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype);
 
-void print_ir_node(ir_node_t *ir_node) {
+void parse_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
     instr_t *new_instr;
 
@@ -21,13 +21,13 @@ void print_ir_node(ir_node_t *ir_node) {
         switch (ir_node->op_rval) {
         case OP_OR:
         case OP_AND:
-            print_ir_node(ir_node->ir_rval);
-            print_ir_node(ir_node->ir_rval2);
+            parse_ir_node(ir_node->ir_rval);
+            parse_ir_node(ir_node->ir_rval2);
             break;
         case OP_NOT:
-            die("UNEXPECTED ERROR: ir_printer: NODE_BRANCH_COND: not operator still alive??");
+            die("UNEXPECTED ERROR: ir_parser: NODE_BRANCH_COND: not operator still alive??");
         default:
-            die("UNEXPENTED_ERROR: print branch ir");
+            die("UNEXPENTED_ERROR: parse branch ir");
             break;
         }
         return;
@@ -60,19 +60,19 @@ void print_ir_node(ir_node_t *ir_node) {
         case SVC_PRINT_STRING:
             //set the register first
             ir_node->ir_rval->reg = &R_a0;
-            print_ir_node(ir_node->ir_rval);
+            parse_ir_node(ir_node->ir_rval);
             break;
         case SVC_PRINT_REAL:
             //set the register first
             ir_node->ir_rval->reg = arch_fp[12];
-            print_ir_node(ir_node->ir_rval);
+            parse_ir_node(ir_node->ir_rval);
             break;
         case SVC_READ_INT:
         case SVC_READ_CHAR:
         case SVC_READ_REAL:
             //it is safer to parse the address first, because it may change the special
             //registers before we use them
-            print_ir_node(ir_node->address);
+            parse_ir_node(ir_node->address);
             break;
         case SVC_READ_STRING:
             //pass address of string
@@ -137,7 +137,7 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
-        print_ir_node(ir_node->ir_rval);
+        parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_w_s);
         new_instr->virt_Rd = ir_node->virt_reg;
@@ -150,7 +150,7 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
-        print_ir_node(ir_node->ir_rval);
+        parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_s_w);
         new_instr->virt_Rd = ir_node->virt_reg;
@@ -159,8 +159,8 @@ void print_ir_node(ir_node_t *ir_node) {
         return;
     case NODE_MEMCPY:
         printf("__memcpy__");
-        print_ir_node(ir_node->address);
-        print_ir_node(ir_node->ir_lval);
+        parse_ir_node(ir_node->address);
+        parse_ir_node(ir_node->ir_lval);
         return;
     case NODE_LOAD:
         if (ir_node->label) {
@@ -168,7 +168,7 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
-        print_ir_node(ir_node->ir_lval);
+        parse_ir_node(ir_node->ir_lval);
 
         if (ir_node->data_is==TYPE_REAL) {
             //load directly to c1
@@ -192,8 +192,8 @@ void print_ir_node(ir_node_t *ir_node) {
         printf("__shiftR__");
         return;
     case NODE_LVAL:
-        print_ir_node(ir_node->offset);
-        print_ir_node(ir_node->address);
+        parse_ir_node(ir_node->offset);
+        parse_ir_node(ir_node->address);
         return;
     case NODE_RVAL:
         if (ir_node->label) {
@@ -212,7 +212,7 @@ void print_ir_node(ir_node_t *ir_node) {
                 final_tree_current = link_instructions(new_instr,final_tree_current);
                 break;
             case NODE_RVAL:
-                print_ir_node(ir_node->ir_rval);
+                parse_ir_node(ir_node->ir_rval);
                 break;
             case NODE_RVAL_ARCH:
                 break;
@@ -220,7 +220,7 @@ void print_ir_node(ir_node_t *ir_node) {
                 tmp = ir_node->ir_rval;
                 while (tmp) {
                     //if (tmp->node_type==NODE_LOAD) { break; }
-                    print_ir_node(tmp);
+                    parse_ir_node(tmp);
                     tmp = tmp->next;
                 }
                 break;
@@ -236,7 +236,7 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
             break;
         case NODE_RVAL:
-            print_ir_node(ir_node->ir_rval2);
+            parse_ir_node(ir_node->ir_rval2);
             break;
         case NODE_RVAL_ARCH:
             break;
@@ -244,7 +244,7 @@ void print_ir_node(ir_node_t *ir_node) {
             tmp = ir_node->ir_rval2;
             while (tmp) {
                 //if (tmp->node_type==NODE_LOAD) { break; }
-                print_ir_node(tmp);
+                parse_ir_node(tmp);
                 tmp = tmp->next;
             }
             break;
@@ -290,7 +290,7 @@ void print_ir_node(ir_node_t *ir_node) {
         case OP_OR:     // 'or'
         case OP_NOT:    // 'not'
         case RELOP_IN:	// 'in'
-            die("UNEXPECTED ERROR: ir_printer: NODE_RVAL: logical and/or/not/in operator still alive??");
+            die("UNEXPECTED ERROR: ir_parser: NODE_RVAL: logical and/or/not/in operator still alive??");
         default:
             break;
         }
@@ -298,7 +298,7 @@ void print_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
 
         if (ir_node->next) {
-            print_ir_node(ir_node->next);
+            parse_ir_node(ir_node->next);
         }
         return;
     case NODE_RVAL_ARCH:
@@ -332,7 +332,7 @@ void print_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
             break;
         case NODE_RVAL:
-            print_ir_node(ir_node->ir_rval);
+            parse_ir_node(ir_node->ir_rval);
             break;
         case NODE_RVAL_ARCH:
             break;
@@ -343,14 +343,14 @@ void print_ir_node(ir_node_t *ir_node) {
             tmp = ir_node->ir_rval;
             while (tmp) {
                 //if (tmp->node_type==NODE_LOAD) { break; }
-                print_ir_node(tmp);
+                parse_ir_node(tmp);
                 tmp = tmp->next;
             }
             break;
         }
 
         //parse the address first
-        print_ir_node(ir_node->ir_lval);
+        parse_ir_node(ir_node->ir_lval);
 
         if (ir_node->data_is==TYPE_REAL) {
             //store directly from c1
@@ -370,30 +370,18 @@ void print_ir_node(ir_node_t *ir_node) {
         return;
     case NODE_ASSIGN_SET:
         printf("assign_set \t");
-        print_ir_node(ir_node->ir_lval);
-        print_ir_node(ir_node->ir_lval2);
+        parse_ir_node(ir_node->ir_lval);
+        parse_ir_node(ir_node->ir_lval2);
         return;
     case NODE_ASSIGN_STRING:
         printf("assign_string \t");
-        print_ir_node(ir_node->ir_lval);
-        print_ir_node(ir_node->ir_lval2);
+        parse_ir_node(ir_node->ir_lval);
+        parse_ir_node(ir_node->ir_lval2);
         return;
     }
 }
 
-void print_all_modules() {
-    int i;
-    ir_node_t *module;
-
-    for(i=0;i<MAX_NUM_OF_MODULES;i++) {
-        module = ir_root_tree[i];
-        if (!module) {return;}
-        print_module(module);
-        new_final_tree();
-    }
-}
-
-void print_module(ir_node_t *module) {
+void parse_module(ir_node_t *module) {
     ir_node_t *ir_node;
 
     if (!module) {
@@ -403,8 +391,20 @@ void print_module(ir_node_t *module) {
     ir_node = module;
 
     while(ir_node) {
-        print_ir_node(ir_node);
+        parse_ir_node(ir_node);
         ir_node = ir_node->next;
+    }
+}
+
+void parse_all_modules() {
+    int i;
+    ir_node_t *module;
+
+    for(i=0;i<MAX_NUM_OF_MODULES;i++) {
+        module = ir_root_tree[i];
+        if (!module) {return;}
+        parse_module(module);
+        new_final_tree();
     }
 }
 
