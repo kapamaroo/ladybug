@@ -1,15 +1,21 @@
+### Current Team
+Μαρουδας Μανώλης        782 emmmarou@uth.gr
+Βασιλιάδης Βασίλης          vasiliad@inf.gr
+Μαγλογιάννης Βασίλης        vamaglog@uth.gr
+Αϊβαλής Στέφανος            staiva@uth.gr
+
+### Original implementation
 Παρασυρης Κωνσταντινος  836 koparasy@uth.gr
 Καλανδαριδης Θεοδοσης   858 thkaland@uth.gr
 Μαρουδας Μανώλης        782 emmmarou@uth.gr
 Νικολαίδου Κατερίνα     891 anikola@uth.gr
 
-
 this is an implementation of the PASCAL320 compiler 'ladybug'
 
 TODO
-> complete intermediate code generator
-> implement final code generator
+> implement register allocator
+> implement magic tricks in math with constants (shift instead mult, etc..)
+> reconsider structure of IR (very obscure in some cases, especially in subprogram calls)
 > testing, testing, testing
-> polish error messages
-> update some comments in source code
-> organize the headers a bit
+> move optimizations outside of standard parsing for better structure and bug hunting!
+> compete with gcc at next fosdem :)
