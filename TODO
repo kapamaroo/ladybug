@@ -1,0 +1,8 @@
+TODO list:
+> fix bitmap support (broken)
+> implement register allocator
+> implement magic tricks in math with constants (shift instead mult, etc..)
+> reconsider structure of IR (very obscure in some cases, especially in subprogram calls)
+> testing, testing, testing
+> move optimizations outside of standard parsing for better structure and bug hunting!
+> compete with gcc at next fosdem :)
