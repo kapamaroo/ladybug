@@ -19,7 +19,7 @@ void ERROR(const char *msg);
 
 %option case-insensitive
 %option yylineno
-
+%option noyywrap
 letter [A-Z]
 digit [0-9]
 digit_nz [1-9]
@@ -926,24 +926,6 @@ line_feed [\n]
 }
 
 %%
-#if LEX_MAIN == 1
-int main(int argc, char* argv[]) {
-  int tok_id;
-  //stdout = fopen("log_flex","w");
-  if (argc>1) {
-    yyin = fopen(argv[argc-1],"r");
-  }
-  while ( (tok_id = yylex()) ) {
-    printf("\treturned %d\n",tok_id);
-  }
-  if (argc>1) {
-    fclose(yyin);
-  }
-  //fclose(stdout);
-  return 0;
-}
-#endif
-
 void ERROR(const char* msg) {
   printf("ERROR: %s\nLine %d: %s\n",msg,yylineno,line_buf.buf);
 }
