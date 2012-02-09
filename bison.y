@@ -374,11 +374,11 @@ write_item: expression
 int main(int argc, char *argv[]) {
     int status;
 
+    init_err_buff();
     init_symbol_table();
     init_statements();
     init_ir();
     init_final_code();
-    init_err_buff();
 
     if (argc>1) {
         if (argc!=2) {
