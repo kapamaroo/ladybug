@@ -8,13 +8,8 @@
 #include "symbol_table.h"
 #include "expr_toolbox.h"
 
-int gp;
-//int sp; //the main program does not use the stack
-
-void init_mem() {
-    gp = 0;
-    //sp = 0;
-}
+static int gp = 0;
+//main program does not use the stack
 
 mem_t* mem_allocate_symbol(data_t *d) {
     mem_t *m;

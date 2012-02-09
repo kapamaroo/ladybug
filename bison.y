@@ -11,7 +11,6 @@
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "subprograms.h"
-#include "mem.h"
 #include "ir.h"
 #include "statements.h"
 #include "err_buff.h"
@@ -375,7 +374,6 @@ write_item: expression
 int main(int argc, char *argv[]) {
     int status;
 
-    init_mem();
     init_symbol_table();
     init_statements();
     init_ir();

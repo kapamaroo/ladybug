@@ -4,9 +4,6 @@
 #include "semantics.h"
 #include "mips32.h"
 
-extern int gp; //global static memory (heap)
-//extern int sp; //dynamic memory (stack)
-
 //size of standard types in memory in bytes
 #define MEM_SIZEOF_CHAR 1
 #define MEM_SIZEOF_INT 4
@@ -21,7 +18,6 @@ extern int gp; //global static memory (heap)
 //depends on machine type
 #define SIZEOF_POINTER_TYPE MACHINE_ARCHITECTURE
 
-void init_mem();
 mem_t *mem_allocate_symbol(data_t *d);
 mem_t *mem_allocate_string(char *string);
 
