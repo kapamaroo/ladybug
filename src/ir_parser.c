@@ -4,8 +4,38 @@
 #include "ir.h"
 #include "final_code.h"
 #include "err_buff.h"
+#include "instruction_set.h"
 
 mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype);
+
+instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
+    instr_t *new_instr;
+
+    new_instr = (instr_t*)malloc(sizeof(instr_t));
+
+    new_instr->prev = NULL;
+    new_instr->next = NULL;
+    new_instr->last = new_instr;
+
+    new_instr->label = label;
+    new_instr->mips_instr = mips_instr;
+
+    return new_instr;
+}
+
+instr_t *link_instructions(instr_t *child, instr_t *parent) {
+    if (child && parent) {
+        parent->last->next = child;
+        child->prev = parent->last;
+        parent->last = child->last;
+        return parent;
+    } else if (child) {
+        return child;
+    } else if (parent) {
+        return parent;
+    }
+    return NULL;
+}
 
 void parse_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
@@ -77,7 +107,7 @@ void parse_ir_node(ir_node_t *ir_node) {
             //pass address of string
             new_instr = new_instruction(NULL,&I_move);
             new_instr->Rd = &R_a0;
-            new_instr->virt_Rs = ir_node->ir_rval->virt_reg;
+            new_instr->Rs = ir_node->ir_rval->reg;
             final_tree_current = link_instructions(new_instr,final_tree_current);
 
             //pass size of string
@@ -114,7 +144,6 @@ void parse_ir_node(ir_node_t *ir_node) {
             //store input to register
             new_instr = new_instruction(NULL,&I_sw);
             new_instr->Rt = ir_node->address->last->reg;
-            new_instr->virt_Rt = ir_node->address->last->virt_reg;
             new_instr->ival = ir_node->offset->ival;
             new_instr->Rs = &R_a0;
             final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -123,7 +152,6 @@ void parse_ir_node(ir_node_t *ir_node) {
             //save input to mem
             new_instr = new_instruction(NULL,&I_swc1);
             new_instr->Rt = ir_node->address->last->reg;
-            new_instr->virt_Rt = ir_node->address->last->virt_reg;
             new_instr->ival = ir_node->offset->ival;
             new_instr->Rs = arch_fp[0];
             final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -139,8 +167,8 @@ void parse_ir_node(ir_node_t *ir_node) {
         parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_w_s);
-        new_instr->virt_Rd = ir_node->virt_reg;
-        new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
+        new_instr->Rd = ir_node->reg;
+        new_instr->Rs = ir_node->ir_rval->last->reg;
         final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_CONVERT_TO_REAL:
@@ -152,8 +180,8 @@ void parse_ir_node(ir_node_t *ir_node) {
         parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_s_w);
-        new_instr->virt_Rd = ir_node->virt_reg;
-        new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
+        new_instr->Rd = ir_node->reg;
+        new_instr->Rs = ir_node->ir_rval->last->reg;
         final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_MEMCPY:
@@ -176,10 +204,9 @@ void parse_ir_node(ir_node_t *ir_node) {
             new_instr = new_instruction(NULL,&I_lw);
         }
 
-        new_instr->virt_Rd = ir_node->virt_reg;
+        new_instr->Rd = ir_node->reg;
 
         new_instr->Rs = ir_node->ir_lval->address->last->reg;
-        new_instr->virt_Rs = ir_node->ir_lval->address->last->virt_reg;
         new_instr->ival = ir_node->ir_lval->offset->ival;
 
         final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -205,7 +232,7 @@ void parse_ir_node(ir_node_t *ir_node) {
             switch (ir_node->ir_rval->node_type) {
             case NODE_HARDCODED_RVAL:
                 new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
-                new_instr->virt_Rd = ir_node->ir_rval->virt_reg;
+                new_instr->Rd = ir_node->ir_rval->reg;
                 new_instr->Rs = &R_zero;
                 new_instr->ival = ir_node->ir_rval->ival;
                 final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -229,7 +256,7 @@ void parse_ir_node(ir_node_t *ir_node) {
         switch (ir_node->ir_rval2->node_type) {
         case NODE_HARDCODED_RVAL:
             new_instr = new_instruction(ir_node->ir_rval2->label,&I_addi);
-            new_instr->virt_Rd = ir_node->ir_rval2->virt_reg;
+            new_instr->Rd = ir_node->ir_rval2->reg;
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval2->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -252,16 +279,13 @@ void parse_ir_node(ir_node_t *ir_node) {
         new_instr = new_instruction(NULL,op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is));
 
         //pass the Rd, may be needed by optimizers
-        new_instr->virt_Rd = ir_node->virt_reg;
         new_instr->Rd = ir_node->reg;
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
             new_instr->Rs = ir_node->ir_rval->last->reg;
-            new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
         }
 
         new_instr->Rt = ir_node->ir_rval2->last->reg;
-        new_instr->virt_Rt = ir_node->ir_rval2->last->virt_reg;
 
         //set label of branches
         switch (ir_node->op_rval) {
@@ -325,7 +349,7 @@ void parse_ir_node(ir_node_t *ir_node) {
         switch (ir_node->ir_rval->node_type) {
         case NODE_HARDCODED_RVAL:
             new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
-            new_instr->virt_Rd = ir_node->ir_rval->virt_reg;
+            new_instr->Rd = ir_node->ir_rval->reg;
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -359,10 +383,8 @@ void parse_ir_node(ir_node_t *ir_node) {
         }
 
         new_instr->Rs = ir_node->ir_rval->last->reg;
-        new_instr->virt_Rs = ir_node->ir_rval->last->virt_reg;
-
         new_instr->Rt = ir_node->ir_lval->address->last->reg;
-        new_instr->virt_Rt = ir_node->ir_lval->address->last->virt_reg;
+
         new_instr->ival = ir_node->ir_lval->offset->ival;
 
         final_tree_current = link_instructions(new_instr,final_tree_current);

@@ -5,6 +5,7 @@
 #define ARCH_FP_REG_NUM 32
 
 typedef enum reg_type_t {
+    REG_VIRT,         //before register allocation
     REG_ZERO,         //r0,             $zero     always 0
     REG_RESERVED_ASM, //r1,             $at       reserved for assembler
     REG_RESERVED_OS,  //r26-r27,        $k0-$k1,  reserved for OS
@@ -23,9 +24,13 @@ typedef enum reg_type_t {
 
 typedef struct reg_t {
     reg_type_t is;
-    int r;
+
+    unsigned long virtual;   //unique number for REG_VIRT
+
+    int r;                  //predefined arch number for physical registers
     char *name;
     char *alias;
+    //struct reg_t *physical; //physical register
 } reg_t;
 
 extern reg_t *arch[ARCH_REG_NUM];

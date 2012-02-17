@@ -43,9 +43,9 @@ typedef struct instr_t {
     reg_t *Rs;
     reg_t *Rt;
 
-    unsigned long virt_Rd; //use virtual registers if we have not allocated registers
-    unsigned long virt_Rs;
-    unsigned long virt_Rt;
+    //unsigned long virt_Rd; //use virtual registers if we have not allocated registers
+    //unsigned long virt_Rs;
+    //unsigned long virt_Rt;
 
     int ival; //possible offset, address, immediate
     char *goto_label;

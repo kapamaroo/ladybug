@@ -13,7 +13,7 @@
 #include "bitmap.h"
 #include "err_buff.h"
 
-unsigned long unique_virt_reg;
+unsigned long unique_virt_reg = 40;
 
 ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
 
@@ -22,6 +22,16 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l);
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
 ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir_false);
+
+reg_t *new_virtual_register() {
+    reg_t *new_reg;
+
+    new_reg = (reg_t*)malloc(sizeof(reg_t));
+    new_reg->is = REG_VIRT;
+    new_reg->virtual = unique_virt_reg++;
+
+    return new_reg;
+}
 
 char *new_label_literal(char *label) {
     return strdup(label);
@@ -48,7 +58,6 @@ void init_ir() {
     int i;
 
     //first of all initialize the register counter
-    unique_virt_reg = 40; //to recognize the virtual registers easier
 
     for(i=0; i<MAX_NUM_OF_MODULES; i++) {
         ir_root_tree[i] = NULL;
@@ -135,7 +144,7 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     }
     */
 
-    new_node->virt_reg = ++unique_virt_reg;
+    new_node->reg = new_virtual_register();
     new_node->op_rval = OP_IGNORE;
 
     new_node->ir_lval = NULL;
