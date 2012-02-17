@@ -36,6 +36,8 @@ void print_register(reg_t *reg) {
 }
 
 void print_instr(instr_t *instr) {
+    printf("%ld: ",instr->id);
+
     if (instr->label) { printf("%-22s: ",instr->label); }
     else { printf("\t\t\t"); }
 
@@ -119,6 +121,20 @@ void print_instr(instr_t *instr) {
     case FMT_EMPTY:
         break;
     }
+
+
+    if (IS_REG_VIRT(instr->Rd) &&
+        instr->Rd->live == instr)
+        printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rd->virtual, instr->Rd->live->id, instr->Rd->die->id);
+
+    if (IS_REG_VIRT(instr->Rs) &&
+        instr->Rs->live == instr)
+        printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rs->virtual, instr->Rs->live->id, instr->Rs->die->id);
+
+    if (IS_REG_VIRT(instr->Rt) &&
+        instr->Rt->live == instr)
+        printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rt->virtual, instr->Rt->live->id, instr->Rt->die->id);
+
 }
 
 void print_assembly() {

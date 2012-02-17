@@ -29,6 +29,8 @@ reg_t *new_virtual_register() {
     new_reg = (reg_t*)malloc(sizeof(reg_t));
     new_reg->is = REG_VIRT;
     new_reg->virtual = unique_virt_reg++;
+    new_reg->live = NULL;
+    new_reg->die = NULL;
 
     return new_reg;
 }

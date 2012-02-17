@@ -1,8 +1,15 @@
 #ifndef _REG_H
 #define _REG_H
 
+struct reg_t;
+
+#include "instruction_set.h"
+
 #define ARCH_REG_NUM 32
 #define ARCH_FP_REG_NUM 32
+
+#define ARCH_REG_CONTENT_NUM 8
+#define ARCH_REG_TEMP_NUM 10
 
 typedef enum reg_type_t {
     REG_VIRT,         //before register allocation
@@ -30,8 +37,13 @@ typedef struct reg_t {
     int r;                  //predefined arch number for physical registers
     char *name;
     char *alias;
+
+    struct instr_t *live;
+    struct instr_t *die;
     //struct reg_t *physical; //physical register
 } reg_t;
+
+#define IS_REG_VIRT(reg) (reg && reg->is == REG_VIRT)
 
 extern reg_t *arch[ARCH_REG_NUM];
 extern reg_t *arch_fp[ARCH_FP_REG_NUM];

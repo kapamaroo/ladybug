@@ -5,17 +5,24 @@
 #include "final_code.h"
 #include "err_buff.h"
 #include "instruction_set.h"
+#include "reg.h"
 
 mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype);
 
 instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
+    static unsigned long unique_instr_id = 0;
     instr_t *new_instr;
 
     new_instr = (instr_t*)malloc(sizeof(instr_t));
 
+    new_instr->id = ++unique_instr_id;
     new_instr->prev = NULL;
     new_instr->next = NULL;
     new_instr->last = new_instr;
+
+    new_instr->Rd = NULL;
+    new_instr->Rs = NULL;
+    new_instr->Rt = NULL;
 
     new_instr->label = label;
     new_instr->mips_instr = mips_instr;
@@ -23,11 +30,28 @@ instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
     return new_instr;
 }
 
+void reg_liveness_analysis(instr_t *pc) {
+    /**  ATTENTION!
+     * we assume that the virtual registers appear in the final code tree
+     * in ascending order. we need a more sophisticated liveness analysis
+     * //FIXME
+     */
+
+    if (IS_REG_VIRT(pc->Rd)) {
+        if (!pc->Rd->live) { pc->Rd->live = pc; }
+        if (IS_REG_VIRT(pc->Rs)) { pc->Rs->die = pc; }
+        if (IS_REG_VIRT(pc->Rt)) { pc->Rt->die = pc; }
+    }
+}
+
 instr_t *link_instructions(instr_t *child, instr_t *parent) {
     if (child && parent) {
         parent->last->next = child;
         child->prev = parent->last;
         parent->last = child->last;
+
+        reg_liveness_analysis(child);
+
         return parent;
     } else if (child) {
         return child;
@@ -278,7 +302,8 @@ void parse_ir_node(ir_node_t *ir_node) {
 
         new_instr = new_instruction(NULL,op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is));
 
-        //pass the Rd, may be needed by optimizers
+        //pass the Rd for all instructions
+        //liveness analysis depends on it
         new_instr->Rd = ir_node->reg;
 
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
@@ -381,6 +406,9 @@ void parse_ir_node(ir_node_t *ir_node) {
         } else {
             new_instr = new_instruction(NULL,&I_sw);
         }
+
+        //we do not need the Rd here, but we set it because liveness analysis depends on it
+        new_instr->Rd = ir_node->ir_rval->last->reg;
 
         new_instr->Rs = ir_node->ir_rval->last->reg;
         new_instr->Rt = ir_node->ir_lval->address->last->reg;
