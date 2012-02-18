@@ -30,6 +30,40 @@ instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
     return new_instr;
 }
 
+void set_register_files_for_virtual_regs(instr_t *instr) {
+    switch (instr->mips_instr->datatype) {
+    case I_FLOAT:
+        if (instr->Rd) {instr->Rd->is = REG_FLOAT;}
+        if (instr->Rs) {instr->Rs->is = REG_FLOAT;}
+        if (instr->Rt) {instr->Rt->is = REG_FLOAT;}
+        break;
+    case I_INT:
+        //our first choice for integers is REG_CONTENT, maybe
+        //we will use REG_TEMP in some of them if we are
+        //out of REG_CONTENT, but now is very early to say
+        if (instr->Rd) {instr->Rd->is = REG_CONTENT;}
+        if (instr->Rs) {instr->Rs->is = REG_CONTENT;}
+        if (instr->Rt) {instr->Rt->is = REG_CONTENT;}
+        break;
+    case I_FLOAT_INT:
+        //only load, store
+        if (instr->mips_instr->fmt==FMT_LOAD) {
+            instr->Rd->is = REG_FLOAT;
+            instr->Rs->is = REG_CONTENT;
+        }
+        else if (instr->mips_instr->fmt==FMT_STORE) {
+            instr->Rs->is = REG_FLOAT;
+            instr->Rt->is = REG_CONTENT;
+        }
+        break;
+    case I_INT_FLOAT:
+        //only FMT_RS_RT
+        instr->Rs->is = REG_CONTENT;
+        instr->Rt->is = REG_FLOAT;
+        break;
+    }
+}
+
 void reg_liveness_analysis(instr_t *pc) {
     /**  ATTENTION!
      * we assume that the virtual registers appear in the final code tree
@@ -50,6 +84,7 @@ instr_t *link_instructions(instr_t *child, instr_t *parent) {
         child->prev = parent->last;
         parent->last = child->last;
 
+        set_register_files_for_virtual_regs(child);
         reg_liveness_analysis(child);
 
         return parent;
@@ -169,7 +204,7 @@ void parse_ir_node(ir_node_t *ir_node) {
             new_instr = new_instruction(NULL,&I_sw);
             new_instr->Rt = ir_node->address->last->reg;
             new_instr->ival = ir_node->offset->ival;
-            new_instr->Rs = &R_a0;
+            new_instr->Rs = &R_v0;
             final_tree_current = link_instructions(new_instr,final_tree_current);
             break;
         case SVC_READ_REAL:
