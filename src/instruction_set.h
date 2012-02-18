@@ -31,9 +31,17 @@ enum instr_format {
     FMT_EMPTY
 };
 
+enum instr_data_t {
+    I_FLOAT,
+    I_INT,
+    I_FLOAT_INT,
+    I_INT_FLOAT
+};
+
 typedef struct mips_instr_t {
     enum instr_type_t type;
     enum instr_format fmt;
+    enum instr_data_t datatype;
     char *name;
 } mips_instr_t;
 
