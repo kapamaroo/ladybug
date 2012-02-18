@@ -162,9 +162,9 @@ mips_instr_t I_c_lt_s = {.name="c.lt.s", .fmt=FMT_RS_RT,       .datatype=I_FLOAT
 //mips_instr_t I_c_neq_s = {.name="c.neq.s", .fmt=FMT_RS_RT,       .datatype=I_FLOAT, .type=INSTR_ISA};
 
 //other c1
-mips_instr_t I_mtc1 = {.name="mtc1",     .fmt=FMT_RS_RT,       .datatype=I_FLOAT_INT, .type=INSTR_ISA};    //move gpr to fpr
+mips_instr_t I_mtc1 = {.name="mtc1",     .fmt=FMT_RS_RT,       .datatype=I_INT_FLOAT, .type=INSTR_ISA};    //move gpr to fpr
 mips_instr_t I_mfc1 = {.name="mfc1",     .fmt=FMT_RS_RT,       .datatype=I_INT_FLOAT, .type=INSTR_ISA};    //move fpr to gpr
-mips_instr_t I_ctc1 = {.name="ctc1",     .fmt=FMT_RS_RT,       .datatype=I_FLOAT_INT, .type=INSTR_ISA};    //move gpr to fcr
+mips_instr_t I_ctc1 = {.name="ctc1",     .fmt=FMT_RS_RT,       .datatype=I_INT_FLOAT, .type=INSTR_ISA};    //move gpr to fcr
 mips_instr_t I_cfc1 = {.name="cfc1",     .fmt=FMT_RS_RT,       .datatype=I_INT_FLOAT, .type=INSTR_ISA};    //move fcr to gpr
 
 //syscall
