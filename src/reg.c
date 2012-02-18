@@ -17,24 +17,24 @@ reg_t R_a0  = {.type = REG_PHYSICAL, .is = REG_ARGUMENT,     .r = 4,  .name = "$
 reg_t R_a1  = {.type = REG_PHYSICAL, .is = REG_ARGUMENT,     .r = 5,  .name = "$a1",   .alias = "r5" };
 reg_t R_a2  = {.type = REG_PHYSICAL, .is = REG_ARGUMENT,     .r = 6,  .name = "$a2",   .alias = "r6" };
 reg_t R_a3  = {.type = REG_PHYSICAL, .is = REG_ARGUMENT,     .r = 7,  .name = "$a3",   .alias = "r7" };
-reg_t R_t0  = {.type = REG_PHYSICAL, .is = REG_TEMP,         .r = 8,  .name = "$t0",   .alias = "r8" };
-reg_t R_t1  = {.type = REG_PHYSICAL, .is = REG_TEMP,         .r = 9,  .name = "$t1",   .alias = "r9" };
-reg_t R_t2 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 10, .name = "$t2",   .alias = "r10" };
-reg_t R_t3 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 11, .name = "$t3",   .alias = "r11" };
-reg_t R_t4 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 12, .name = "$t4",   .alias = "r12" };
-reg_t R_t5 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 13, .name = "$t5",   .alias = "r13" };
-reg_t R_t6 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 14, .name = "$t6",   .alias = "r14" };
-reg_t R_t7 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 15, .name = "$t7",   .alias = "r15" };
-reg_t R_s0 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 16, .name = "$s0",   .alias = "r16" };
-reg_t R_s1 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 17, .name = "$s1",   .alias = "r17" };
-reg_t R_s2 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 18, .name = "$s2",   .alias = "r18" };
-reg_t R_s3 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 19, .name = "$s3",   .alias = "r19" };
-reg_t R_s4 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 20, .name = "$s4",   .alias = "r20" };
-reg_t R_s5 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 21, .name = "$s5",   .alias = "r21" };
-reg_t R_s6 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 22, .name = "$s6",   .alias = "r22" };
-reg_t R_s7 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 23, .name = "$s7",   .alias = "r23" };
-reg_t R_t8 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 24, .name = "$t8",   .alias = "r24" };
-reg_t R_t9 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 25, .name = "$t9",   .alias = "r25" };
+reg_t R_t0  = {.type = REG_PHYSICAL, .is = REG_TEMP,         .r = 0,  .name = "$t0",   .alias = "r8" };
+reg_t R_t1  = {.type = REG_PHYSICAL, .is = REG_TEMP,         .r = 1,  .name = "$t1",   .alias = "r9" };
+reg_t R_t2 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 2, .name = "$t2",   .alias = "r10" };
+reg_t R_t3 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 3, .name = "$t3",   .alias = "r11" };
+reg_t R_t4 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 4, .name = "$t4",   .alias = "r12" };
+reg_t R_t5 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 5, .name = "$t5",   .alias = "r13" };
+reg_t R_t6 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 6, .name = "$t6",   .alias = "r14" };
+reg_t R_t7 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 7, .name = "$t7",   .alias = "r15" };
+reg_t R_s0 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 0, .name = "$s0",   .alias = "r16" };
+reg_t R_s1 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 1, .name = "$s1",   .alias = "r17" };
+reg_t R_s2 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 2, .name = "$s2",   .alias = "r18" };
+reg_t R_s3 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 3, .name = "$s3",   .alias = "r19" };
+reg_t R_s4 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 4, .name = "$s4",   .alias = "r20" };
+reg_t R_s5 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 5, .name = "$s5",   .alias = "r21" };
+reg_t R_s6 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 6, .name = "$s6",   .alias = "r22" };
+reg_t R_s7 = {.type = REG_PHYSICAL, .is = REG_CONTENT,       .r = 7, .name = "$s7",   .alias = "r23" };
+reg_t R_t8 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 8, .name = "$t8",   .alias = "r24" };
+reg_t R_t9 = {.type = REG_PHYSICAL, .is = REG_TEMP,          .r = 9, .name = "$t9",   .alias = "r25" };
 reg_t R_k0 = {.type = REG_PHYSICAL, .is = REG_RESERVED_OS,   .r = 26, .name = "$k0",   .alias = "r26" };
 reg_t R_k1 = {.type = REG_PHYSICAL, .is = REG_RESERVED_OS,   .r = 27, .name = "$k1",   .alias = "r27" };
 reg_t R_gp = {.type = REG_PHYSICAL, .is = REG_POINTER,       .r = 28, .name = "$gp",   .alias = "r28" };
@@ -79,8 +79,6 @@ reg_t FP_30 = {.type = REG_PHYSICAL, .is = REG_FLOAT,        .r = 30, .name = "$
 reg_t FP_31 = {.type = REG_PHYSICAL, .is = REG_FLOAT,        .r = 31, .name = "$f31",   .alias = "fp31" };
 
 void init_reg() {
-    int i;
-
     arch[0]  = &R_zero;
     arch[1]  = &R_at;
     arch[2]  = &R_v0;
@@ -147,6 +145,12 @@ void init_reg() {
     arch_fp[30] = &FP_30;
     arch_fp[31] = &FP_31;
 
+    free_all_registers();
+}
+
+void free_all_registers() {
+    int i;
+
     for(i=0;i<ARCH_REG_CONTENT_NUM;i++) {
         reg_pool_temp[i] = arch[i+8];
         reg_pool_content[i] = arch[i+16];
@@ -158,7 +162,6 @@ void init_reg() {
     for(i=0;i<ARCH_FP_REG_NUM;i++) {
         reg_pool_float[i] = arch_fp[i];
     }
-
 }
 
 reg_t *get_available_reg(reg_type_t type) {
@@ -196,6 +199,10 @@ reg_t *get_available_reg(reg_type_t type) {
 }
 
 void release_reg(reg_t *reg) {
+    if (!reg) {
+        return;
+    }
+
     if (reg->is==REG_CONTENT) {
         reg_pool_content[reg->r] = reg;
     } else if (reg->is==REG_TEMP) {

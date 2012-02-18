@@ -13,7 +13,8 @@ struct reg_t;
 
 typedef enum reg_status_t {
     REG_VIRT,         //before register allocation
-    REG_PHYSICAL      //after  register allocation
+    REG_ALLOCATED,    //after  register allocation
+    REG_PHYSICAL      //arch registers
 } reg_status_t;
 
 typedef enum reg_type_t {
@@ -45,7 +46,7 @@ typedef struct reg_t {
 
     struct instr_t *live;
     struct instr_t *die;
-    //struct reg_t *physical; //physical register
+    struct reg_t *physical; //physical register
 } reg_t;
 
 #define IS_REG_VIRT(reg) (reg && reg->type == REG_VIRT)
@@ -87,7 +88,8 @@ extern reg_t R_fp;
 extern reg_t R_ra;
 
 void init_reg();
+void free_all_registers();
 reg_t *get_available_reg(reg_type_t type);
-void release_reg();
+void release_reg(reg_t *reg);
 
 #endif

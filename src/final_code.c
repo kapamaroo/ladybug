@@ -15,6 +15,8 @@ instr_t *final_tree_current;
 void init_final_code() {
     int i;
 
+    init_reg();
+
     final_tree_empty = MAX_NUM_OF_MODULES;
 
     for(i=0;i<MAX_NUM_OF_MODULES;i++) {
@@ -31,12 +33,47 @@ void new_final_tree() {
 }
 
 void print_register(reg_t *reg) {
-    if (reg->type == REG_PHYSICAL) { printf("%s",reg->name);}
-    else { printf("@%ld",reg->virtual); }
+    switch (reg->type) {
+    case REG_VIRT:
+        printf("@%ld",reg->virtual);
+        break;
+    case REG_ALLOCATED:
+        printf("%s",reg->physical->name);
+        break;
+    case REG_PHYSICAL:
+        printf("%s",reg->name);
+        break;
+    }
+}
+
+void REG_ALLOCATE(reg_t *reg) {
+    if (IS_REG_VIRT(reg)) {
+        reg->physical = get_available_reg(reg->is);
+        if (reg->physical) {
+            reg->type = REG_ALLOCATED;
+        }
+    }
+}
+
+void register_allocate(instr_t *pc) {
+    //if (IS_REG_VIRT(pc->Rd)) { pc->Rd->physical = get_available_reg(pc->Rd->is); }
+    REG_ALLOCATE(pc->Rd);
+    REG_ALLOCATE(pc->Rs);
+    REG_ALLOCATE(pc->Rt);
+}
+
+void REG_FREE(reg_t *reg, unsigned long barrier) {
+    if (reg && reg->type==REG_ALLOCATED && reg->die->id == barrier) { release_reg(reg->physical); }
+}
+
+void register_free(instr_t *pc) {
+    REG_FREE(pc->Rd, pc->id);
+    REG_FREE(pc->Rs, pc->id);
+    REG_FREE(pc->Rt, pc->id);
 }
 
 void print_instr(instr_t *instr) {
-    printf("%ld: ",instr->id);
+    //printf("%ld: ",instr->id);
 
     if (instr->label) { printf("%-22s: ",instr->label); }
     else { printf("\t\t\t"); }
@@ -122,19 +159,18 @@ void print_instr(instr_t *instr) {
         break;
     }
 
-
-    if (IS_REG_VIRT(instr->Rd) &&
-        instr->Rd->live == instr)
+    /*
+    if (instr->Rd && instr->Rd->live == instr)
         printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rd->virtual, instr->Rd->live->id, instr->Rd->die->id);
 
-    if (IS_REG_VIRT(instr->Rs) &&
-        instr->Rs->live == instr)
+    if (instr->Rs && instr->Rs->live == instr)
         printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rs->virtual, instr->Rs->live->id, instr->Rs->die->id);
 
-    if (IS_REG_VIRT(instr->Rt) &&
-        instr->Rt->live == instr)
+    if (instr->Rt && instr->Rt->live == instr)
         printf("\t\t\t@%ld -> lines : %ld..%ld",instr->Rt->virtual, instr->Rt->live->id, instr->Rt->die->id);
+    */
 
+    printf("\n");
 }
 
 void print_assembly() {
@@ -142,14 +178,16 @@ void print_assembly() {
     instr_t *instr;
 
     for(i=0;i<MAX_NUM_OF_MODULES;i++) {
-        if (!final_tree[i]) {
+        instr = final_tree[i];
+        if (!instr) {
             return;
         }
 
-        instr = final_tree[i];
+        free_all_registers();
         while (instr) {
+            register_allocate(instr);
             print_instr(instr);
-            printf("\n");
+            register_free(instr);
             instr = instr->next;
         }
         printf("\n");

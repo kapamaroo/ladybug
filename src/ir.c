@@ -31,6 +31,7 @@ reg_t *new_virtual_register() {
     new_reg->virtual = unique_virt_reg++;
     new_reg->live = NULL;
     new_reg->die = NULL;
+    new_reg->physical = NULL;
 
     return new_reg;
 }
