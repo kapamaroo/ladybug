@@ -122,20 +122,25 @@ mips_instr_t I_lbu  = {.name="lbu",   .fmt=FMT_LOAD,           .type=INSTR_ISA};
 mips_instr_t I_lh   = {.name="lh",    .fmt=FMT_LOAD,           .type=INSTR_ISA};
 mips_instr_t I_lhu  = {.name="lhu",   .fmt=FMT_LOAD,           .type=INSTR_ISA};
 mips_instr_t I_lw   = {.name="lw",    .fmt=FMT_LOAD,           .type=INSTR_ISA};
-mips_instr_t I_lwc1 = {.name="lwc1",  .fmt=FMT_LOAD,           .type=INSTR_ISA};
 mips_instr_t I_lwl  = {.name="lwl",   .fmt=FMT_LOAD,           .type=INSTR_ISA};         //load (for unaligned data)
 mips_instr_t I_lwr  = {.name="lwr",   .fmt=FMT_LOAD,           .type=INSTR_ISA};         //load (for unaligned data)
 mips_instr_t I_ulw  = {.name="ulw",   .fmt=FMT_LOAD,           .type=INSTR_PSEUDO_ISA};  //load unaligned data
-mips_instr_t I_ll = {.name="ll",      .fmt=FMT_LOAD,           .type=INSTR_ISA};         //load atomic (mips 2)
+
 //store
 mips_instr_t I_sb   = {.name="sb",    .fmt=FMT_STORE,          .type=INSTR_ISA};
 mips_instr_t I_sh   = {.name="sh",    .fmt=FMT_STORE,          .type=INSTR_ISA};
 mips_instr_t I_sw   = {.name="sw",    .fmt=FMT_STORE,          .type=INSTR_ISA};
-mips_instr_t I_swc1 = {.name="swc1",  .fmt=FMT_STORE,          .type=INSTR_ISA};
 mips_instr_t I_swl  = {.name="swl",   .fmt=FMT_STORE,          .type=INSTR_ISA};         //store (for unaligned data)
 mips_instr_t I_swr  = {.name="swr",   .fmt=FMT_STORE,          .type=INSTR_ISA};         //store (for unaligned data)
 mips_instr_t I_usw  = {.name="usw",   .fmt=FMT_STORE,          .type=INSTR_PSEUDO_ISA};  //store unaligned data
+
+//atomic
+mips_instr_t I_ll = {.name="ll",      .fmt=FMT_LOAD,           .type=INSTR_ISA};         //load atomic (mips 2)
 mips_instr_t I_sc = {.name="sc",      .fmt=FMT_STORE,          .type=INSTR_ISA};         //store atomic (mips 2)
+
+//float load, store
+mips_instr_t I_lwc1 = {.name="lwc1",  .fmt=FMT_LOAD,           .type=INSTR_ISA};         //FLOAT
+mips_instr_t I_swc1 = {.name="swc1",  .fmt=FMT_STORE,          .type=INSTR_ISA};         //FLOAT
 
 //float single arithmetic
 mips_instr_t I_add_s = {.name="add.s",   .fmt=FMT_RD_RS_RT,    .type=INSTR_ISA};
