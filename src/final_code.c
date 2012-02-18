@@ -31,7 +31,7 @@ void new_final_tree() {
 }
 
 void print_register(reg_t *reg) {
-    if (reg->is != REG_VIRT) { printf("%s",reg->name);}
+    if (reg->type == REG_PHYSICAL) { printf("%s",reg->name);}
     else { printf("@%ld",reg->virtual); }
 }
 

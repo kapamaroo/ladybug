@@ -11,8 +11,12 @@ struct reg_t;
 #define ARCH_REG_CONTENT_NUM 8
 #define ARCH_REG_TEMP_NUM 10
 
-typedef enum reg_type_t {
+typedef enum reg_status_t {
     REG_VIRT,         //before register allocation
+    REG_PHYSICAL      //after  register allocation
+} reg_status_t;
+
+typedef enum reg_type_t {
     REG_ZERO,         //r0,             $zero     always 0
     REG_RESERVED_ASM, //r1,             $at       reserved for assembler
     REG_RESERVED_OS,  //r26-r27,        $k0-$k1,  reserved for OS
@@ -30,6 +34,7 @@ typedef enum reg_type_t {
 } reg_type_t;
 
 typedef struct reg_t {
+    reg_status_t type;
     reg_type_t is;
 
     unsigned long virtual;   //unique number for REG_VIRT
@@ -43,7 +48,7 @@ typedef struct reg_t {
     //struct reg_t *physical; //physical register
 } reg_t;
 
-#define IS_REG_VIRT(reg) (reg && reg->is == REG_VIRT)
+#define IS_REG_VIRT(reg) (reg && reg->type == REG_VIRT)
 
 extern reg_t *arch[ARCH_REG_NUM];
 extern reg_t *arch_fp[ARCH_FP_REG_NUM];
