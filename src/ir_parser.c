@@ -37,11 +37,11 @@ void reg_liveness_analysis(instr_t *pc) {
      * //FIXME
      */
 
-    if (IS_REG_VIRT(pc->Rd)) {
-        if (!pc->Rd->live) { pc->Rd->live = pc; }
-        if (IS_REG_VIRT(pc->Rs)) { pc->Rs->die = pc; }
-        if (IS_REG_VIRT(pc->Rt)) { pc->Rt->die = pc; }
-    }
+    if (IS_REG_VIRT(pc->Rd) &&
+        !pc->Rd->live) { pc->Rd->live = pc; }        //first appearance of virtual register
+    if (IS_REG_VIRT(pc->Rs)) { pc->Rs->die = pc; }   //update last appearance
+    if (IS_REG_VIRT(pc->Rt)) { pc->Rt->die = pc; }   //update last appearance
+
 }
 
 instr_t *link_instructions(instr_t *child, instr_t *parent) {
@@ -302,10 +302,6 @@ void parse_ir_node(ir_node_t *ir_node) {
 
         new_instr = new_instruction(NULL,op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is));
 
-        //pass the Rd for all instructions
-        //liveness analysis depends on it
-        new_instr->Rd = ir_node->reg;
-
         if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
             new_instr->Rs = ir_node->ir_rval->last->reg;
         }
@@ -340,6 +336,8 @@ void parse_ir_node(ir_node_t *ir_node) {
         case RELOP_IN:	// 'in'
             die("UNEXPECTED ERROR: ir_parser: NODE_RVAL: logical and/or/not/in operator still alive??");
         default:
+            //only non branch instructions need the Rd
+            new_instr->Rd = ir_node->reg;
             break;
         }
 
@@ -406,9 +404,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         } else {
             new_instr = new_instruction(NULL,&I_sw);
         }
-
-        //we do not need the Rd here, but we set it because liveness analysis depends on it
-        new_instr->Rd = ir_node->ir_rval->last->reg;
 
         new_instr->Rs = ir_node->ir_rval->last->reg;
         new_instr->Rt = ir_node->ir_lval->address->last->reg;
