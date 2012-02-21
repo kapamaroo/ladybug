@@ -293,11 +293,13 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
     ir_node_t *ir_cond;
     ir_node_t *ir_exit_if;
 
+    //true_stmt always exists
+
     ir_exit_if = new_ir_node_t(NODE_DUMMY_LABEL);
     ir_exit_if->label = new_label_unique("IF_EXIT");
-    true_stmt = link_ir_to_ir(ir_exit_if,true_stmt); //true_stmt always exists
+    true_stmt = link_ir_to_ir(ir_exit_if,true_stmt);
 
-    if (true_stmt && false_stmt) {
+    if (false_stmt) {
         /* pseudo assembly
            if cond goto: TRUE_STMT
            FALSE_STMT
