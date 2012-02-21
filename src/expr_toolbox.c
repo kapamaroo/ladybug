@@ -31,7 +31,8 @@ expr_t *expr_from_variable(var_t *v) {
         break;
     }
 
-    if (v->id_is==ID_CONST) {
+    if (v->id_is==ID_CONST || v->status_known == KNOWN_YES) {
+        //if (v->id_is==ID_CONST ) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
             l->datatype = v->datatype; //if enum, set the enumeration type
@@ -72,6 +73,16 @@ expr_t *expr_from_variable(var_t *v) {
         l->expr_is = EXPR_LOST;
         return l;
     }
+
+    if (v->status_value == VALUE_GARBAGE) {
+        //change this to error??
+        sprintf(str_err,"variable %s of datatype %s maybe used uninitialised",v->name,v->datatype->data_name);
+        //yyerror(str_err);
+        yywarning(str_err);
+    }
+
+    //mark variable as used
+    v->status_use = USE_YES;
 
     //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {

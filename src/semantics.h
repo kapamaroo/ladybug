@@ -59,6 +59,21 @@ typedef enum type_t {
     TYPE_SET,
 } type_t;
 
+typedef enum var_status_value_t {
+    VALUE_GARBAGE,
+    VALUE_VALID
+} var_status_value_t;
+
+typedef enum var_status_use_t {
+    USE_NONE,
+    USE_YES
+} var_status_use_t;
+
+typedef enum var_status_known_t {
+    KNOWN_NO,
+    KNOWN_YES
+} var_status_known_t;
+
 typedef enum mem_seg_t {
     MEM_GLOBAL,
     MEM_STACK,
@@ -125,6 +140,11 @@ typedef struct mem_t {
  */
 typedef struct var_t {
     idt_t id_is; //ID_VAR, ID_VAR_GUARDED, ID_CONST, ID_RETURN, ID_LOST
+
+    var_status_value_t status_value;
+    var_status_use_t status_use;
+    var_status_known_t status_known;
+
     data_t *datatype;
     char *name;
     scope_t *scope;

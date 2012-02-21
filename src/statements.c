@@ -276,6 +276,28 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
         return new_statement_t(ST_BadStatement);
     }
 
+    //set status_known
+    v->status_known = (l->expr_is == EXPR_HARDCODED_CONST) ? KNOWN_YES : KNOWN_NO;
+
+    //skip first init with value known at compile time, this will go to the .data segment
+#warning actually DO the .data segment
+    if (v->status_value == VALUE_GARBAGE && v->status_known == KNOWN_YES) {
+        switch (l->datatype->is) {
+        case TYPE_INT:      v->ival = l->ival;  break;
+        case TYPE_REAL:     v->fval = l->fval;  break;
+        case TYPE_CHAR:     //reminder: char and boolean types both internally are represented as chars
+        case TYPE_BOOLEAN:  v->cval = l->cval;
+        }
+
+        //mark variable as initialised
+        v->status_value = VALUE_VALID;
+
+        return NULL;
+    }
+
+    //mark variable as initialised in the general case
+    v->status_value = VALUE_VALID;
+
     new_assign = new_statement_t(ST_Assignment);
     new_assign->_assignment.var = v;
     new_assign->_assignment.expr = l;

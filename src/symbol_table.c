@@ -406,6 +406,10 @@ void declare_vars(data_t* type){
                 new_sem->var->datatype = type;
                 new_sem->var->name = new_sem->name;
                 new_sem->var->Lvalue = mem_allocate_symbol(type);
+
+                new_sem->var->status_value = VALUE_GARBAGE;
+                new_sem->var->status_use = USE_NONE;
+                new_sem->var->status_known = KNOWN_NO;
             }
             else {
                 sprintf(str_err,"'%s' already declared",idf_table[i]->name);
