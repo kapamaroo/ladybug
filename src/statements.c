@@ -277,6 +277,7 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     }
 
     //set status_known
+    //reminder: known variables become hardcoded constants, see expr_toolbox.c
     v->status_known = (l->expr_is == EXPR_HARDCODED_CONST) ? KNOWN_YES : KNOWN_NO;
 
     //skip first init with value known at compile time, this will go to the .data segment
@@ -402,6 +403,15 @@ statement_t *statement_read(var_list_t *var_list) {
 
     if (error) {
         return new_statement_t(ST_BadStatement);
+    }
+
+    //mark variables as unknown
+    for(i=0;i<MAX_VAR_LIST-var_list->var_list_empty;i++) {
+        v = var_list->var_list[i];
+        v->status_known = KNOWN_NO;
+        v->status_value = VALUE_VALID;
+        //do not touch status_use
+        //v->statis_use = USE_YES;
     }
 
     new_read = new_statement_t(ST_Read);
