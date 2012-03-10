@@ -308,13 +308,13 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     if (op==OP_AND && l2->expr_is==EXPR_HARDCODED_CONST && l1->expr_is==EXPR_HARDCODED_CONST) {
-        return expr_from_hardcoded_boolean((l1->ival+l2->ival==2)?1:0); //and
+        return expr_from_hardcoded_boolean((l1->cval && l2->cval)?1:0); //and
     }
     else if (op==OP_OR && l2->expr_is==EXPR_HARDCODED_CONST && l1->expr_is==EXPR_HARDCODED_CONST) {
-        return expr_from_hardcoded_boolean((l1->ival+l2->ival)?1:0); //or
+        return expr_from_hardcoded_boolean((l1->cval || l2->cval)?1:0); //or
     }
     else if (op==OP_NOT && l2->expr_is==EXPR_HARDCODED_CONST) {
-        return expr_from_hardcoded_boolean((l2->ival)?0:1); //not
+        return expr_from_hardcoded_boolean((l2->cval)?0:1); //not
     }
     else {
         //no hardcoded value
