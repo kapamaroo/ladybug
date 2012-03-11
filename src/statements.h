@@ -95,7 +95,6 @@ extern statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 extern int statement_root_module_current_free;
 
 void init_statements();
-func_t *create_main_program(char *name);
 
 statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
 

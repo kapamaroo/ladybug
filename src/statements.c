@@ -3,6 +3,7 @@
 
 #include "statements.h"
 #include "symbol_table.h" //ladybug's symbol table
+#include "datatypes.h"
 #include "scope.h"
 #include "expressions.h" //maybe we need to invert the cond in if
 #include "expr_toolbox.h"
@@ -54,6 +55,9 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement) {
     close_current_scope();
 
+#warning we leak memory on obsolete functions //FIXME
+    if (subprogram->status==FUNC_OBSOLETE) { return; }
+
     statement_root_module[subprogram->unique_id] =
         link_statements(new_statement,statement_root_module[subprogram->unique_id]);
 }
@@ -66,23 +70,6 @@ void new_statement_module(func_t *subprogram) {
     subprogram->unique_id = statement_root_module_current_free++;
     start_new_scope(subprogram);
     new_ir_tree(subprogram);
-}
-
-func_t *create_main_program(char *name) {
-    sem_t *sem_main_program;
-
-    sem_main_program = sm_insert(name);
-    sem_main_program->id_is = ID_PROGRAM_NAME;
-
-    //see scope.h
-    main_program = (func_t*)malloc(sizeof(func_t));
-    //main_program->func_name = sem_main_program->name;
-    main_program->func_name = "main";
-    sem_main_program->subprogram = main_program;
-
-    new_statement_module(main_program);
-
-    return sem_main_program->subprogram;
 }
 
 int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
@@ -280,23 +267,27 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     //reminder: known variables become hardcoded constants, see expr_toolbox.c
     v->status_known = (l->expr_is == EXPR_HARDCODED_CONST) ? KNOWN_YES : KNOWN_NO;
 
-    //skip first init with value known at compile time, this will go to the .data segment
-#warning actually DO the .data segment
-    if (v->status_value == VALUE_GARBAGE && v->status_known == KNOWN_YES) {
+    if (v->status_known == KNOWN_YES) {
         switch (l->datatype->is) {
         case TYPE_INT:      v->ival = l->ival;  break;
         case TYPE_REAL:     v->fval = l->fval;  break;
         case TYPE_CHAR:     //reminder: char and boolean types both internally are represented as chars
         case TYPE_BOOLEAN:  v->cval = l->cval;
         }
-
-        //mark variable as initialised
-        v->status_value = VALUE_VALID;
-
-        return NULL;
     }
 
-    //mark variable as initialised in the general case
+    //skip first init with value known at compile time, EXCEPT for return_values
+    //this will go to the .data segment
+#warning actually DO the .data segment
+    if (v->id_is!=ID_RETURN &&
+        v->status_value==VALUE_GARBAGE &&
+        v->status_use==USE_NONE &&
+        v->status_known==KNOWN_YES) {
+        v->status_value = VALUE_VALID;
+        //printf("debug: ignore assignment to: %s\n", v->name);
+        //return NULL;
+    }
+
     v->status_value = VALUE_VALID;
 
     new_assign = new_statement_t(ST_Assignment);
@@ -304,6 +295,7 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     new_assign->_assignment.expr = l;
 
     if (v->id_is==ID_RETURN) {
+        //printf("debug: return name: %s\tknown:%d\n", v->name, v->status_known);
         new_assign->return_point = 1;
     }
 

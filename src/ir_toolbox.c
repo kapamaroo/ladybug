@@ -277,17 +277,33 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
         //load the lvalue of every datatype
 
-        new_node = new_ir_node_t(NODE_LOAD);
-        new_node->ir_lval = calculate_lvalue(ltree->var);
-
         if (ltree->var->id_is==ID_RETURN) {
+            if (ltree->var->scope->scope_owner->status==FUNC_OBSOLETE) {
+                printf("debug: obsolete function %s\n",ltree->var->scope->scope_owner->func_name);
+                new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
+                new_node->ival = ltree->var->ival;
+                new_node->fval = ltree->var->fval;
+                new_node->cval = ltree->var->cval;
+                new_node->data_is = ltree->var->datatype->is;
+
+                return new_node;
+            }
+
             new_func_call = prepare_stack_and_call(ltree->var->scope->scope_owner,ltree->expr_list);
 
             //finally we must read the return value after the actual call
+            new_node = new_ir_node_t(NODE_LOAD);
+            new_node->ir_lval = calculate_lvalue(ltree->var);
+            new_node->data_is = ltree->datatype->is;
+
             new_node = link_ir_to_ir(new_node,new_func_call);
+
+        } else {
+            new_node = new_ir_node_t(NODE_LOAD);
+            new_node->ir_lval = calculate_lvalue(ltree->var);
+            new_node->data_is = ltree->datatype->is;
         }
 
-        new_node->data_is = ltree->datatype->is;
 
         if (ltree->convert_to==SEM_INTEGER) {
             convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
