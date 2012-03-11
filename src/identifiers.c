@@ -71,7 +71,7 @@ void idf_addto_record() {
                 usr_datatype->memsize += idf_data_type->memsize;
             }
             else {
-                sprintf(str_err,"'%s' declared previously in '%s' record type, ignoring",idf_table[i].name,usr_datatype->data_name);
+                sprintf(str_err,"'%s' declared previously in '%s' record type, ignoring",idf_table[i].name,usr_datatype->name);
                 yyerror(str_err);
             }
         }

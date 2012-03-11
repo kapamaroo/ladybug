@@ -77,7 +77,7 @@ void new_ir_tree(func_t *subprogram) {
     ir_node_t *ir_new;
 
     ir_new = new_ir_node_t(NODE_DUMMY_LABEL);
-    ir_new->label = new_label_subprogram(subprogram->func_name);
+    ir_new->label = new_label_subprogram(subprogram->name);
 
     ir_root_tree[subprogram->unique_id] = ir_new;
 }

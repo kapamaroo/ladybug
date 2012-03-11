@@ -49,7 +49,7 @@ void start_new_scope(func_t *scope_owner) {
 
         scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
 
-        //printf("__start_new_scope_%s_%d\n",scope_owner->func_name,sm_scope);
+        //printf("__start_new_scope_%s_%d\n",scope_owner->name,sm_scope);
         return;
     }
     else {
@@ -140,7 +140,7 @@ void start_new_with_statement_scope(var_t *var) {
             for(i=0;i<var->datatype->field_num;i++) {
                 if (check_for_id_in_datatype(with_scope->type,var->datatype->field_name[i])>=0) {
                     sprintf(str_err,"conflict in nested with_statement of type '%s' inside type '%s',\n\t both record datatypes have the name '%s' for element"
-                            ,var->datatype->data_name,with_scope->type->data_name,var->datatype->field_name[i]);
+                            ,var->datatype->name,with_scope->type->name,var->datatype->field_name[i]);
                     yyerror(str_err);
                     tail_scope_with->conflicts++;;
                     return; //do not insert any record element, do not open new with_scope
@@ -189,8 +189,8 @@ void close_last_opened_with_statement_scope() {
         tail_scope_with->conflicts--;
     }
     else {
-        //remove backwards to find the symbol entry faster
-        //and also the corrent symbol if there is a predefined symbol with the same name
+        //remove backwards to find the corrent symbol if
+        //there is a predefined symbol with the same name
         for (i=tail_scope_with->type->field_num-1;i>=0;i--) {
             sm_remove(tail_scope_with->type->field_name[i]);
         }

@@ -80,7 +80,9 @@ expr_t *expr_from_variable(var_t *v) {
 
     if (v->status_value == VALUE_GARBAGE) {
         //change this to error??
-        sprintf(str_err,"variable %s of datatype %s maybe used uninitialised",v->name,v->datatype->data_name);
+        sprintf(str_err,"variable '%s' of datatype '%s' maybe used 'uninitialized' in '%s'" ,v->name,
+                v->datatype->name,
+                v->scope->scope_owner->name);
         //yyerror(str_err);
         yywarning(str_err);
     }
@@ -89,7 +91,7 @@ expr_t *expr_from_variable(var_t *v) {
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
         //reminder: arrays and record types are allowed only for asignments
         if (v->datatype->is==TYPE_ARRAY || v->datatype->is==TYPE_RECORD) {
-            sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->data_name);
+            sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->name);
             yyerror(str_err);
             l->expr_is = EXPR_LOST;
             l->var = lost_var_reference();
@@ -101,7 +103,7 @@ expr_t *expr_from_variable(var_t *v) {
         //so we can use their __actual__ datatype
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
             //this is actually a warning, maybe we need a yywarning?
-            sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->data_name);
+            sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->name);
             yywarning(str_err);
 
             //pass the __actual__ datatype (integer,char,boolean, or enumeration)
@@ -114,7 +116,7 @@ expr_t *expr_from_variable(var_t *v) {
         ////final correction, this may override the subset datatype in the case of char subset
         ////if (!TYPE_IS_ARITHMETIC(v->datatype)) {
         //if (v->datatype->is==TYPE_CHAR) {
-        //    sprintf(str_err,"doing math with '%s' variable",v->datatype->data_name);
+        //    sprintf(str_err,"doing math with '%s' variable",v->datatype->name);
         //    yywarning(str_err);
         //    l->datatype = SEM_INTEGER;
         //}
@@ -174,13 +176,13 @@ int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list) {
     data_t *el_datatype;
 
     if (!list && subprogram->param_num!=0) {
-        sprintf(str_err,"'%s' subprogram takes %d parameters",subprogram->func_name,subprogram->param_num);
+        sprintf(str_err,"'%s' subprogram takes %d parameters",subprogram->name,subprogram->param_num);
         yyerror(str_err);
         return 0;
     }
 
     if (list->all_expr_num != subprogram->param_num) {
-        sprintf(str_err,"subprogram `%s` takes %d parameters",subprogram->func_name,subprogram->param_num);
+        sprintf(str_err,"subprogram `%s` takes %d parameters",subprogram->name,subprogram->param_num);
         yyerror(str_err);
         return 0;
     }
@@ -209,7 +211,7 @@ int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list) {
             }
 
             if (el_datatype != subprogram->param[i]->datatype) {
-                sprintf(str_err,"passing reference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
+                sprintf(str_err,"passing reference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->name,el_datatype->name);
                 yyerror(str_err);
                 return 0;
             }
@@ -244,6 +246,8 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
             //else we had parse errors
             if (check_valid_subprogram_call(sem_1->subprogram,list)) {
+                //we do not know yet if the function we call is obsolete, (e.g. forwarded functions)
+                //postpone optimizaton for expr_tree_to_ir_tree()
                 new_expr = expr_from_variable(sem_1->subprogram->return_value);
                 new_expr->expr_list = list; //this is a hack, see ir_toolbox.c: expr_tree_to_ir_tree() //FIXME
                 return new_expr;
@@ -518,7 +522,7 @@ dim_t *make_dim_bound_from_id(char *id) {
     sem_1 = sm_find(id);
     if (sem_1) {
         if (sem_1->id_is==ID_TYPEDEF && (sem_1->comp->is==TYPE_ENUM || sem_1->comp->is==TYPE_SUBSET)) {
-            if (strcmp(sem_1->comp->data_name,id)==0) {
+            if (strcmp(sem_1->comp->name,id)==0) {
                 //the range is the whole enumeration or subset
                 new_dim->first = sem_1->comp->enum_num[0];
                 new_dim->range = sem_1->comp->enum_num[sem_1->comp->field_num-1];
@@ -571,7 +575,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
                 die("UNEXPECTED ERROR 30");
             }
         } else {
-            sprintf(str_err,"reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->data_name);
+            sprintf(str_err,"reference to the %d dimension of array with nonscalar datatype '%s'",i,l->datatype->name);
             yyerror(str_err);
             error++;
         }
@@ -862,13 +866,13 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
 
     //at least one expression exists, check if valid
     if (l1->expr_is!=EXPR_LOST && !TYPE_IS_ELEXPR_VALID(l1->datatype)) {
-        sprintf(str_err,"left bound of elexpression range has invalid datatype '%s'",l1->datatype->data_name);
+        sprintf(str_err,"left bound of elexpression range has invalid datatype '%s'",l1->datatype->name);
         yyerror(str_err);
         return NULL;
     }
 
     if (l2->expr_is!=EXPR_LOST && !TYPE_IS_ELEXPR_VALID(l2->datatype)) {
-        sprintf(str_err,"right bound of elexpression range has invalid datatype '%s'",l2->datatype->data_name);
+        sprintf(str_err,"right bound of elexpression range has invalid datatype '%s'",l2->datatype->name);
         yyerror(str_err);
         return NULL;
     }
@@ -922,10 +926,10 @@ elexpr_t *make_elexpr(expr_t *l) {
 
     if (!TYPE_IS_ELEXPR_VALID(l->datatype)) {
         if (l->expr_is==EXPR_LVAL) {
-            sprintf(str_err,"ignoring elexpression because '%s' has invalid datatype '%s'",l->var->name,l->datatype->data_name);
+            sprintf(str_err,"ignoring elexpression because '%s' has invalid datatype '%s'",l->var->name,l->datatype->name);
         }
         else {
-            sprintf(str_err,"ignoring elexpression because of invalid type '%s'",l->datatype->data_name);
+            sprintf(str_err,"ignoring elexpression because of invalid type '%s'",l->datatype->name);
         }
         yyerror(str_err);
         return NULL;
@@ -963,7 +967,7 @@ expr_t *limit_from_id(char *id) {
             }
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
-            if (strcmp(sem_1->comp->data_name,id)==0) {
+            if (strcmp(sem_1->comp->name,id)==0) {
                 sprintf(str_err,"limit '%s' is a typename, expected constant integer or enumeration",id);
                 yyerror(str_err);
                 new_expr = expr_from_hardcoded_int(0);

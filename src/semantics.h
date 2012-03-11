@@ -103,7 +103,7 @@ typedef struct scope_t {
 
 typedef struct data_t {
     type_t is;
-    char *data_name; //name of typedef
+    char *name; //name of typedef
     struct data_t *def_datatype; //type of array's or set elemets, (enumerations set this to integer type)
     int field_num; //number of: elements in record type, array dimensions, enum or subset elements
     char *field_name[MAX_FIELDS]; //enum names, record elements
@@ -181,7 +181,7 @@ typedef struct param_list_t {
 typedef struct func_t {
     func_status_t status;
     var_t *return_value;
-    char *func_name;
+    char *name;
     int param_num; //number of parameters
     param_t *param[MAX_PARAMS];
     mem_t *param_Lvalue[MAX_PARAMS];

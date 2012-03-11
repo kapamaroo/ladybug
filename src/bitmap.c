@@ -19,7 +19,7 @@ void init_bitmap() {
     //init bitmap_factory, do NOT put this datatype in symbol table
     datatype_max_sizeof_set.is = TYPE_ARRAY;
     datatype_max_sizeof_set.def_datatype = SEM_CHAR;
-    datatype_max_sizeof_set.data_name = "__internal_bitmap_factory_datatype__";
+    datatype_max_sizeof_set.name = "__internal_bitmap_factory_datatype__";
     datatype_max_sizeof_set.memsize = 16*MEM_SIZEOF_CHAR; //we use only this
 
     //these go to gp

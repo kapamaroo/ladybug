@@ -29,7 +29,7 @@ var_t *reference_to_variable_or_enum_element(char *id) {
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             //ALLOW this if only enumerations and subsets can declare an iter_space
-            if (strcmp(sem_1->comp->data_name,id)==0) {
+            if (strcmp(sem_1->comp->name,id)==0) {
                 sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
                 yyerror(str_err);
                 return lost_var_reference();
@@ -369,7 +369,7 @@ void make_type_definition(char *id, data_t *type) {
             //set semantics to symbol
             sem_1->id_is = ID_TYPEDEF;
             sem_1->comp = type;
-            sem_1->comp->data_name = sem_1->name;
+            sem_1->comp->name = sem_1->name;
         }
         else {
             yyerror("id type declaration already exists");

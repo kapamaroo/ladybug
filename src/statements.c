@@ -250,7 +250,7 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
         scope_owner = get_current_scope_owner();
         if (scope_owner->return_value->scope!=get_current_scope()) {
             //v->name is the same with function's name because that's how functions return their value
-            sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->func_name);
+            sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->name);
             yyerror(str_err);
             return new_statement_t(ST_BadStatement);
         }
@@ -258,7 +258,7 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 
     //reminder: expressions hava standard datatypes or set datatype
     if (!check_assign_similar_comp_datatypes(v->datatype,l->datatype)) {
-        sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->data_name,l->datatype->data_name);
+        sprintf(str_err,"assignment to '%s' of type '%s' with type '%s'",v->name,v->datatype->name,l->datatype->name);
         yyerror(str_err);
         return new_statement_t(ST_BadStatement);
     }
@@ -387,7 +387,7 @@ statement_t *statement_read(var_list_t *var_list) {
             yyerror(str_err);
             error++;
         } else if (!TYPE_IS_STANDARD(v->datatype) && !TYPE_IS_STRING(v->datatype)) {
-            sprintf(str_err,"in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->data_name);
+            sprintf(str_err,"in read, expected standard type '%s' or string, istead of '%s'",v->name,v->datatype->name);
             yyerror(str_err);
             error++;
         }
@@ -431,7 +431,7 @@ statement_t *statement_write(expr_list_t *expr_list) {
         }
         else if (!TYPE_IS_STANDARD(l->datatype) && l->expr_is!=EXPR_STRING) {
             //EXPR_RVAL, EXPR_HARDCODED_CONST, EXPR_LVAL, EXPR_STRING
-            sprintf(str_err,"in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->data_name);
+            sprintf(str_err,"in write, '%s' is not standard type ('%s') or string",l->var->name,l->datatype->name);
             yyerror(str_err);
             error++;
         }

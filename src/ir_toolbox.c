@@ -279,7 +279,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
         if (ltree->var->id_is==ID_RETURN) {
             if (ltree->var->scope->scope_owner->status==FUNC_OBSOLETE) {
-                printf("debug: obsolete function %s\n",ltree->var->scope->scope_owner->func_name);
                 new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
                 new_node->ival = ltree->var->ival;
                 new_node->fval = ltree->var->fval;

@@ -48,7 +48,7 @@ void configure_formal_parameters(param_list_t *list,func_t *func);
 void declare_formal_parameters(func_t *subprogram);
 
 void sm_insert_lost_symbol(const char *id);
-char *sm_find_lost_symbol(char *id);
+char *sm_find_lost_symbol(const char *id);
 
 func_t *create_main_program(char *name);
 

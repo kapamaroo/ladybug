@@ -36,8 +36,8 @@ func_t *create_main_program(char *name) {
     main_program = (func_t*)malloc(sizeof(func_t));
     main_program->status = FUNC_USEFULL;
 
-    //main_program->func_name = sem_main_program->name;
-    main_program->func_name = "main";
+    //main_program->name = sem_main_program->name;
+    main_program->name = "main";
     sem_main_program->subprogram = main_program;
 
     new_statement_module(main_program);
@@ -66,7 +66,7 @@ void init_symbol_table() {
     void_datatype = (data_t*)malloc(sizeof(struct data_t));
     void_datatype->is = TYPE_VOID;
     void_datatype->def_datatype = void_datatype;
-    void_datatype->data_name = "__void_datatype__";
+    void_datatype->name = "__void_datatype__";
     void_datatype->memsize = 0;
 
     //insert the standard types
@@ -96,10 +96,10 @@ void init_symbol_table() {
     sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
     sem_CHAR->comp->def_datatype = sem_CHAR->comp;
 
-    sem_INTEGER->comp->data_name = sem_INTEGER->name;
-    sem_REAL->comp->data_name = sem_REAL->name;
-    sem_BOOLEAN->comp->data_name = sem_BOOLEAN->name;
-    sem_CHAR->comp->data_name = sem_CHAR->name;
+    sem_INTEGER->comp->name = sem_INTEGER->name;
+    sem_REAL->comp->name = sem_REAL->name;
+    sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
+    sem_CHAR->comp->name = sem_CHAR->name;
 
     sem_INTEGER->comp->memsize = MEM_SIZEOF_INT;
     sem_REAL->comp->memsize = MEM_SIZEOF_REAL;
@@ -209,8 +209,14 @@ void sm_remove(char *id) {
 
     switch (symbol->id_is) {
     case ID_VAR_GUARDED:
-    case ID_RETURN:
     case ID_VAR:
+        if (symbol->var->status_use==USE_NONE) {
+            sprintf(str_err, "variable '%s' of type '%s' not used in '%s'", symbol->var->name,
+                    symbol->var->datatype->name,
+                    symbol->var->scope->scope_owner->name);
+            yywarning(str_err);
+        }
+    case ID_RETURN:
         //free(symbol->var);
         break;
     case ID_LOST:
@@ -237,7 +243,7 @@ void sm_remove(char *id) {
     case ID_FORWARDED_FUNC:
     case ID_FORWARDED_PROC:
         scope_owner = get_current_scope_owner();
-        sprintf(str_err,"subprogram '%s' without body in module %s.",id,scope_owner->func_name);
+        sprintf(str_err,"subprogram '%s' without body in module %s.",id,scope_owner->name);
         yyerror(str_err);
         break;
     }
@@ -326,6 +332,7 @@ void declare_vars(data_t* type){
                 new_sem->var->id_is = ID_VAR;
                 new_sem->var->datatype = type;
                 new_sem->var->name = new_sem->name;
+                new_sem->var->scope = new_sem->scope;
                 new_sem->var->Lvalue = mem_allocate_symbol(type);
 
                 new_sem->var->status_value = VALUE_GARBAGE;
@@ -404,7 +411,7 @@ void sm_insert_lost_symbol(const char *id) {
     }
 }
 
-char *sm_find_lost_symbol(char *id) {
+char *sm_find_lost_symbol(const char *id) {
     char **pool;
     int index;
     int i;
