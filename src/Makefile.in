@@ -47,9 +47,10 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_ladybug_OBJECTS = FuncTools.$(OBJEXT) symbol_table.$(OBJEXT) \
-	mem.$(OBJEXT) ir.$(OBJEXT) err_buff.$(OBJEXT) \
-	expressions.$(OBJEXT) expr_toolbox.$(OBJEXT) \
-	ir_toolbox.$(OBJEXT) main_app.$(OBJEXT) subprograms.$(OBJEXT) \
+	identifiers.$(OBJEXT) datatypes.$(OBJEXT) mem.$(OBJEXT) \
+	ir.$(OBJEXT) err_buff.$(OBJEXT) expressions.$(OBJEXT) \
+	expr_toolbox.$(OBJEXT) ir_toolbox.$(OBJEXT) main_app.$(OBJEXT) \
+	subprograms.$(OBJEXT) subprograms_toolbox.$(OBJEXT) \
 	scope.$(OBJEXT) bitmap.$(OBJEXT) ir_parser.$(OBJEXT) \
 	reg.$(OBJEXT) statements.$(OBJEXT) generator.$(OBJEXT) \
 	final_code.$(OBJEXT) instruction_set.$(OBJEXT) bison.$(OBJEXT) \
@@ -169,6 +170,8 @@ AM_YFLAGS = --defines=bison.tab.h -v
 # AM_LFLAGS = -o$(LEX_OUTPUT_ROOT).c
 ladybug_SOURCES = FuncTools.c \
 	symbol_table.c \
+	identifiers.c \
+	datatypes.c \
 	mem.c \
 	ir.c \
 	err_buff.c \
@@ -177,6 +180,7 @@ ladybug_SOURCES = FuncTools.c \
 	ir_toolbox.c \
 	main_app.c \
 	subprograms.c \
+	subprograms_toolbox.c \
 	scope.c \
 	bitmap.c \
 	ir_parser.c \
@@ -273,12 +277,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FuncTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bison.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bitmap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/datatypes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/err_buff.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expr_toolbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expressions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/final_code.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/generator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/identifiers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/instruction_set.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ir_parser.Po@am__quote@
@@ -289,6 +295,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scope.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/statements.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subprograms.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subprograms_toolbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol_table.Po@am__quote@
 
 .c.o:

@@ -6,6 +6,8 @@ AM_YFLAGS = --defines=bison.tab.h -v
 
 ladybug_SOURCES = FuncTools.c \
 	symbol_table.c \
+	identifiers.c \
+	datatypes.c \
 	mem.c \
 	ir.c \
 	err_buff.c \
@@ -14,6 +16,7 @@ ladybug_SOURCES = FuncTools.c \
 	ir_toolbox.c \
 	main_app.c \
 	subprograms.c \
+	subprograms_toolbox.c \
 	scope.c \
 	bitmap.c \
 	ir_parser.c \
