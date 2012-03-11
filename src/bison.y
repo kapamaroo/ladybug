@@ -7,10 +7,12 @@
 #include "build_flags.h"
 #include "semantics.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "scope.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "subprograms.h"
+#include "subprograms_toolbox.h"
 #include "ir.h"
 #include "statements.h"
 #include "err_buff.h"
@@ -190,9 +192,9 @@ expression: expression RELOP expression {$$ = expr_relop_equ_addop_mult($1,$2,$3
 | setexpression {$$ = expr_from_setexpression($1);}
 ;
 
-variable: ID {$$ = refference_to_variable_or_enum_element($1);}
-| variable DOT ID {$$ = refference_to_record_element($1,$3);}
-| variable LBRACK expressions RBRACK {$$ = refference_to_array_element($1,$3);}
+variable: ID {$$ = reference_to_variable_or_enum_element($1);}
+| variable DOT ID {$$ = reference_to_record_element($1,$3);}
+| variable LBRACK expressions RBRACK {$$ = reference_to_array_element($1,$3);}
 ;
 
 expressions: expressions COMMA expression {$$ = expr_list_add($1,$3);}//pass array's dimensions or function's parameters

@@ -74,6 +74,11 @@ typedef enum var_status_known_t {
     KNOWN_YES
 } var_status_known_t;
 
+typedef enum func_status_t {
+    FUNC_USEFULL,
+    FUNC_OBSOLETE
+} func_status_t;
+
 typedef enum mem_seg_t {
     MEM_GLOBAL,
     MEM_STACK,
@@ -148,7 +153,7 @@ typedef struct var_t {
     data_t *datatype;
     char *name;
     scope_t *scope;
-    mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by refference and we load it from here
+    mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by reference and we load it from here
     struct expr_t *cond_assign; //if not NULL, check this cond to assign
     float fval; //hardcoded float value
     int ival; //hardcoded int value
@@ -174,6 +179,7 @@ typedef struct param_list_t {
 } param_list_t;
 
 typedef struct func_t {
+    func_status_t status;
     var_t *return_value;
     char *func_name;
     int param_num; //number of parameters

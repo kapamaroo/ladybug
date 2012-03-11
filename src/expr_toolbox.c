@@ -6,6 +6,7 @@
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "mem.h"
 #include "err_buff.h"
 
@@ -30,6 +31,9 @@ expr_t *expr_from_variable(var_t *v) {
     default:
         break;
     }
+
+    //mark variable as used
+    v->status_use = USE_YES;
 
     if (v->id_is==ID_CONST || v->status_known == KNOWN_YES) {
         //if (v->id_is==ID_CONST ) {
@@ -69,7 +73,7 @@ expr_t *expr_from_variable(var_t *v) {
     l->convert_to = NULL;
 
     if (v->id_is==ID_LOST) {
-        //refference to lost variable
+        //reference to lost variable
         l->expr_is = EXPR_LOST;
         return l;
     }
@@ -80,9 +84,6 @@ expr_t *expr_from_variable(var_t *v) {
         //yyerror(str_err);
         yywarning(str_err);
     }
-
-    //mark variable as used
-    v->status_use = USE_YES;
 
     //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
@@ -208,13 +209,13 @@ int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list) {
             }
 
             if (el_datatype != subprogram->param[i]->datatype) {
-                sprintf(str_err,"passing refference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
+                sprintf(str_err,"passing reference to datatype '%s' with datatype '%s'",subprogram->param[i]->datatype->data_name,el_datatype->data_name);
                 yyerror(str_err);
                 return 0;
             }
 
             if (list->expr_list[i]->var->id_is==ID_VAR_GUARDED) {
-                sprintf(str_err,"guard variable of for_statement '%s' passed by refference",list->expr_list[i]->var->name);
+                sprintf(str_err,"guard variable of for_statement '%s' passed by reference",list->expr_list[i]->var->name);
                 yyerror(str_err);
                 return 0;
             }
@@ -222,7 +223,7 @@ int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list) {
         else { //PASS_VAL
             //accept anything, if it's not rvalue we pass it's address
             if (TYPE_IS_COMPOSITE(el_datatype)) {
-                yyerror("arrays, records and set datatypes can only be passed by refference");
+                yyerror("arrays, records and set datatypes can only be passed by reference");
                 return 0;
             }
         }
@@ -244,7 +245,7 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
             //else we had parse errors
             if (check_valid_subprogram_call(sem_1->subprogram,list)) {
                 new_expr = expr_from_variable(sem_1->subprogram->return_value);
-                new_expr->expr_list = list;
+                new_expr->expr_list = list; //this is a hack, see ir_toolbox.c: expr_tree_to_ir_tree() //FIXME
                 return new_expr;
             }
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
@@ -255,11 +256,8 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
             yyerror(str_err);
         }
     } else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared subprogram '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared subprogram '%s'",id);
+        yyerror(str_err);
     }
     return expr_from_variable(lost_var_reference()); //EXPR_LOST
 }
@@ -536,11 +534,8 @@ dim_t *make_dim_bound_from_id(char *id) {
         }
     }
     else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared symbol '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared symbol '%s'",id);
+        yyerror(str_err);
     }
     return new_dim;
 }
@@ -588,7 +583,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
     return 1;
 }
 
-expr_t *make_array_refference(expr_list_t *list,data_t *data) {
+expr_t *make_array_reference(expr_list_t *list,data_t *data) {
     int i;
     expr_t *l;
     expr_t *dim_size;
@@ -670,7 +665,7 @@ expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
         return expr_from_hardcoded_boolean(0);
     }
     else {
-        sprintf(str_err,"different number of dimensions (%d) and dimension refferences (%d)",data->field_num, MAX_EXPR_LIST-list->expr_list_empty);
+        sprintf(str_err,"different number of dimensions (%d) and dimension references (%d)",data->field_num, MAX_EXPR_LIST-list->expr_list_empty);
         yyerror(str_err);
         return expr_from_hardcoded_boolean(0);
     }
@@ -986,11 +981,8 @@ expr_t *limit_from_id(char *id) {
         }
     }
     else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared symbol '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared symbol '%s'",id);
+        yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
     return new_expr;
@@ -1017,11 +1009,8 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
         }
     }
     else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared symbol '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared symbol '%s'",id);
+        yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
     return new_expr;
@@ -1037,11 +1026,8 @@ data_t *reference_to_typename(char *id) {
         yyerror("id is not a data type");
     }
     else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared datatype '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared datatype '%s'",id);
+        yyerror(str_err);
     }
     return NULL; //we return NULL here because we handle differently the various cases
     //with reference to user-defined datatypes

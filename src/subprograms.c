@@ -4,51 +4,11 @@
 
 #include "build_flags.h"
 #include "subprograms.h"
-//#include "scope.h"
+#include "subprograms_toolbox.h"
 #include "symbol_table.h"
 #include "mem.h"
 #include "err_buff.h"
 #include "statements.h"
-
-param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
-    int i;
-    param_t *new_param;
-    param_list_t *list;
-
-    if (!new_list) {
-        list = (param_list_t*)malloc(sizeof(param_list_t));
-        list->param_empty = MAX_PARAMS;
-    }
-    else {
-        list = new_list;
-    }
-
-    /* enable this if we want to declare parameters when their type isn't declared right,
-     * to avoid unreal error messages
-     */
-    if (!type) {
-        type = SEM_INTEGER;
-    }
-
-    if (mode==PASS_VAL && TYPE_IS_COMPOSITE(type)) {
-        yyerror("arrays, records and set datatypes can only be passed by refference");
-    }
-    else if (list->param_empty>=MAX_IDF-idf_empty) {
-        for (i=0;i<MAX_IDF-idf_empty;i++) {
-            new_param = (param_t*)malloc(sizeof(param_t));
-            new_param->name = idf_table[i]->name;
-            new_param->pass_mode = mode;
-            new_param->datatype = type;
-            list->param[MAX_PARAMS-list->param_empty] = new_param;
-            list->param_empty--;
-        }
-    }
-    else {
-        printf("too much function parameters\n");
-    }
-    idf_init();
-    return list;
-}
 
 void configure_formal_parameters(param_list_t *list,func_t *func) {
     int i;
@@ -65,9 +25,19 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
 }
 
 void check_for_return_value(func_t *subprogram,statement_t *body) {
+    //subprogram here is always a function
     if (body->last->return_point==0) {
         sprintf(str_err,"control reaches end of function '%s' without return value",subprogram->func_name);
         yyerror(str_err);
+    }
+}
+
+void check_if_function_is_obsolete(func_t *subprogram) {
+    //subprogram here is always a function
+    if (subprogram->return_value->status_known==KNOWN_YES) {
+        //we know the return value at compile time
+        //mark function as obsolete
+        subprogram->status = FUNC_OBSOLETE;
     }
 }
 
@@ -82,6 +52,7 @@ void subprogram_init(sem_t *sem_sub) {
         //Multiple body definitions for a subprogram are forbidden
         //for more information see the comments in semantics.h
         sprintf(str_err,"Multiple body definition for subprogram %s.",sem_sub->name);
+        yyerror(str_err);
         return;
     }
 
@@ -103,6 +74,7 @@ void subprogram_finit(sem_t *sem_sub,statement_t *body) {
     if (sem_sub->id_is == ID_FORWARDED_FUNC) {
         sem_sub->id_is = ID_FUNC;
         check_for_return_value(sem_sub->subprogram,body);
+        check_if_function_is_obsolete(sem_sub->subprogram);
     }
     else if (sem_sub->id_is == ID_FORWARDED_PROC) {
         sem_sub->id_is = ID_PROC;
@@ -120,6 +92,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
     if (sem_2) {
         sem_2->id_is = ID_FORWARDED_FUNC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
+        sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->func_name = sem_2->name;
         sem_2->subprogram->stack_size = 0;
 
@@ -133,6 +106,10 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         return_value->datatype = return_type;
         return_value->name = sem_2->name;
         //do not set the scope or Lvalue here, we are not inside the function yet
+
+        return_value->status_value = VALUE_GARBAGE;
+        return_value->status_use = USE_YES;
+        return_value->status_known = KNOWN_NO;
 
         sem_2->subprogram->return_value = return_value;
 
@@ -154,6 +131,7 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
 
         sem_2->id_is = ID_FORWARDED_PROC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
+        sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->func_name = sem_2->name;
         sem_2->subprogram->return_value = NULL;
         sem_2->subprogram->stack_size = 0;

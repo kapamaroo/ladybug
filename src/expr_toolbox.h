@@ -27,7 +27,7 @@ dim_t *make_dim_bound_from_id(char *id);
 dim_t *make_dim_bounds(expr_t *l1,expr_t *l2);
 
 int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list);
-expr_t *make_array_refference(expr_list_t *list,data_t *data);
+expr_t *make_array_reference(expr_list_t *list,data_t *data);
 expr_t *make_array_bound_check(expr_list_t *list,data_t *data);
 
 elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2);

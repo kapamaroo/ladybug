@@ -5,6 +5,7 @@
 #include "semantics.h"
 #include "scope.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "mem.h"

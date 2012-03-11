@@ -5,6 +5,7 @@
 #include "bison.tab.h"
 #include "scope.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "err_buff.h"
 
 int sm_scope;
@@ -163,7 +164,7 @@ void start_new_with_statement_scope(var_t *var) {
     //insert the record elements
     for (i=0;i<var->datatype->field_num;i++) {
         new_sem = sm_insert(var->datatype->field_name[i]);
-        new_sem->var = refference_to_record_element(var,var->datatype->field_name[i]);
+        new_sem->var = reference_to_record_element(var,var->datatype->field_name[i]);
     }
 }
 
