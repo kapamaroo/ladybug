@@ -70,6 +70,16 @@ ir_node_t *append_return_node(ir_node_t *ir_tree) {
     return ir_tree;
 }
 
+ir_node_t *append_exit_node(ir_node_t *ir_tree) {
+    ir_node_t *ir_exit;
+
+    ir_exit = new_ir_node_t(NODE_SYSCALL);
+    ir_exit->syscall_num = SVC_EXIT;
+    ir_tree = link_ir_to_ir(ir_exit,ir_tree);
+
+    return ir_tree;
+}
+
 ir_node_t *generate_module(statement_t *module) {
     statement_t *current;
     ir_node_t *new_ir;
@@ -91,12 +101,17 @@ void generate_all_modules() {
     int i;
     ir_node_t *ir_tree;
 
-    for(i=0;i<MAX_NUM_OF_MODULES;i++) {
-        if (!statement_root_module[i] ) {
-            break;
+    //main program (index 0), append exit code
+    ir_tree = generate_module(statement_root_module[0]);
+    ir_tree = append_exit_node(ir_tree);
+    ir_root_tree[0] = link_ir_to_ir(ir_tree,ir_root_tree[0]);
+
+    //start from the first subprogram
+    for(i=1;i<MAX_NUM_OF_MODULES;i++) {
+        if (statement_root_module[i]) {
+            ir_tree = generate_module(statement_root_module[i]);
+            ir_tree = append_return_node(ir_tree);
+            ir_root_tree[i] = link_ir_to_ir(ir_tree,ir_root_tree[i]);
         }
-        ir_tree = generate_module(statement_root_module[i]);
-        ir_tree = append_return_node(ir_tree);
-        ir_root_tree[i] = link_ir_to_ir(ir_tree,ir_root_tree[i]);
     }
 }
