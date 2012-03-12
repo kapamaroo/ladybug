@@ -6,6 +6,7 @@
 #define MAX_SCOPE 10
 
 extern func_t *main_program;
+extern func_t internal_scope;
 
 typedef struct with_stmt_scope_t {
     data_t *type; //record type of with statement
@@ -21,10 +22,9 @@ extern with_stmt_scope_t *root_scope_with;
 void init_scope();
 
 void start_new_scope(func_t *scope_owner);
-void close_current_scope();
-void sm_clean_current_scope();
+void close_scope(func_t *scope_owner);
+void sm_clean_current_scope(func_t *scope_owner);
 
-scope_t *get_current_scope();
 func_t *get_current_scope_owner();
 
 void start_new_with_statement_scope(var_t *var);

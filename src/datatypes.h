@@ -3,8 +3,17 @@
 
 #include "semantics.h"
 
+//pointers to standard type structures
+extern data_t *SEM_INTEGER;
+extern data_t *SEM_REAL;
+extern data_t *SEM_BOOLEAN;
+extern data_t *SEM_CHAR;
+
 extern data_t *usr_datatype; //new user defined datatype
 extern data_t *VIRTUAL_STRING_DATATYPE;
+extern data_t *void_datatype; //datatype of lost symbols
+
+void init_datatypes();
 
 data_t *close_datatype_start_new();
 data_t *close_array_type(data_t *def_type);

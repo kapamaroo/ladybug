@@ -3,7 +3,7 @@
 
 #include "build_flags.h"
 #include "semantics.h"
-#include "scope.h"
+//#include "scope.h"
 #include "symbol_table.h"
 #include "datatypes.h"
 #include "expr_toolbox.h"
@@ -405,6 +405,7 @@ ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list) {
     ir_node_t *new_proc_call;
 
     //we are error free here!
+    //printf("debug: jump to: %s\n", subprogram->name);
     new_proc_call = prepare_stack_and_call(subprogram,list);
     return new_proc_call;
 }

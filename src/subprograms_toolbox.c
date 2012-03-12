@@ -3,6 +3,7 @@
 
 #include "subprograms_toolbox.h"
 #include "identifiers.h"
+#include "datatypes.h"
 #include "err_buff.h"
 
 param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
@@ -68,11 +69,8 @@ sem_t *reference_to_forwarded_function(char *id) {
         }
     }
     else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"invalid forwarded function. '%s' not declared before in this scope",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"invalid forwarded function. '%s' not declared before in this scope",id);
+        sm_insert_lost_symbol(id,str_err);
     }
     return NULL;
 }
@@ -94,11 +92,8 @@ func_t *find_subprogram(char *id) {
             yyerror("ID is not a subprogram.");
         }
     } else {
-        if (!sm_find_lost_symbol(id)) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared subprogram '%s'",id);
-            yyerror(str_err);
-        }
+        sprintf(str_err,"undeclared subprogram '%s'",id);
+        sm_insert_lost_symbol(id,str_err);
     }
     return NULL;
 }

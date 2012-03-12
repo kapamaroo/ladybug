@@ -19,6 +19,7 @@
 struct expr_t;
 struct func_t;
 struct elexpr_list_t;
+struct sem_t;
 
 /** info `enum idt_t`
  * when a sub_header is declared it is marked as
@@ -94,12 +95,16 @@ typedef struct dim_t {
     int relative_distance; //number of elements between 2 indexes of the same dimension
 } dim_t;
 
-typedef struct scope_t {
+typedef struct symbol_table_t {
     int start_index; //for array symbol tables
-    struct func_t *scope_owner; //if scope_owner is NULL, the struct is inactive
-    char **lost_symbols;
-    int lost_symbols_empty;
-} scope_t;
+
+    char **lost;
+    int lost_empty;
+
+    struct sem_t **pool;
+    int pool_empty;
+
+} symbol_table_t;
 
 typedef struct data_t {
     type_t is;
@@ -112,7 +117,8 @@ typedef struct data_t {
     int enum_num[MAX_FIELDS]; //only for enums and subsets: each number of field_name
     dim_t *dim[MAX_ARRAY_DIMS]; //only for arrays: array's dimensions
     int memsize; //sizeof data type in bytes
-    scope_t *scope; //depth of declaration
+    //scope_t *scope; //depth of declaration
+    struct func_t *scope; //depth of declaration
 } data_t;
 
 #define TYPE_IS_STANDARD(d) (d->is==TYPE_INT || d->is==TYPE_REAL || d->is==TYPE_BOOLEAN || d->is==TYPE_CHAR)
@@ -152,7 +158,8 @@ typedef struct var_t {
 
     data_t *datatype;
     char *name;
-    scope_t *scope;
+    //scope_t *scope;
+    struct func_t *scope;
     mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by reference and we load it from here
     struct expr_t *cond_assign; //if not NULL, check this cond to assign
     float fval; //hardcoded float value
@@ -186,7 +193,8 @@ typedef struct func_t {
     param_t *param[MAX_PARAMS];
     mem_t *param_Lvalue[MAX_PARAMS];
     int stack_size; //formal parameters + return value + whatever
-    //scope_t *scope; //a subprogram belongs to the previous scope
+    struct func_t *scope;
+    symbol_table_t symbol_table;
     char *label;
     int unique_id; //index of ir_root_tree (low level info)
 } func_t;

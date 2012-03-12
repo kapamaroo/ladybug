@@ -83,6 +83,13 @@ void idf_addto_record() {
 }
 
 void idf_init(int idf_free_memory) {
+    static unsigned int first_call = 1;
+
+    if (first_call) {
+        idf_table = (idf_t*)malloc(MAX_IDF*sizeof(idf_t));
+        first_call = 0;
+    }
+
     int i;
     idf_data_type = NULL;
     for (i=0;i<MAX_IDF-idf_empty;i++) {

@@ -82,7 +82,7 @@ expr_t *expr_from_variable(var_t *v) {
         //change this to error??
         sprintf(str_err,"variable '%s' of datatype '%s' maybe used 'uninitialized' in '%s'" ,v->name,
                 v->datatype->name,
-                v->scope->scope_owner->name);
+                v->scope->name);
         //yyerror(str_err);
         yywarning(str_err);
     }
@@ -138,8 +138,8 @@ expr_t *expr_from_STRING(char *id) {
     dummy_var->id_is = ID_STRING;
     dummy_var->datatype = SEM_CHAR;
     dummy_var->cstr = id;
-    //we have STRING only in assign and write statement, we don't need the get_current_scope()
-    //dummy_var->scope = get_current_scope();
+    //we have STRING only in assign and write statement, we don't need the scope
+    //dummy_var->scope = get_current_scope_owner();
     dummy_var->Lvalue = mem_allocate_string(id);
 
     new_expr = (expr_t*)malloc(sizeof(expr_t));
@@ -261,7 +261,7 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         }
     } else {
         sprintf(str_err,"undeclared subprogram '%s'",id);
-        yyerror(str_err);
+        sm_insert_lost_symbol(id,str_err);
     }
     return expr_from_variable(lost_var_reference()); //EXPR_LOST
 }
@@ -539,7 +539,7 @@ dim_t *make_dim_bound_from_id(char *id) {
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
-        yyerror(str_err);
+        sm_insert_lost_symbol(id,str_err);
     }
     return new_dim;
 }
@@ -986,6 +986,7 @@ expr_t *limit_from_id(char *id) {
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
+        //sm_insert_lost_symbol(id,str_err);
         yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
@@ -1014,6 +1015,7 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
+        //sm_insert_lost_symbol(id,str_err);
         yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
@@ -1031,6 +1033,7 @@ data_t *reference_to_typename(char *id) {
     }
     else {
         sprintf(str_err,"undeclared datatype '%s'",id);
+        //sm_insert_lost_symbol(id,str_err);
         yyerror(str_err);
     }
     return NULL; //we return NULL here because we handle differently the various cases

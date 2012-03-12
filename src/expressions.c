@@ -3,6 +3,7 @@
 
 #include "semantics.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
 #include "err_buff.h"

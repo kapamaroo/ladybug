@@ -14,16 +14,6 @@
 #include "mem.h"
 #include "err_buff.h"
 
-//ARRAY implementation of symbol table
-sem_t **sm_array;
-sem_t **sm_table;
-int sm_empty = MAX_SYMBOLS;
-
-sem_t *sem_INTEGER;
-sem_t *sem_REAL;
-sem_t *sem_BOOLEAN;
-sem_t *sem_CHAR;
-
 var_t *lost_var;
 
 func_t *create_main_program(char *name) {
@@ -46,71 +36,14 @@ func_t *create_main_program(char *name) {
 }
 
 void init_symbol_table() {
-    data_t *void_datatype; //datatype of lost symbols
-
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("Initializing symbol table.. ");
 #endif
 
-    sm_array = (sem_t**)malloc(MAX_SYMBOLS*sizeof(sem_t*));
-    sm_table = sm_array;
-
     init_scope();
-
-    //at the begining there is no memory
-    idf_table = (idf_t*)malloc(MAX_IDF*sizeof(idf_t));
     idf_init(IDF_KEEP_MEM);
 
-    usr_datatype = (data_t*)malloc(sizeof(data_t));
-
-    void_datatype = (data_t*)malloc(sizeof(struct data_t));
-    void_datatype->is = TYPE_VOID;
-    void_datatype->def_datatype = void_datatype;
-    void_datatype->name = "__void_datatype__";
-    void_datatype->memsize = 0;
-
-    //insert the standard types
-    sem_INTEGER = sm_insert("integer");
-    sem_REAL = sm_insert("real");
-    sem_BOOLEAN = sm_insert("boolean");
-    sem_CHAR = sm_insert("char");
-
-    sem_INTEGER->id_is = ID_TYPEDEF;
-    sem_REAL->id_is = ID_TYPEDEF;
-    sem_BOOLEAN->id_is = ID_TYPEDEF;
-    sem_CHAR->id_is = ID_TYPEDEF;
-
-    sem_INTEGER->comp = (data_t*)malloc(sizeof(data_t));
-    sem_REAL->comp = (data_t*)malloc(sizeof(data_t));
-    sem_BOOLEAN->comp = (data_t*)malloc(sizeof(data_t));
-    sem_CHAR->comp = (data_t*)malloc(sizeof(data_t));
-
-    sem_INTEGER->comp->is = TYPE_INT;
-    sem_REAL->comp->is = TYPE_REAL;
-    sem_BOOLEAN->comp->is = TYPE_BOOLEAN;
-    sem_CHAR->comp->is = TYPE_CHAR;
-
-    //point to itself
-    sem_INTEGER->comp->def_datatype = sem_INTEGER->comp;
-    sem_REAL->comp->def_datatype = sem_REAL->comp;
-    sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
-    sem_CHAR->comp->def_datatype = sem_CHAR->comp;
-
-    sem_INTEGER->comp->name = sem_INTEGER->name;
-    sem_REAL->comp->name = sem_REAL->name;
-    sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
-    sem_CHAR->comp->name = sem_CHAR->name;
-
-    sem_INTEGER->comp->memsize = MEM_SIZEOF_INT;
-    sem_REAL->comp->memsize = MEM_SIZEOF_REAL;
-    sem_BOOLEAN->comp->memsize = MEM_SIZEOF_BOOLEAN;
-    sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
-
-    //(d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
-    VIRTUAL_STRING_DATATYPE = (data_t*)malloc(sizeof(data_t));
-    VIRTUAL_STRING_DATATYPE->is = TYPE_ARRAY;
-    VIRTUAL_STRING_DATATYPE->field_num = 1;
-    VIRTUAL_STRING_DATATYPE->def_datatype = SEM_CHAR;
+    init_datatypes();
 
     lost_var = (var_t*)malloc(sizeof(var_t));
     lost_var->id_is = ID_LOST;
@@ -138,32 +71,44 @@ sem_t *sm_find(const char *id) {
     //search in enumerations
     int i;
     int j;
+    int size;
 
-    //search backwards in order to search in current scope first
-    for (i=MAX_SYMBOLS-sm_empty-1;i>=0;i--) {
-        if (sm_table[i] != NULL) {
-            //search in symbols' names
-            if (strcmp(id,sm_table[i]->name)==0) {
-                return sm_table[i];
-            }
-            //search in composite types for id
-            if (sm_table[i]->id_is==ID_TYPEDEF) {
-                if (sm_table[i]->comp->is==TYPE_ENUM
-                    /*|| sm_table->comp->def_type==D_RECORD*/) {
-                    for (j=0;j<sm_table[i]->comp->field_num;j++) {
-                        if (strcmp(id,sm_table[i]->comp->field_name[j])==0) {
-                            return sm_table[i];
+    func_t *scope_owner;
+    sem_t **sm_table;
+
+    scope_owner = get_current_scope_owner();
+    while (scope_owner) {
+        //printf("debug: search symbol '%s' in scope '%s'\n", id, scope_owner->name);
+
+        size = MAX_SYMBOLS - scope_owner->symbol_table.pool_empty;
+        sm_table = scope_owner->symbol_table.pool;
+
+        //backwards search to find the correct symbol (in case of with_statement name overloading)
+        for (i=size-1;i>=0;i--) {
+            if (sm_table[i]) {
+                //search in symbols' names
+                if (strcmp(id,sm_table[i]->name)==0) {
+                    return sm_table[i];
+                }
+                //search in composite types for id
+                if (sm_table[i]->id_is==ID_TYPEDEF) {
+                    if (sm_table[i]->comp->is==TYPE_ENUM
+                        /*|| sm_table[i]->comp->def_type==D_RECORD*/) {
+                        for (j=0;j<sm_table[i]->comp->field_num;j++) {
+                            if (strcmp(id,sm_table[i]->comp->field_name[j])==0) {
+                                return sm_table[i];
+                            }
                         }
                     }
                 }
             }
         }
-        else {
-            //no more symbols, return
-            sm_insert_lost_symbol(id);
-            return NULL;
-        }
+
+        scope_owner = scope_owner->scope;
     }
+
+    //sm_insert_lost_symbol(id,NULL);
+
     return NULL;
 }
 
@@ -172,15 +117,24 @@ sem_t *sm_insert(const char *id) {
     sem_t *existing_sem;
     sem_t *new_sem;
 
+    func_t *scope_owner;
+    sem_t **sm_table;
+    int sm_empty;
+
+    scope_owner = get_current_scope_owner();
+    sm_table = scope_owner->symbol_table.pool;
+    sm_empty = scope_owner->symbol_table.pool_empty;
+
     existing_sem = sm_find(id);
-    if ((!existing_sem || existing_sem->scope!=get_current_scope() || root_scope_with) && sm_empty) {
+
+    if ((!existing_sem || existing_sem->scope!=scope_owner || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)malloc(sizeof(sem_t));
         new_sem->name = strdup(id);
-        new_sem->scope = get_current_scope();
-        new_sem->index = MAX_SYMBOLS-sm_empty;
-        sm_table[MAX_SYMBOLS-sm_empty] = new_sem;
-        sm_empty--;
-        //printf("__symbol__ `%s` inserted :empty=%d\n",id,sm_empty);
+        new_sem->scope = scope_owner;
+        new_sem->index = MAX_SYMBOLS - sm_empty;
+        sm_table[MAX_SYMBOLS - sm_empty] = new_sem;
+        scope_owner->symbol_table.pool_empty--; //decrease the real counter
+        //printf("debug: inserted symbol `%s` inserted in scope '%s'\n", id ,scope_owner->name);
         return new_sem;
     }
     else if (!sm_empty) {
@@ -199,6 +153,7 @@ void sm_remove(char *id) {
     sem_t *symbol;
     func_t *scope_owner;
 
+    scope_owner = get_current_scope_owner();
     symbol = sm_find(id);
 
     if (!symbol) {
@@ -213,7 +168,7 @@ void sm_remove(char *id) {
         if (symbol->var->status_use==USE_NONE) {
             sprintf(str_err, "variable '%s' of type '%s' not used in '%s'", symbol->var->name,
                     symbol->var->datatype->name,
-                    symbol->var->scope->scope_owner->name);
+                    symbol->var->scope->name);
             yywarning(str_err);
         }
     case ID_RETURN:
@@ -242,15 +197,15 @@ void sm_remove(char *id) {
         break;
     case ID_FORWARDED_FUNC:
     case ID_FORWARDED_PROC:
-        scope_owner = get_current_scope_owner();
         sprintf(str_err,"subprogram '%s' without body in module %s.",id,scope_owner->name);
         yyerror(str_err);
         break;
     }
     //free(symbol->name);
-    free(symbol);
-    symbol = NULL;
-    sm_empty++;
+    free(scope_owner->symbol_table.pool[symbol->index]);
+    scope_owner->symbol_table.pool[symbol->index] = NULL;
+    scope_owner->symbol_table.pool_empty++;
+    //printf("debug: remove symbol '%s' of scope '%s'\n", symbol->name, scope_owner->name);
 }
 
 void declare_consts(char *id,expr_t *l) {
@@ -266,26 +221,15 @@ void declare_consts(char *id,expr_t *l) {
     }
 
     if (l->expr_is!=EXPR_HARDCODED_CONST) {
-        lost_id = sm_find_lost_symbol(id);
-        if (!lost_id) {
-            sm_insert_lost_symbol(id);
-            //sprintf(str_err,"undeclared symbol '%s'",id);
-            //yyerror(str_err);
-        }
         sprintf(str_err,"non constant value in constant declaration of '%s'",id);
-        yyerror(str_err);
+        sm_insert_lost_symbol(id,str_err);
         return;
     }
 
     if (!TYPE_IS_STANDARD(l->datatype) && l->datatype->is!=TYPE_ENUM) {
         //we have only one value so it cannot be a subset
-        yyerror("invalid nonstandard datatype of constant declaration");
-        lost_id = sm_find_lost_symbol(id);
-        if (!lost_id) {
-            sm_insert_lost_symbol(id);
-            //sprintf(str_err,"undeclared symbol '%s'",id);
-            //yyerror(str_err);
-        }
+        sprintf(str_err,"invalid non-standard datatype value in constant declaration of '%s'",id);
+        sm_insert_lost_symbol(id,str_err);
         return;
     }
 
@@ -347,12 +291,9 @@ void declare_vars(data_t* type){
     }
     else {
         for (i=0;i<MAX_IDF-idf_empty;i++) {
-            lost_id = sm_find_lost_symbol(idf_table[i].name);
-            if (!lost_id) {
-                sm_insert_lost_symbol(idf_table[i].name);
-                //sprintf(str_err,"undeclared symbol '%s'",id);
-                //yyerror(str_err);
-            }
+            sm_insert_lost_symbol(idf_table[i].name,NULL);
+            //sprintf(str_err,"undeclared symbol '%s'",id);
+            //yyerror(str_err);
         }
 #if BISON_DEBUG_LEVEL >= 1
         yyerror("trying to declare variable(s) of unknown datatype (debugging info)");
@@ -371,6 +312,12 @@ void declare_formal_parameters(func_t *subprogram) {
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
         new_sem = sm_insert(subprogram->param[i]->name);
+
+        //should always succeed
+        if (!new_sem) {
+            die("INTERNAL_ERROR: declaration of formal parameter failed");
+        }
+
         new_sem->id_is = ID_VAR;
 
         new_var = (var_t*)malloc(sizeof(var_t));
@@ -388,26 +335,34 @@ void declare_formal_parameters(func_t *subprogram) {
     }
 }
 
-void sm_insert_lost_symbol(const char *id) {
+void sm_insert_lost_symbol(const char *id, const char *error_msg) {
     char **pool;
     char *tmp;
-    scope_t *current_scope;
+    func_t *current_scope;
+    int empty;
 
     tmp = sm_find_lost_symbol(id);
     if (tmp) {
         return;
     }
 
-    current_scope = get_current_scope();
-    pool = current_scope->lost_symbols;
+    current_scope = get_current_scope_owner();
+    pool = current_scope->symbol_table.lost;
+    empty = current_scope->symbol_table.lost_empty;
 
-    if (current_scope->lost_symbols_empty>0) {
+    if (empty>0) {
+        //printf("debug: insert lost symbol '%s' in scope '%s'\n", id, current_scope->name);
         tmp = strdup(id);
-        pool[MAX_LOST_SYMBOLS - current_scope->lost_symbols_empty] = tmp;
-        current_scope->lost_symbols_empty--;
+        pool[MAX_LOST_SYMBOLS - empty] = tmp;
+        current_scope->symbol_table.lost_empty--;
+
+        //print error if any
+        if (error_msg) {
+            yyerror(error_msg);
+        }
     }
     else {
-        die("FATAL_ERROR: reached maximun lost symbols from current scope");
+        die("FATAL_ERROR: reached maximun lost symbols for current scope");
     }
 }
 
@@ -415,23 +370,24 @@ char *sm_find_lost_symbol(const char *id) {
     char **pool;
     int index;
     int i;
-    scope_t *current_scope;
+    func_t *current_scope;
 
-    current_scope = get_current_scope();
-    pool = current_scope->lost_symbols;
+    current_scope = get_current_scope_owner();
 
-    index = MAX_LOST_SYMBOLS - current_scope->lost_symbols_empty;
+    while (current_scope) {
+        pool = current_scope->symbol_table.lost;
+        index = MAX_LOST_SYMBOLS - current_scope->symbol_table.lost_empty;
 
-    if (index>0) {
-        for (i=index-1;i>=0;i--) {
-            if (pool[i]==NULL) {
-                return NULL;
-            }
-            else if (strcmp(pool[i],id)==0) {
+        for (i=0;i<index;i++) {
+            if (strcmp(pool[i],id)==0) {
+                //printf("debug: found lost symbol '%s' in scope '%s'\n", id, current_scope->name);
                 return pool[i];
             }
         }
+
+        current_scope = current_scope->scope;
     }
+
     return NULL; //no lost symbols
 }
 

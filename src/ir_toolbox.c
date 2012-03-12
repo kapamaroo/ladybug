@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "semantics.h"
-#include "scope.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "ir.h"
 #include "ir_toolbox.h"
 #include "bitmap.h"
@@ -278,7 +278,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         //load the lvalue of every datatype
 
         if (ltree->var->id_is==ID_RETURN) {
-            if (ltree->var->scope->scope_owner->status==FUNC_OBSOLETE) {
+            if (ltree->var->scope->status==FUNC_OBSOLETE) {
                 new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
                 new_node->ival = ltree->var->ival;
                 new_node->fval = ltree->var->fval;
@@ -288,7 +288,8 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 return new_node;
             }
 
-            new_func_call = prepare_stack_and_call(ltree->var->scope->scope_owner,ltree->expr_list);
+            //printf("debug: function call: %s\treturn_value: %s\n", ltree->var->scope->name, ltree->var->name);
+            new_func_call = prepare_stack_and_call(ltree->var->scope,ltree->expr_list);
 
             //finally we must read the return value after the actual call
             new_node = new_ir_node_t(NODE_LOAD);
@@ -433,8 +434,8 @@ ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list) {
 
     tmp_var = (var_t*)malloc(sizeof(var_t)); //allocate once
     tmp_var->id_is = ID_VAR;
-#warning do we need the scope of the callee here?
-    tmp_var->scope = get_current_scope();
+    //#warning do we need the scope of the callee here?
+    tmp_var->scope = NULL;
     tmp_var->cond_assign = NULL;
 
     for (i=0;i<subprogram->param_num;i++) {

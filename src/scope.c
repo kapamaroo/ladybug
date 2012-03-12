@@ -9,8 +9,10 @@
 #include "err_buff.h"
 
 int sm_scope;
-scope_t scope_stack[MAX_SCOPE+1];
+func_t *scope_stack[MAX_SCOPE+2]; //+1 for internal_scope
+
 func_t *main_program;
+func_t internal_scope;
 
 with_stmt_scope_t *root_scope_with;
 with_stmt_scope_t *tail_scope_with;
@@ -18,15 +20,18 @@ with_stmt_scope_t *tail_scope_with;
 void init_scope() {
     int i;
 
+    internal_scope.name = "__internal_scope__";
+
     root_scope_with = NULL;
     tail_scope_with = NULL;
 
     sm_scope = -1; //no scope yet
 
     for (i=0;i<MAX_SCOPE+1;i++) {
-        scope_stack[i].scope_owner = NULL;
-        scope_stack[i].lost_symbols = NULL;
+        scope_stack[i] = NULL;
     }
+
+    start_new_scope(&internal_scope);
 }
 
 void start_new_scope(func_t *scope_owner) {
@@ -38,17 +43,25 @@ void start_new_scope(func_t *scope_owner) {
     //create new scope even if symbol table is full, let the next sm_insert() handle this case
 
     if (sm_scope<MAX_SCOPE) {
-        sm_scope++;
-        scope_stack[sm_scope].scope_owner = scope_owner;
-        scope_stack[sm_scope].lost_symbols_empty = MAX_LOST_SYMBOLS;
-        scope_stack[sm_scope].lost_symbols = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
+        scope_owner->symbol_table.pool = (sem_t**)malloc(MAX_SYMBOLS*sizeof(sem_t*));
+        scope_owner->symbol_table.pool_empty = MAX_SYMBOLS;
 
-        for (i=0;i<MAX_LOST_SYMBOLS;i++) {
-            scope_stack[sm_scope].lost_symbols[i] = NULL;
+        for (i=0;i<MAX_SYMBOLS;i++) {
+            scope_owner->symbol_table.pool[i] = NULL;
         }
 
-        scope_stack[sm_scope].start_index = sm_table[MAX_SYMBOLS-sm_empty-1]->index + 1;
+        scope_owner->symbol_table.lost = (char**)malloc(MAX_LOST_SYMBOLS*sizeof(char*));
+        scope_owner->symbol_table.lost_empty = MAX_LOST_SYMBOLS;
 
+        for (i=0;i<MAX_LOST_SYMBOLS;i++) {
+            scope_owner->symbol_table.lost[i] = NULL;
+        }
+
+        //a subprogram belongs to the previous scope
+        scope_owner->scope = (sm_scope<0) ? NULL : scope_stack[sm_scope];
+        sm_scope++;
+        scope_stack[sm_scope] = scope_owner;
+        //printf("debug: %d scope '%s'\n", sm_scope ,scope_owner->name);
         //printf("__start_new_scope_%s_%d\n",scope_owner->name,sm_scope);
         return;
     }
@@ -57,7 +70,7 @@ void start_new_scope(func_t *scope_owner) {
     }
 }
 
-void close_current_scope() {
+void close_scope(func_t *scope_owner) {
     //every time a scope is closed we must clean the symbol table from its declarations and definitions
     //make sure all the declared subprobrams in this scope,
     //have one body in this scope too, (in the case of FORWARD)
@@ -66,42 +79,41 @@ void close_current_scope() {
         //there is no main scope any more
         die("INTERNAL_ERROR: no scope to delete");
     }
-    sm_clean_current_scope();
+    sm_clean_current_scope(scope_owner);
 
     //printf("__close_current_scope_%d\n",sm_scope);
+    scope_stack[sm_scope] = NULL;
     sm_scope--;
 }
 
-scope_t *get_current_scope() {
-    return &scope_stack[sm_scope];
-}
-
 func_t *get_current_scope_owner() {
-    return (func_t*)(scope_stack[sm_scope].scope_owner);
+    if (sm_scope<0) { die("too early scope request"); }
+    return scope_stack[sm_scope];
 }
 
-void sm_clean_current_scope() {
+void sm_clean_current_scope(func_t *scope_owner) {
     int i;
-    int scope_start;
+    int size;
 
-    scope_start = scope_stack[sm_scope].start_index;
-    i = MAX_SYMBOLS-sm_empty-1;
-    for (;i>=scope_start;i--) {
-        sm_remove(sm_table[i]->name);
+    size = MAX_SYMBOLS - scope_owner->symbol_table.pool_empty;
+    for (i=size-1;i>=0;i--) {
+        //if (!scope_owner->symbol_table.pool[i]) { break; }
+        //printf("debug: trying to remove symbol '%s' of scope '%s'\n",scope_owner->symbol_table.pool[i]->name, scope_owner->name);
+        sm_remove(scope_owner->symbol_table.pool[i]->name);
     }
+
+    free(scope_owner->symbol_table.pool);
+    scope_owner->symbol_table.pool = NULL;
 
     //clean lost symbols of scope
     for (i=0;i<MAX_LOST_SYMBOLS;i++) {
-        if (scope_stack[sm_scope].lost_symbols[i]!=NULL) {
-            free(scope_stack[sm_scope].lost_symbols[i]);
-        }
-        else {
-            //no more lost symbols
-            break;
-        }
+        //if (!scope_owner->symbol_table.lost[i]) { break; }
+
+        free(scope_owner->symbol_table.lost[i]);
     }
-    free(scope_stack[sm_scope].lost_symbols);
-    scope_stack[sm_scope].lost_symbols = NULL;
+
+    free(scope_owner->symbol_table.lost);
+    scope_owner->symbol_table.lost = NULL;
 }
 
 void start_new_with_statement_scope(var_t *var) {

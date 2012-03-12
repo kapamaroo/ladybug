@@ -7,6 +7,7 @@
 #include "ir_toolbox.h"
 #include "mem.h"
 #include "symbol_table.h"
+#include "datatypes.h"
 #include "err_buff.h"
 
 data_t datatype_max_sizeof_set; //array of chars with 16 elements (max size of sets in bytes)

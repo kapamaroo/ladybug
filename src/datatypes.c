@@ -10,8 +10,77 @@
 #include "expr_toolbox.h"
 #include "err_buff.h"
 
+data_t *SEM_INTEGER;
+data_t *SEM_REAL;
+data_t *SEM_BOOLEAN;
+data_t *SEM_CHAR;
+
 data_t *usr_datatype; //new user defined datatype
 data_t *VIRTUAL_STRING_DATATYPE;
+data_t *void_datatype; //datatype of lost symbols
+
+void init_datatypes() {
+    sem_t *sem_INTEGER;
+    sem_t *sem_REAL;
+    sem_t *sem_BOOLEAN;
+    sem_t *sem_CHAR;
+
+    //insert the standard types
+    sem_INTEGER = sm_insert("integer");
+    sem_REAL = sm_insert("real");
+    sem_BOOLEAN = sm_insert("boolean");
+    sem_CHAR = sm_insert("char");
+
+    sem_INTEGER->id_is = ID_TYPEDEF;
+    sem_REAL->id_is = ID_TYPEDEF;
+    sem_BOOLEAN->id_is = ID_TYPEDEF;
+    sem_CHAR->id_is = ID_TYPEDEF;
+
+    sem_INTEGER->comp = (data_t*)malloc(sizeof(data_t));
+    sem_REAL->comp = (data_t*)malloc(sizeof(data_t));
+    sem_BOOLEAN->comp = (data_t*)malloc(sizeof(data_t));
+    sem_CHAR->comp = (data_t*)malloc(sizeof(data_t));
+
+    sem_INTEGER->comp->is = TYPE_INT;
+    sem_REAL->comp->is = TYPE_REAL;
+    sem_BOOLEAN->comp->is = TYPE_BOOLEAN;
+    sem_CHAR->comp->is = TYPE_CHAR;
+
+    //point to itself
+    sem_INTEGER->comp->def_datatype = sem_INTEGER->comp;
+    sem_REAL->comp->def_datatype = sem_REAL->comp;
+    sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
+    sem_CHAR->comp->def_datatype = sem_CHAR->comp;
+
+    sem_INTEGER->comp->name = sem_INTEGER->name;
+    sem_REAL->comp->name = sem_REAL->name;
+    sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
+    sem_CHAR->comp->name = sem_CHAR->name;
+
+    sem_INTEGER->comp->memsize = MEM_SIZEOF_INT;
+    sem_REAL->comp->memsize = MEM_SIZEOF_REAL;
+    sem_BOOLEAN->comp->memsize = MEM_SIZEOF_BOOLEAN;
+    sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
+
+    SEM_INTEGER = sem_INTEGER->comp;
+    SEM_REAL = sem_REAL->comp;
+    SEM_BOOLEAN = sem_BOOLEAN->comp;
+    SEM_CHAR = sem_CHAR->comp;
+
+    usr_datatype = (data_t*)malloc(sizeof(data_t));
+
+    void_datatype = (data_t*)malloc(sizeof(struct data_t));
+    void_datatype->is = TYPE_VOID;
+    void_datatype->def_datatype = void_datatype;
+    void_datatype->name = "__void_datatype__";
+    void_datatype->memsize = 0;
+
+    //(d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
+    VIRTUAL_STRING_DATATYPE = (data_t*)malloc(sizeof(data_t));
+    VIRTUAL_STRING_DATATYPE->is = TYPE_ARRAY;
+    VIRTUAL_STRING_DATATYPE->field_num = 1;
+    VIRTUAL_STRING_DATATYPE->def_datatype = SEM_CHAR;
+}
 
 var_t *reference_to_variable_or_enum_element(char *id) {
     sem_t *sem_1;
@@ -29,37 +98,33 @@ var_t *reference_to_variable_or_enum_element(char *id) {
         }
         else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
             //ALLOW this if only enumerations and subsets can declare an iter_space
-            if (strcmp(sem_1->comp->name,id)==0) {
-                sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
-                yyerror(str_err);
-                return lost_var_reference();
+            if (strcmp(sem_1->comp->name,id)!=0) {
+                //the ID is an enumeration element
+                new_enum_const = (var_t*)malloc(sizeof(var_t));
+                new_enum_const->id_is = ID_CONST;
+                new_enum_const->datatype = sem_1->comp;
+                new_enum_const->name = sem_1->comp->field_name[enum_num_of_id(sem_1->comp,id)];
+                new_enum_const->Lvalue = NULL;
+                new_enum_const->cond_assign = NULL;
+                new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
+                //do not set the scope, this is not a variable
+                return new_enum_const;
             }
-            //the ID is an enumeration element
-            new_enum_const = (var_t*)malloc(sizeof(var_t));
-            new_enum_const->id_is = ID_CONST;
-            new_enum_const->datatype = sem_1->comp;
-            new_enum_const->name = sem_1->comp->field_name[enum_num_of_id(sem_1->comp,id)];
-            new_enum_const->Lvalue = NULL;
-            new_enum_const->cond_assign = NULL;
-            new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
-            //do not set the scope, this is not a variable
-            return new_enum_const;
+
+            sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
+            yyerror(str_err);
         }
         else {
             sprintf(str_err,"'%s' is not a variable or constant",id);
             yyerror(str_err);
-            return lost_var_reference();
         }
     }
     else {
-        lost_id = sm_find_lost_symbol(id);
-        if (!lost_id) {
-            sm_insert_lost_symbol(id);
-            sprintf(str_err,"undeclared symbol '%s'",id);
-            yyerror(str_err);
-        }
-        return lost_var_reference();
+        sprintf(str_err,"bad reference: undeclared symbol '%s'",id);
+        sm_insert_lost_symbol(id,str_err);
     }
+
+    return lost_var_reference();
 }
 
 var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
@@ -363,8 +428,9 @@ void add_dim_to_array_type(dim_t *dim) {
 
 void make_type_definition(char *id, data_t *type) {
     sem_t *sem_1;
-    if (type!=NULL) {
-        if (!sm_find(id)) {
+    if (type) {
+        sem_1 = sm_find(id);
+        if (!sem_1) {
             sem_1 = sm_insert(id);
             //set semantics to symbol
             sem_1->id_is = ID_TYPEDEF;

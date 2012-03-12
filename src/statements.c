@@ -53,7 +53,7 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
 }
 
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement) {
-    close_current_scope();
+    close_scope(subprogram);
 
 #warning we leak memory on obsolete functions //FIXME
     if (subprogram->status==FUNC_OBSOLETE) { return; }
@@ -248,9 +248,9 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 
     if (v->id_is==ID_RETURN) {
         scope_owner = get_current_scope_owner();
-        if (scope_owner->return_value->scope!=get_current_scope()) {
+        if (v->scope!=scope_owner) {
             //v->name is the same with function's name because that's how functions return their value
-            sprintf(str_err,"function '%s' asigns return value of function '%s'",v->name,scope_owner->name);
+            sprintf(str_err,"subprogram '%s' assigns return value of function '%s'" ,scope_owner->name, v->name);
             yyerror(str_err);
             return new_statement_t(ST_BadStatement);
         }
@@ -336,6 +336,8 @@ statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params) {
         //bad call
         return new_statement_t(ST_BadStatement);
     }
+
+    //printf("debug: procedure call: %s\n", subprogram->name);
 
     new_call = new_statement_t(ST_Call);
     new_call->_call.subprogram = subprogram;
