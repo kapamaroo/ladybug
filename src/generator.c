@@ -7,6 +7,8 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
     ir_node_t *ir_new;
     ir_node_t *ir_tmp1;
     ir_node_t *ir_tmp2;
+    ir_node_t *ir_tmp;
+    statement_t *s_tmp;
 
     if (!s) {
         return NULL;
@@ -19,8 +21,23 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
 
     switch (s->type) {
     case ST_If:
-        ir_tmp1 = generate_ir_from_statement(s->_if._true);
-        ir_tmp2 = generate_ir_from_statement(s->_if._false);
+
+        ir_tmp1 = NULL;
+        s_tmp = s->_if._true;
+        while (s_tmp) {
+            ir_tmp = generate_ir_from_statement(s_tmp);
+            ir_tmp1 = link_ir_to_ir(ir_tmp,ir_tmp1);
+            s_tmp = s_tmp->next;
+        }
+
+        ir_tmp2 = NULL;
+        s_tmp = s->_if._false;
+        while (s_tmp) {
+            ir_tmp = generate_ir_from_statement(s_tmp);
+            ir_tmp2 = link_ir_to_ir(ir_tmp,ir_tmp2);
+            s_tmp = s_tmp->next;
+        }
+
         ir_new = new_ir_if(s->_if.condition,
                            ir_tmp1,
                            ir_tmp2);
