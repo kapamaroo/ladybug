@@ -315,7 +315,7 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
         //if_node->ir_cond = expr_tree_to_ir_tree(cond);
         ir_cond = expr_tree_to_ir_cond(cond);
         ir_cond = backpatch_ir_cond(ir_cond,true_stmt,false_stmt);
-
+        ir_cond = link_ir_to_ir(false_stmt,ir_cond);
     } else {
         // only true_stmt
         /* pseudo assembly
@@ -330,7 +330,6 @@ ir_node_t *new_ir_if(expr_t *cond,ir_node_t *true_stmt,ir_node_t *false_stmt) {
         ir_cond = backpatch_ir_cond(ir_cond,ir_exit_if,true_stmt);
     }
 
-    ir_cond = link_ir_to_ir(false_stmt,ir_cond);     //this ignores false_stmt if NULL
     ir_cond = link_ir_to_ir(true_stmt,ir_cond);
 
     return ir_cond;

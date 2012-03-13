@@ -102,7 +102,6 @@ ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
     case OP_AND:
     case OP_OR:
         ir_rval->ir_rval = ir_tree_to_ir_cond(ir_rval->ir_rval);
-        ir_rval->ir_rval2 = ir_tree_to_ir_cond(ir_rval->ir_rval2);
         //do not break;
     case OP_NOT:
         ir_rval->ir_rval2 = ir_tree_to_ir_cond(ir_rval->ir_rval2);
@@ -138,7 +137,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
     ir_node_t *new_node;
     ir_node_t *convert_node;
     ir_node_t *new_func_call;
-    ir_node_t *tmp_node;
 
     expr_t *tmp_expr;
 
@@ -175,8 +173,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             }
         }
         else { //it's all the same
-            tmp_node = NULL;
-
             switch (ltree->op) {
             case RELOP_B:
             case RELOP_BE:
@@ -223,9 +219,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             }
 
             new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
-
-            //this ignores the tmp_node if NULL
-            new_node = link_ir_to_ir(tmp_node,new_node);
 
             if (ltree->convert_to==SEM_INTEGER) {
                 convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
@@ -303,7 +296,6 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node->ir_lval = calculate_lvalue(ltree->var);
             new_node->data_is = ltree->datatype->is;
         }
-
 
         if (ltree->convert_to==SEM_INTEGER) {
             convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);
