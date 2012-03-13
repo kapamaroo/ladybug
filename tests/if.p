@@ -34,11 +34,11 @@ end; { try_if2 }
 
 procedure proc_1(i,j:integer);
 begin
-  if ( x > a ) then
+  if ( x > a ) and (b = x) then
      begin
      a:=700;
-     b:=700;
-     c:=700;
+     b:=800;
+     c:=900;
      end
   else
      begin
@@ -53,6 +53,6 @@ begin
    b := 10;
 
    e:=try_if1(a,b);
-   proc_1(e,x);
+   proc_1(c,x);
    x:=try_if2(c,d)
 end.
