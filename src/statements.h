@@ -96,6 +96,11 @@ extern int statement_root_module_current_free;
 
 void init_statements();
 
+void prepare_branch_stmt(expr_t *l);
+
+var_t *protect_guard_var(char *id);
+void unprotect_guard_var(var_t *var);
+
 statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
 
 statement_t *statement_while(expr_t *cond, statement_t *loop);

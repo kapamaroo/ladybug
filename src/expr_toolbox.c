@@ -5,6 +5,7 @@
 #include "build_flags.h"
 #include "expr_toolbox.h"
 #include "expressions.h"
+#include "scope.h"
 #include "symbol_table.h"
 #include "datatypes.h"
 #include "mem.h"
@@ -12,6 +13,7 @@
 
 expr_t *expr_from_variable(var_t *v) {
     expr_t *l;
+    func_t *current_scope;
 
     if (!v) {
         //error in variable declaration
@@ -59,7 +61,6 @@ expr_t *expr_from_variable(var_t *v) {
         }
         return l;
     }
-
     l = (expr_t*)malloc(sizeof(expr_t));
     l->parent = l;
     l->l1 = NULL;
@@ -78,11 +79,15 @@ expr_t *expr_from_variable(var_t *v) {
         return l;
     }
 
+    current_scope = get_current_scope_owner();
+
     if (v->status_value == VALUE_GARBAGE) {
         //change this to error??
-        sprintf(str_err,"variable '%s' of datatype '%s' maybe used 'uninitialized' in '%s'" ,v->name,
+        sprintf(str_err,"variable '%s' of datatype '%s' declared in '%s', maybe used 'uninitialized' in '%s'",
+                v->name,
                 v->datatype->name,
-                v->scope->name);
+                v->scope->name,
+                current_scope->name);
         //yyerror(str_err);
         yywarning(str_err);
     }
@@ -470,17 +475,6 @@ char *op_literal(op_t op) {
         die("UNEXPECTED_ERROR: 04");
         return NULL; //keep the compiler happy
     }
-}
-
-int check_if_boolean(expr_t *l) {
-    if (!l) {
-        die("UNEXPECTED_ERROR: 03");
-    }
-    else if (l->datatype->is==TYPE_BOOLEAN) {
-        return 1;
-    }
-    yyerror("a flow control expression must be boolean");
-    return 0;
 }
 
 dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {

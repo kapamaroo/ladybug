@@ -12,6 +12,7 @@
 
 statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 int statement_root_module_current_free;
+unsigned int inside_branch_stmt = 0;
 
 void init_statements() {
     int i;
@@ -191,6 +192,8 @@ statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false)
         new_if->return_point = 1;
     }
 
+    inside_branch_stmt--;
+
     return new_if;
 }
 
@@ -214,6 +217,8 @@ statement_t *statement_while(expr_t *cond, statement_t *loop) {
     new_while = new_statement_t(ST_While);
     new_while->_while.condition = cond;
     new_while->_while.loop = loop;
+
+    inside_branch_stmt--;
 
     return new_while;
 }
@@ -246,8 +251,9 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
         return new_statement_t(ST_BadStatement);
     }
 
+    scope_owner = get_current_scope_owner();
+
     if (v->id_is==ID_RETURN) {
-        scope_owner = get_current_scope_owner();
         if (v->scope!=scope_owner) {
             //v->name is the same with function's name because that's how functions return their value
             sprintf(str_err,"subprogram '%s' assigns return value of function '%s'" ,scope_owner->name, v->name);
@@ -264,8 +270,14 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     }
 
     //set status_known
+    //ONLY for native variables in scope
+    //ONLY when outside if,for,while statements //FIXME
     //reminder: known variables become hardcoded constants, see expr_toolbox.c
-    v->status_known = (l->expr_is == EXPR_HARDCODED_CONST) ? KNOWN_YES : KNOWN_NO;
+    if (l->expr_is == EXPR_HARDCODED_CONST && !inside_branch_stmt && v->scope==scope_owner) {
+        v->status_known = KNOWN_YES;
+    } else {
+        v->status_known = KNOWN_NO;
+    }
 
     if (v->status_known == KNOWN_YES) {
         switch (l->datatype->is) {
@@ -280,12 +292,13 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     //this will go to the .data segment
 #warning actually DO the .data segment
     if (v->id_is!=ID_RETURN &&
+        v->scope==main_program &&           //ONLY main program variables can be in .data segment
         v->status_value==VALUE_GARBAGE &&
         v->status_use==USE_NONE &&
         v->status_known==KNOWN_YES) {
         v->status_value = VALUE_VALID;
-        //printf("debug: ignore assignment to: %s\n", v->name);
-        //return NULL;
+        //printf("debug: first unused assignement to '%s' in '%s' goes to '.data' segment\n", v->name, scope_owner->name);
+        return NULL;
     }
 
     v->status_value = VALUE_VALID;
@@ -447,4 +460,56 @@ statement_t *statement_write(expr_list_t *expr_list) {
     new_write->_write.expr_list = expr_list;
 
     return new_write;
+}
+
+void prepare_branch_stmt(expr_t *l) {
+    if (!l) {
+        die("UNEXPECTED_ERROR: 03");
+    }
+
+    if (l->datatype->is!=TYPE_BOOLEAN) {
+        yyerror("a flow control expression must be boolean");
+    }
+
+    inside_branch_stmt++;
+}
+
+var_t *protect_guard_var(char *id) {
+    sem_t *sem_2;
+
+    inside_branch_stmt++;
+
+    sem_2 = sm_find(id);
+    if (sem_2) {
+        if (sem_2->id_is==ID_VAR) {
+            if (sem_2->var->datatype->is==TYPE_INT) {
+                sem_2->var->id_is = ID_VAR_GUARDED;
+                return sem_2->var;
+            }
+            else {
+                sprintf(str_err,"control variable '%s' must be integer",id);
+                yyerror(str_err);
+            }
+        }
+        else if (sem_2->id_is==ID_VAR_GUARDED) {
+            sprintf(str_err,"variable '%s' already controls a for statement",id);
+            yyerror(str_err);
+        }
+        else {
+            sprintf(str_err,"invalid reference to '%s', expected variable",id);
+            yyerror(str_err);
+        }
+    }
+    //else
+    //nothing, error is printed from sm_insert
+    //yyerror("the name of the control variable is declared before in this scope");
+    return NULL;
+}
+
+void unprotect_guard_var(var_t *var) {
+    inside_branch_stmt--;
+
+    if (var) {
+        var->id_is = ID_VAR;
+    }
 }

@@ -27,9 +27,6 @@ sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL 
 sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
 void sm_remove(char *id); //remove this symbol from the most nested scope it is found
 
-var_t *protect_guard_var(char *id);
-void unprotect_guard_var(var_t *var);
-
 void declare_consts(char *id,expr_t *l);
 void declare_vars(data_t *type);
 void declare_formal_parameters(func_t *subprogram);

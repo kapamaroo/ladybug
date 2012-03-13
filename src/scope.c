@@ -70,6 +70,34 @@ void start_new_scope(func_t *scope_owner) {
     }
 }
 
+void invalidate_variables_out_of_scope(func_t *scope_owner) {
+    int i;
+    int size;
+    func_t *prev_scope;
+    sem_t **pool;
+
+    //we play safe in here
+    //we throw any value assigned to out of scope variables
+    //maybe some are usefull
+    //we need a more sophisticated flow control analysis //FIXME
+
+    //start from the previous scope
+    prev_scope = scope_owner->scope;
+    while (prev_scope) {
+        size = MAX_SYMBOLS - prev_scope->symbol_table.pool_empty;
+        pool = prev_scope->symbol_table.pool;
+        for (i=0;i<size;i++) {
+            if (pool[i]->id_is==ID_VAR) {
+                pool[i]->var->status_value = VALUE_GARBAGE;
+                pool[i]->var->status_use = USE_NONE;
+                pool[i]->var->status_known = KNOWN_NO;
+            }
+        }
+
+        prev_scope = prev_scope->scope;
+    }
+}
+
 void close_scope(func_t *scope_owner) {
     //every time a scope is closed we must clean the symbol table from its declarations and definitions
     //make sure all the declared subprobrams in this scope,
@@ -80,6 +108,7 @@ void close_scope(func_t *scope_owner) {
         die("INTERNAL_ERROR: no scope to delete");
     }
     sm_clean_current_scope(scope_owner);
+    invalidate_variables_out_of_scope(scope_owner);
 
     //printf("__close_current_scope_%d\n",sm_scope);
     scope_stack[sm_scope] = NULL;

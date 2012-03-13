@@ -326,14 +326,14 @@ assignment: variable ASSIGN expression {$$ = statement_assignment($1,$3);}
 | variable ASSIGN STRING {$$ = statement_assignment($1,expr_from_STRING($3));}
 ;
 
-if_statement: IF expression THEN {check_if_boolean($2);} statement if_tail {$$ = statement_if($2,$5,$6);}
+if_statement: IF expression THEN {prepare_branch_stmt($2);} statement if_tail {$$ = statement_if($2,$5,$6);}
 ;
 
 if_tail: ELSE statement {$$ = $2;}
 | /* empty */ {$$ = NULL;}
 ;
 
-while_statement: WHILE expression {check_if_boolean($2);} DO statement {$$ = statement_while($2,$5);}
+while_statement: WHILE expression {prepare_branch_stmt($2);} DO statement {$$ = statement_while($2,$5);}
 ;
 
 for_statement: FOR ID ASSIGN iter_space DO {$<var>$ = protect_guard_var($2);} statement {$$ = statement_for($<var>6,$4,$7);unprotect_guard_var($<var>6);}

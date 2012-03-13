@@ -391,42 +391,6 @@ char *sm_find_lost_symbol(const char *id) {
     return NULL; //no lost symbols
 }
 
-var_t *protect_guard_var(char *id) {
-    sem_t *sem_2;
-
-    sem_2 = sm_find(id);
-    if (sem_2) {
-        if (sem_2->id_is==ID_VAR) {
-            if (sem_2->var->datatype->is==TYPE_INT) {
-                sem_2->var->id_is = ID_VAR_GUARDED;
-                return sem_2->var;
-            }
-            else {
-                sprintf(str_err,"control variable '%s' must be integer",id);
-                yyerror(str_err);
-            }
-        }
-        else if (sem_2->id_is==ID_VAR_GUARDED) {
-            sprintf(str_err,"variable '%s' already controls a for statement",id);
-            yyerror(str_err);
-        }
-        else {
-            sprintf(str_err,"invalid reference to '%s', expected variable",id);
-            yyerror(str_err);
-        }
-    }
-    //else
-    //nothing, error is printed from sm_insert
-    //yyerror("the name of the control variable is declared before in this scope");
-    return NULL;
-}
-
-void unprotect_guard_var(var_t *var) {
-    if (var) {
-        var->id_is = ID_VAR;
-    }
-}
-
 var_t *lost_var_reference() {
     return lost_var;
 }

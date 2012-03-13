@@ -19,7 +19,6 @@ void normalize_expr_set(expr_t *expr_set);
 expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set);
 
 char *op_literal(op_t op);
-int check_if_boolean(expr_t *l);
 
 void make_type_definition(char *id, data_t *type);
 
