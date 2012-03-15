@@ -6,8 +6,14 @@
 #include "err_buff.h"
 #include "instruction_set.h"
 #include "reg.h"
+#include "expr_toolbox.h"
 
-mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype);
+enum instr_req_t {
+    INSTR_IMM,
+    INSTR_REG
+};
+
+mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype, enum instr_req_t instr_req);
 
 instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
     static unsigned long unique_instr_id = 0;
@@ -99,6 +105,11 @@ instr_t *link_instructions(instr_t *child, instr_t *parent) {
 void parse_ir_node(ir_node_t *ir_node) {
     ir_node_t *tmp;
     instr_t *new_instr;
+
+    ir_node_t *ir_eff;    //effective ir_node 1
+    ir_node_t *ir_eff2;   //effective ir_node 2
+    enum instr_req_t instr_req;
+    mips_instr_t *new_mips_instr;
 
     switch(ir_node->node_type) {
     case NODE_DUMMY_LABEL:
@@ -281,14 +292,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         parse_ir_node(ir_node->address);
         return;
     case NODE_RVAL:
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
-        //we use it as flag too so init it to NULL (after possible label) //FIXME
-        new_instr = NULL;
-
         //sanity check
         switch (ir_node->op_rval) {
         case OP_AND:    // 'and'
@@ -299,6 +302,16 @@ void parse_ir_node(ir_node_t *ir_node) {
         default: break;
         }
 
+        if (ir_node->label) {
+            new_instr = new_instruction(ir_node->label,&I_nop);
+            final_tree_current = link_instructions(new_instr,final_tree_current);
+        }
+
+        //handle NODE_HARDCODED_RVAL cases (init to common reg to reg instr)
+        instr_req = INSTR_REG;
+        ir_eff = ir_node->ir_rval;    //this may be NULL in case of OP_SIGN
+        ir_eff2 = ir_node->ir_rval2;  //this always exists
+
         //reminder: we can have only one child node (ir_rval OR ir_rval2) marked as NODE_HARDCODED_RVAL
         //see expressions.c
 
@@ -306,12 +319,22 @@ void parse_ir_node(ir_node_t *ir_node) {
             //first node of prepare_stack
             switch (ir_node->ir_rval->node_type) {
             case NODE_HARDCODED_RVAL:
-                new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
-                new_instr->Rd = ir_node->ir_rval->reg;
-                new_instr->Rs = &R_zero;
-                //new_instr->Rs = ir_node->ir_rval2->last->reg;
-                new_instr->ival = ir_node->ir_rval->ival;
-                final_tree_current = link_instructions(new_instr,final_tree_current);
+                if (ir_node->ir_rval2->node_type==NODE_HARDCODED_RVAL) {
+                    die("INTERNAL_ERROR: both rvalues are hardcoded");
+                }
+
+                if (ir_node->op_rval==OP_PLUS || ir_node->op_rval==OP_MINUS) {
+                    instr_req = INSTR_IMM;
+                    //swap rvalues (always put the hardcoded in ir_eff2)
+                    ir_eff2 = ir_node->ir_rval;
+                    ir_eff = ir_node->ir_rval2;
+                } else {
+                    new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
+                    new_instr->Rd = ir_node->ir_rval->reg;
+                    new_instr->Rs = &R_zero;
+                    new_instr->ival = ir_node->ir_rval->ival;
+                    final_tree_current = link_instructions(new_instr,final_tree_current);
+                }
             case NODE_RVAL_ARCH:
                 break;
             default:
@@ -327,11 +350,19 @@ void parse_ir_node(ir_node_t *ir_node) {
 
         switch (ir_node->ir_rval2->node_type) {
         case NODE_HARDCODED_RVAL:
-            new_instr = new_instruction(ir_node->ir_rval2->label,&I_addi);
-            new_instr->Rd = ir_node->ir_rval2->reg;
-            new_instr->Rs = &R_zero;
-            new_instr->ival = ir_node->ir_rval2->ival;
-            final_tree_current = link_instructions(new_instr,final_tree_current);
+            if (ir_node->op_rval==OP_PLUS || ir_node->op_rval==OP_MINUS) {
+                instr_req = INSTR_IMM;
+                //we have the values from the init code
+                //ir_eff2 = ir_node->ir_rval2;
+                //ir_eff = ir_node->ir_rval;
+            } else {
+                //we must load the hardcoded value separately
+                new_instr = new_instruction(ir_node->ir_rval2->label,&I_addi);
+                new_instr->Rd = ir_node->ir_rval2->reg;
+                new_instr->Rs = &R_zero;
+                new_instr->ival = ir_node->ir_rval2->ival;
+                final_tree_current = link_instructions(new_instr,final_tree_current);
+            }
         case NODE_RVAL_ARCH:
             break;
         default:
@@ -344,13 +375,28 @@ void parse_ir_node(ir_node_t *ir_node) {
             break;
         }
 
-        new_instr = new_instruction(NULL,op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is));
+        new_mips_instr = op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is,instr_req);
+        new_instr = new_instruction(NULL,new_mips_instr);
 
-        if (ir_node->op_rval!=OP_SIGN) {
-            new_instr->Rs = ir_node->ir_rval->last->reg;
+        if (instr_req==INSTR_IMM) {
+            if (ir_node->op_rval!=OP_SIGN) {
+                new_instr->Rs = ir_eff->last->reg;
+            } else {
+                new_instr->Rs = &R_zero;
+            }
+
+            if (ir_node->op_rval==OP_MINUS) {
+                new_instr->ival = -ir_eff2->ival;
+            } else {
+                new_instr->ival = ir_eff2->ival;
+            }
+        } else {
+            if (ir_node->op_rval!=OP_SIGN) {
+                new_instr->Rs = ir_eff->last->reg;
+            }
+
+            new_instr->Rt = ir_eff2->last->reg;
         }
-
-        new_instr->Rt = ir_node->ir_rval2->last->reg;
 
         //generic code
 
@@ -420,12 +466,7 @@ void parse_ir_node(ir_node_t *ir_node) {
         case NODE_RVAL_ARCH:
             break;
         default:
-            tmp = ir_node->ir_rval;
-            while (tmp) {
-                //if (tmp->node_type==NODE_LOAD) { break; }
-                parse_ir_node(tmp);
-                tmp = tmp->next;
-            }
+            parse_ir_node(ir_node->ir_rval);
             break;
         }
 
@@ -486,7 +527,21 @@ void parse_all_modules() {
     }
 }
 
-mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype) {
+mips_instr_t *op_to_mips_instr_t(op_t op, type_t datatype, enum instr_req_t instr_req) {
+    //there is no 'subi' instruction, return 'addi'
+    //the caller has to use the negative constant
+    if (instr_req==INSTR_IMM) {
+        if (datatype==TYPE_REAL) {
+            die("INTERNAL_ERROR: bad hardcoded instr request: TYPE_REAL");
+        }
+
+        if (op!=OP_PLUS && op!=OP_MINUS) {
+            printf("debug: bad operator: '%s'\n",op_literal(op));
+            die("INTERNAL_ERROR: bad hardcoded instr request: only add/sub can be used");
+        }
+        return &I_addi;
+    }
+
     if (datatype==TYPE_REAL) {
         switch (op) {
         case RELOP_LE:               // '<='
