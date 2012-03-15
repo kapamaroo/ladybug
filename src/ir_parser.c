@@ -286,19 +286,32 @@ void parse_ir_node(ir_node_t *ir_node) {
             final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
-        if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
+        //we use it as flag too so init it to NULL (after possible label) //FIXME
+        new_instr = NULL;
+
+        //sanity check
+        switch (ir_node->op_rval) {
+        case OP_AND:    // 'and'
+        case OP_OR:     // 'or'
+        case OP_NOT:    // 'not'
+        case RELOP_IN:	// 'in'
+            die("UNEXPECTED ERROR: ir_parser: NODE_RVAL: logical and/or/not/in operator still alive??");
+        default: break;
+        }
+
+        //reminder: we can have only one child node (ir_rval OR ir_rval2) marked as NODE_HARDCODED_RVAL
+        //see expressions.c
+
+        if (ir_node->op_rval!=OP_SIGN) {
             //first node of prepare_stack
             switch (ir_node->ir_rval->node_type) {
             case NODE_HARDCODED_RVAL:
                 new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
                 new_instr->Rd = ir_node->ir_rval->reg;
                 new_instr->Rs = &R_zero;
+                //new_instr->Rs = ir_node->ir_rval2->last->reg;
                 new_instr->ival = ir_node->ir_rval->ival;
                 final_tree_current = link_instructions(new_instr,final_tree_current);
-                break;
-            case NODE_RVAL:
-                parse_ir_node(ir_node->ir_rval);
-                break;
             case NODE_RVAL_ARCH:
                 break;
             default:
@@ -319,10 +332,6 @@ void parse_ir_node(ir_node_t *ir_node) {
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval2->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
-            break;
-        case NODE_RVAL:
-            parse_ir_node(ir_node->ir_rval2);
-            break;
         case NODE_RVAL_ARCH:
             break;
         default:
@@ -337,11 +346,13 @@ void parse_ir_node(ir_node_t *ir_node) {
 
         new_instr = new_instruction(NULL,op_to_mips_instr_t(ir_node->op_rval,ir_node->data_is));
 
-        if (ir_node->op_rval!=OP_NOT && ir_node->op_rval!=OP_SIGN) {
+        if (ir_node->op_rval!=OP_SIGN) {
             new_instr->Rs = ir_node->ir_rval->last->reg;
         }
 
         new_instr->Rt = ir_node->ir_rval2->last->reg;
+
+        //generic code
 
         //set label of branches
         switch (ir_node->op_rval) {
@@ -365,11 +376,6 @@ void parse_ir_node(ir_node_t *ir_node) {
 
             new_instr->goto_label = ir_node->ir_goto->label;
             break;
-        case OP_AND:    // 'and'
-        case OP_OR:     // 'or'
-        case OP_NOT:    // 'not'
-        case RELOP_IN:	// 'in'
-            die("UNEXPECTED ERROR: ir_parser: NODE_RVAL: logical and/or/not/in operator still alive??");
         default:
             //only non branch instructions need the Rd
             new_instr->Rd = ir_node->reg;
@@ -411,15 +417,8 @@ void parse_ir_node(ir_node_t *ir_node) {
             new_instr->Rs = &R_zero;
             new_instr->ival = ir_node->ir_rval->ival;
             final_tree_current = link_instructions(new_instr,final_tree_current);
-            break;
-        case NODE_RVAL:
-            parse_ir_node(ir_node->ir_rval);
-            break;
         case NODE_RVAL_ARCH:
             break;
-        case NODE_ASSIGN:
-        case NODE_JUMP_LINK:
-        case NODE_LOAD:
         default:
             tmp = ir_node->ir_rval;
             while (tmp) {
