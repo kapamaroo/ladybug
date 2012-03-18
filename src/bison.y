@@ -188,7 +188,7 @@ expression: expression RELOP expression {$$ = expr_relop_equ_addop_mult($1,$2,$3
 | variable {$$ = expr_from_variable($1);}
 | ID LPAREN expressions RPAREN {$$ = expr_from_function_call($1,$3);}
 | constant {$$ = $1;}//hardcoded constants are expressions
-| LPAREN expression RPAREN {$$ = expr_mark_paren($2);}//expression of high priority
+| LPAREN expression RPAREN { $$ = $2; }
 | setexpression {$$ = expr_from_setexpression($1);}
 ;
 

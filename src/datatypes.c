@@ -135,56 +135,44 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
     mem_t *new_mem;
     var_t *new_var;
 
-    if (!list) {
-        die("UNEXPECTED_ERROR: null expr_list for array reference");
+    if (!v || !list) {
+        die("UNEXPECTED_ERROR: null parameter for array reference");
     }
 
-    if (v) {
-        if (v->id_is==ID_VAR) {
-            if (v->datatype->is==TYPE_ARRAY) {
-                if (valid_expr_list_for_array_reference(v->datatype,list)) {
-                    //we print any possible messages in "valid_expr_list_for_array_reference()"
-                    relative_offset_expr = make_array_reference(list,v->datatype);
-                    cond_expr = make_array_bound_check(list,v->datatype);
+    if (v->id_is==ID_VAR) {
+        if (v->datatype->is==TYPE_ARRAY) {
+            if (valid_expr_list_for_array_reference(v->datatype,list)) {
+                //we print any possible messages in "valid_expr_list_for_array_reference()"
 
-                    final_offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,relative_offset_expr);
+                new_var = (var_t*)malloc(sizeof(var_t));
+                new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
 
-                    //we start from the variable's mem position and we add the offset from there
-                    new_mem = (mem_t*)malloc(sizeof(mem_t));
-                    new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(mem_t));
+                new_var->datatype = v->datatype->def_datatype;
+                new_var->cond_assign = cond_expr;
 
-                    new_mem->offset_expr = final_offset_expr;
-                    new_mem->size = v->datatype->def_datatype->memsize;
+                new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+                new_var->from_comp->base = v;
+                new_var->from_comp->element = NULL;
+                new_var->from_comp->index_list = list;
 
-                    new_var = (var_t*)malloc(sizeof(var_t));
-                    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
-                    //new_var->id_is = ID_VAR;
-                    new_var->datatype = v->datatype->def_datatype;
-                    //new_var->name = v->name;
-                    //new_var->scope = v->scope;
-                    new_var->Lvalue = new_mem;
-                    new_var->cond_assign = cond_expr;
-                    return new_var;
-                }
+                return new_var;
             }
-            else {
-                sprintf(str_err,"variable '%s' is not an array",v->name);
-                yyerror(str_err);
-            }
-        }
-        else if (v->id_is==ID_LOST) {
-            //avoid duplucate error messages
-            return v; //this points to lost variable
         }
         else {
-            sprintf(str_err,"id '%s' is not a variable",v->name);
+            sprintf(str_err,"variable '%s' is not an array",v->name);
             yyerror(str_err);
         }
-        return lost_var_reference();
+    }
+    else if (v->id_is==ID_LOST) {
+        //avoid duplucate error messages
+        return v; //this points to lost variable
+    }
+    else {
+        sprintf(str_err,"id '%s' is not a variable",v->name);
+        yyerror(str_err);
     }
 
-    die("UNEXPECTED_ERROR: 42");
-    return NULL; //keep the compiler happy
+    return lost_var_reference();
 }
 
 var_t *reference_to_record_element(var_t *v, char *id) {
@@ -201,21 +189,21 @@ var_t *reference_to_record_element(var_t *v, char *id) {
                 elem_num = check_for_id_in_datatype(v->datatype,id);
                 if (elem_num>=0) {
                     //element's position does not change so it is represented as a hardcoded constant
-                    offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
-                    final_expr_offset = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,offset_expr);
 
-                    new_mem = (mem_t*)malloc(sizeof(mem_t));
-                    new_mem = (mem_t*)memcpy(new_mem,v->Lvalue,sizeof(struct mem_t));
-                    new_mem->offset_expr = final_expr_offset;
-                    new_mem->size = v->datatype->field_datatype[elem_num]->memsize;
+                    offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
+                    //size = v->datatype->field_datatype[elem_num]->memsize;
 
                     new_var = (var_t*)malloc(sizeof(var_t));
-                    new_var->id_is = ID_VAR;
-                    new_var->datatype = v->datatype->field_datatype[elem_num];
+                    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+
                     //new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
                     new_var->name = strdup(v->datatype->field_name[elem_num]);
-                    new_var->scope = v->scope;
-                    new_var->Lvalue = new_mem;
+
+                    new_var->datatype = v->datatype->field_datatype[elem_num];
+
+                    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+                    new_var->from_comp->base = v;
+                    new_var->from_comp->element = elem_num;
 
                     return new_var;
                 }

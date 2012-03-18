@@ -61,6 +61,7 @@ expr_t *expr_from_variable(var_t *v) {
         }
         return l;
     }
+
     l = (expr_t*)malloc(sizeof(expr_t));
     l->parent = l;
     l->l1 = NULL;
@@ -95,19 +96,11 @@ expr_t *expr_from_variable(var_t *v) {
     //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
         //reminder: arrays and record types are allowed only for asignments
-        if (v->datatype->is==TYPE_ARRAY || v->datatype->is==TYPE_RECORD) {
-            sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->name);
-            yyerror(str_err);
-            l->expr_is = EXPR_LOST;
-            l->var = lost_var_reference();
-            l->datatype = l->var->datatype;
-            return l;
-        }
+        //leave them from now
 
         //reminder: we check bounds before we assign to char, subset or enumeration,
         //so we can use their __actual__ datatype
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
-            //this is actually a warning, maybe we need a yywarning?
             sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->name);
             yywarning(str_err);
 
@@ -115,7 +108,6 @@ expr_t *expr_from_variable(var_t *v) {
             //reminder: def_datatype is always standard scalar, see limit_from_id() below
             l->datatype = v->datatype->def_datatype;
         }
-
 
         //decide later inside expressions.c
         ////final correction, this may override the subset datatype in the case of char subset

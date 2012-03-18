@@ -17,8 +17,10 @@
 
 //some structs contain elements of a struct that is declared later, so this keeps the compiler happy
 struct expr_t;
+struct var_t;
 struct func_t;
 struct elexpr_list_t;
+struct expr_list_t;
 struct sem_t;
 
 /** info `enum idt_t`
@@ -146,6 +148,12 @@ typedef struct mem_t {
     int size; //memory size
 } mem_t;
 
+typedef struct info_comp_t {
+    struct var_t *base;              //array/record base variable
+    struct expr_list_t *index_list;  //array index
+    int element;                     //record element offset (hardcoded)
+} info_comp_t;
+
 /** Variables & declared Constants struct
  * We use the var_t struct to represent both variables and declared constants in the symbol table.
  */
@@ -155,6 +163,8 @@ typedef struct var_t {
     var_status_value_t status_value;
     var_status_use_t status_use;
     var_status_known_t status_known;
+
+    info_comp_t *from_comp;
 
     data_t *datatype;
     char *name;
@@ -251,7 +261,6 @@ typedef struct expr_t {
     struct expr_t *parent;
     struct expr_t *l1;
     struct expr_t *l2;
-    int flag_paren; //expression of priority //OBSOLETE
 } expr_t;
 
 typedef struct expr_list_t {

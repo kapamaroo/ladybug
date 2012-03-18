@@ -8,6 +8,8 @@
 #include "expressions.h"
 #include "err_buff.h"
 
+int expr_lval_with_comp_datatype(expr_t *l);
+
 /** Expression routines */
 expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
     //relops need paren
@@ -112,8 +114,13 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
     }
 
     //continue only with scalar or arithmetic datatypes
-    if (TYPE_IS_COMPOSITE(l1->datatype) || TYPE_IS_COMPOSITE(l2->datatype)) {
-        die("UNEXPECTED ERROR: composite type in expression");
+    if (expr_lval_with_comp_datatype(l1) || expr_lval_with_comp_datatype(l2)) {
+        switch (op) {
+        case OP_PLUS:
+        case OP_MINUS:
+        case OP_MULT:   return expr_from_hardcoded_int(0);
+        default:        return expr_from_hardcoded_boolean(0);
+        }
     }
 
     if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
@@ -466,10 +473,13 @@ expr_t *expr_sign(op_t op,expr_t *l) {
 
     if (op==OP_MINUS) {
         if (l->expr_is==EXPR_HARDCODED_CONST) { //optimization
-            l->ival = -l->ival; //if integer
-            l->fval = -l->fval; //if real
-            l->cval = -l->cval; //if char, boolean
-            return l;
+            switch (l->datatype->is) {
+            case TYPE_INT:   return expr_from_hardcoded_int(-l->ival);
+            case TYPE_REAL:  return expr_from_hardcoded_real(-l->fval);
+            default:
+                //should never reach here
+                die("UNEXPECTED_ERROR: in sign expression");
+            }
         }
 
         new_expr = (expr_t*)malloc(sizeof(expr_t));
@@ -493,38 +503,24 @@ expr_t *expr_sign(op_t op,expr_t *l) {
 
     }
 
+    //ignore OP_PLUS
+
     return l;
 }
 
-expr_t *expr_mark_paren(expr_t *l) {
-    switch (l->op) {
-    case OP_IGNORE:
-    case OP_SIGN:
-    case OP_NOT:
-    case OP_MULT:
-    case OP_RDIV:
-    case OP_DIV:
-    case OP_MOD:
-    case OP_AND:
-        //ignore paren for the above operators because of their high priority
-        //l->flag_paren = 0;
-        break;
-    case RELOP_B:
-    case RELOP_BE:
-    case RELOP_L:
-    case RELOP_LE:
-    case RELOP_NE:
-    case RELOP_EQU:
-    case RELOP_IN:
-        //allow relops in paren, because of their lower priority from logical operators (and,or,not)
-    case OP_PLUS:
-    case OP_MINUS:
-    case OP_OR:
-        l->flag_paren = 1;
+int expr_lval_with_comp_datatype(expr_t *l) {
+    var_t *v;
+
+    v = l->var;
+
+    if (l->expr_is==EXPR_LVAL && TYPE_IS_COMPOSITE(l->datatype)) {
+        sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->name);
+        yyerror(str_err);
+        l->expr_is = EXPR_LOST;
+        l->var = lost_var_reference();
+        l->datatype = l->var->datatype;
+        return 1;
     }
-    return l;
-}
 
-void expr_unmark_paren(expr_t *l) {
-    l->flag_paren = 0;
+    return 0;
 }

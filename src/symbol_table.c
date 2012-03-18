@@ -278,6 +278,7 @@ void declare_vars(data_t* type){
                 new_sem->var->name = new_sem->name;
                 new_sem->var->scope = new_sem->scope;
                 new_sem->var->Lvalue = mem_allocate_symbol(type);
+                new_sem->var->from_comp = NULL;
 
                 new_sem->var->status_value = VALUE_GARBAGE;
                 new_sem->var->status_use = USE_NONE;

@@ -9,6 +9,7 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
     ir_node_t *ir_tmp2;
     ir_node_t *ir_tmp;
     statement_t *s_tmp;
+    var_t *var;
 
     if (!s) {
         return NULL;
@@ -58,7 +59,8 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
                                        s->_call.expr_params);
         break;
     case ST_Assignment:
-        ir_new = new_ir_assign(s->_assignment.var,s->_assignment.expr);
+        ir_new = new_ir_assign(s->_assignment.var,
+                               s->_assignment.expr);
         break;
     case ST_With:
         ir_tmp1 = generate_ir_from_statement(s->_with.statement);
