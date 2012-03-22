@@ -88,9 +88,8 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
     var_t *return_value;
 
     //function name belongs to current scope
-    sem_2 = sm_insert(id);
+    sem_2 = sm_insert(id,ID_FORWARDED_FUNC);
     if (sem_2) {
-        sem_2->id_is = ID_FORWARDED_FUNC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;
@@ -125,11 +124,9 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
 sem_t *declare_procedure_header(char *id,param_list_t *list) {
     sem_t *sem_2;
 
-    sem_2  = sm_insert(id);
+    sem_2  = sm_insert(id,ID_FORWARDED_PROC);
     if (sem_2) {
         //do something with formal parameters
-
-        sem_2->id_is = ID_FORWARDED_PROC;
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;

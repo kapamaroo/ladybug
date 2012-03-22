@@ -24,7 +24,7 @@ void init_symbol_table();
 func_t *create_main_program(char *name);
 
 sem_t *sm_find(const char *id); //search the scopes backwards, this IS CRITICAL for the whole implementation
-sem_t *sm_insert(const char *id); //insert symbol to the current scope, sets only the name
+sem_t *sm_insert(const char *id, const idt_t ID_TYPE); //insert symbol to the current scope, sets only the name
 void sm_remove(char *id); //remove this symbol from the most nested scope it is found
 
 void declare_consts(char *id,expr_t *l);

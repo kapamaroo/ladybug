@@ -19,8 +19,7 @@ var_t *lost_var;
 func_t *create_main_program(char *name) {
     sem_t *sem_main_program;
 
-    sem_main_program = sm_insert(name);
-    sem_main_program->id_is = ID_PROGRAM_NAME;
+    sem_main_program = sm_insert(name,ID_PROGRAM_NAME);
 
     //see scope.h
     main_program = (func_t*)malloc(sizeof(func_t));
@@ -112,7 +111,7 @@ sem_t *sm_find(const char *id) {
     return NULL;
 }
 
-sem_t *sm_insert(const char *id) {
+sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
     //sets only the name of the symbol
     sem_t *existing_sem;
     sem_t *new_sem;
@@ -129,6 +128,7 @@ sem_t *sm_insert(const char *id) {
 
     if ((!existing_sem || existing_sem->scope!=scope_owner || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)malloc(sizeof(sem_t));
+        new_sem->id_is = ID_TYPE;
         new_sem->name = strdup(id);
         new_sem->scope = scope_owner;
         new_sem->index = MAX_SYMBOLS - sm_empty;
@@ -233,9 +233,8 @@ void declare_consts(char *id,expr_t *l) {
         return;
     }
 
-    sem = sm_insert(id);
+    sem = sm_insert(id,ID_CONST);
     if (sem) {
-        sem->id_is = ID_CONST;
         new_var = (var_t*)malloc(sizeof(var_t));
         new_var->id_is = ID_CONST;
         new_var->datatype = l->datatype;
@@ -269,9 +268,8 @@ void declare_vars(data_t* type){
 
     if (type) {
         for (i=0;i<MAX_IDF-idf_empty;i++) {
-            new_sem = sm_insert(idf_table[i].name);
+            new_sem = sm_insert(idf_table[i].name,ID_VAR);
             if (new_sem) {
-                new_sem->id_is = ID_VAR;
                 new_sem->var = (var_t*)malloc(sizeof(var_t));
                 new_sem->var->id_is = ID_VAR;
                 new_sem->var->datatype = type;
@@ -312,14 +310,12 @@ void declare_formal_parameters(func_t *subprogram) {
 
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
-        new_sem = sm_insert(subprogram->param[i]->name);
+        new_sem = sm_insert(subprogram->param[i]->name,ID_VAR);
 
         //should always succeed
         if (!new_sem) {
             die("INTERNAL_ERROR: declaration of formal parameter failed");
         }
-
-        new_sem->id_is = ID_VAR;
 
         new_var = (var_t*)malloc(sizeof(var_t));
         new_var->id_is = ID_VAR;

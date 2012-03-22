@@ -26,45 +26,36 @@ void init_datatypes() {
     sem_t *sem_CHAR;
 
     //insert the standard types
-    sem_INTEGER = sm_insert("integer");
-    sem_REAL = sm_insert("real");
-    sem_BOOLEAN = sm_insert("boolean");
-    sem_CHAR = sm_insert("char");
-
-    sem_INTEGER->id_is = ID_TYPEDEF;
-    sem_REAL->id_is = ID_TYPEDEF;
-    sem_BOOLEAN->id_is = ID_TYPEDEF;
-    sem_CHAR->id_is = ID_TYPEDEF;
-
+    sem_INTEGER = sm_insert("integer",ID_TYPEDEF);
     sem_INTEGER->comp = (data_t*)malloc(sizeof(data_t));
-    sem_REAL->comp = (data_t*)malloc(sizeof(data_t));
-    sem_BOOLEAN->comp = (data_t*)malloc(sizeof(data_t));
-    sem_CHAR->comp = (data_t*)malloc(sizeof(data_t));
-
     sem_INTEGER->comp->is = TYPE_INT;
-    sem_REAL->comp->is = TYPE_REAL;
-    sem_BOOLEAN->comp->is = TYPE_BOOLEAN;
-    sem_CHAR->comp->is = TYPE_CHAR;
-
-    //point to itself
     sem_INTEGER->comp->def_datatype = sem_INTEGER->comp;
-    sem_REAL->comp->def_datatype = sem_REAL->comp;
-    sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
-    sem_CHAR->comp->def_datatype = sem_CHAR->comp;
-
     sem_INTEGER->comp->name = sem_INTEGER->name;
-    sem_REAL->comp->name = sem_REAL->name;
-    sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
-    sem_CHAR->comp->name = sem_CHAR->name;
-
     sem_INTEGER->comp->memsize = MEM_SIZEOF_INT;
-    sem_REAL->comp->memsize = MEM_SIZEOF_REAL;
-    sem_BOOLEAN->comp->memsize = MEM_SIZEOF_BOOLEAN;
-    sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
-
     SEM_INTEGER = sem_INTEGER->comp;
+
+    sem_REAL = sm_insert("real",ID_TYPEDEF);
+    sem_REAL->comp = (data_t*)malloc(sizeof(data_t));
+    sem_REAL->comp->is = TYPE_REAL;
+    sem_REAL->comp->def_datatype = sem_REAL->comp;
+    sem_REAL->comp->name = sem_REAL->name;
+    sem_REAL->comp->memsize = MEM_SIZEOF_REAL;
     SEM_REAL = sem_REAL->comp;
+
+    sem_BOOLEAN = sm_insert("boolean",ID_TYPEDEF);
+    sem_BOOLEAN->comp = (data_t*)malloc(sizeof(data_t));
+    sem_BOOLEAN->comp->is = TYPE_BOOLEAN;
+    sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
+    sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
+    sem_BOOLEAN->comp->memsize = MEM_SIZEOF_BOOLEAN;
     SEM_BOOLEAN = sem_BOOLEAN->comp;
+
+    sem_CHAR = sm_insert("char",ID_TYPEDEF);
+    sem_CHAR->comp = (data_t*)malloc(sizeof(data_t));
+    sem_CHAR->comp->is = TYPE_CHAR;
+    sem_CHAR->comp->def_datatype = sem_CHAR->comp;
+    sem_CHAR->comp->name = sem_CHAR->name;
+    sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
     SEM_CHAR = sem_CHAR->comp;
 
     usr_datatype = (data_t*)malloc(sizeof(data_t));
@@ -152,7 +143,7 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
 
                 new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
                 new_var->from_comp->base = v;
-                new_var->from_comp->element = NULL;
+                new_var->from_comp->element = -1;
                 new_var->from_comp->index_list = list;
 
                 return new_var;
@@ -419,9 +410,8 @@ void make_type_definition(char *id, data_t *type) {
     if (type) {
         sem_1 = sm_find(id);
         if (!sem_1) {
-            sem_1 = sm_insert(id);
+            sem_1 = sm_insert(id,ID_TYPEDEF);
             //set semantics to symbol
-            sem_1->id_is = ID_TYPEDEF;
             sem_1->comp = type;
             sem_1->comp->name = sem_1->name;
         }
