@@ -430,9 +430,7 @@ void parse_ir_node(ir_node_t *ir_node) {
 
         final_tree_current = link_instructions(new_instr,final_tree_current);
 
-        if (ir_node->next) {
-            parse_ir_node(ir_node->next);
-        }
+        //if (ir_node->next) { parse_ir_node(ir_node->next); }
         return;
     case NODE_RVAL_ARCH:
         return;
@@ -466,7 +464,12 @@ void parse_ir_node(ir_node_t *ir_node) {
         case NODE_RVAL_ARCH:
             break;
         default:
-            parse_ir_node(ir_node->ir_rval);
+            tmp = ir_node->ir_rval;
+            while (tmp) {
+                //if (tmp->node_type==NODE_LOAD) { break; }
+                parse_ir_node(tmp);
+                tmp = tmp->next;
+            }
             break;
         }
 
