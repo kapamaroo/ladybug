@@ -72,6 +72,15 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
     case ST_Write:
         ir_new = new_ir_write(s->_write.expr_list);
         break;
+    case ST_Comp:
+        ir_new = NULL;
+        s_tmp = s->_comp.first_stmt;
+        while (s_tmp) {
+            ir_tmp = generate_ir_from_statement(s_tmp);
+            ir_new = link_ir_to_ir(ir_tmp,ir_new);
+            s_tmp = s_tmp->next;
+        }
+        break;
     case ST_BadStatement:
         //ignore statement
         ir_new = NULL;
