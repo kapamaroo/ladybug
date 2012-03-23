@@ -12,7 +12,9 @@
 
 statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 int statement_root_module_current_free;
-unsigned int inside_branch_stmt = 0;
+
+unsigned int inside_branch = 0;
+unsigned int inside_loop = 0;
 
 void init_statements() {
     int i;
@@ -187,7 +189,7 @@ statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false)
         new_if->return_point = 1;
     }
 
-    inside_branch_stmt--;
+    inside_branch--;
 
     return new_if;
 }
@@ -213,7 +215,7 @@ statement_t *statement_while(expr_t *cond, statement_t *loop) {
     new_while->_while.condition = cond;
     new_while->_while.loop = loop;
 
-    inside_branch_stmt--;
+    inside_loop--;
 
     return new_while;
 }
@@ -268,19 +270,19 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     //ONLY for native variables in scope
     //ONLY when outside if,for,while statements //FIXME
     //reminder: known variables become hardcoded constants, see expr_toolbox.c
-    if (l->expr_is == EXPR_HARDCODED_CONST && !inside_branch_stmt && v->scope==scope_owner) {
+    if (l->expr_is==EXPR_HARDCODED_CONST && v->scope==scope_owner &&
+        !inside_branch && !inside_loop) {
         v->status_known = KNOWN_YES;
     } else {
         v->status_known = KNOWN_NO;
     }
 
     if (v->status_known == KNOWN_YES) {
-        switch (l->datatype->is) {
-        case TYPE_INT:      v->ival = l->ival;  break;
-        case TYPE_REAL:     v->fval = l->fval;  break;
-        case TYPE_CHAR:     //reminder: char and boolean types both internally are represented as chars
-        case TYPE_BOOLEAN:  v->cval = l->cval;
-        }
+        //propagate values
+        //reminder: we pass all of them, maybe later we want to convert from one to another
+        v->ival = l->ival;
+        v->fval = l->fval;
+        v->cval = l->cval;
     }
 
     //skip first init with value known at compile time, EXCEPT for return_values
@@ -324,7 +326,7 @@ statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
         var->id_is = ID_VAR;
     }
 
-    inside_branch_stmt--;
+    inside_loop--;
 
     if (!loop) {
         //ignore empty for
@@ -459,22 +461,26 @@ statement_t *statement_write(expr_list_t *expr_list) {
     return new_write;
 }
 
-void prepare_branch_stmt(expr_t *l) {
-    if (!l) {
-        die("UNEXPECTED_ERROR: 03");
-    }
-
-    if (l->datatype->is!=TYPE_BOOLEAN) {
+inline void check_boolean(data_t *d) {
+    if (d->is!=TYPE_BOOLEAN) {
         yyerror("a flow control expression must be boolean");
     }
-
-    inside_branch_stmt++;
 }
 
-var_t *protect_guard_var(char *id) {
+void prepare_if_stmt(expr_t *l) {
+    inside_branch++;
+    check_boolean(l->datatype);
+}
+
+void prepare_while_stmt(expr_t *l) {
+    inside_loop++;
+    check_boolean(l->datatype);
+}
+
+var_t *prepare_for_stmt(char *id) {
     sem_t *sem_2;
 
-    inside_branch_stmt++;
+    inside_loop++;
 
     sem_2 = sm_find(id);
     if (!sem_2) {

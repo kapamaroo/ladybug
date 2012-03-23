@@ -96,15 +96,13 @@ extern int statement_root_module_current_free;
 
 void init_statements();
 
-void prepare_branch_stmt(expr_t *l);
-
-var_t *protect_guard_var(char *id);
+void prepare_if_stmt(expr_t *l);
+void prepare_while_stmt(expr_t *l);
+var_t *prepare_for_stmt(char *id);
 
 statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
-
 statement_t *statement_while(expr_t *cond, statement_t *loop);
 statement_t *statement_assignment(var_t *v, expr_t *l);
-//statement_t *statement_assignment_str(var_t *var, char *string);
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop);
 statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
 statement_t *statement_with(var_t *var, statement_t *statement);
@@ -114,7 +112,5 @@ statement_t *statement_write(expr_list_t *expr_list);
 statement_t *link_statements(statement_t *child, statement_t *parent);
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement);
 void new_statement_module(func_t *subprogram);
-
-const char* statement_type_to_string(statement_t *statement);
 
 #endif // __STATEMENTS_H
