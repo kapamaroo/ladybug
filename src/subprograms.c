@@ -26,7 +26,8 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
 
 void check_for_return_value(func_t *subprogram,statement_t *body) {
     //subprogram here is always a function
-    if (body->last->return_point==0) {
+    //reminder: body is a comp statement
+    if (body->_comp.first_stmt->last->return_point==0) {
         sprintf(str_err,"control reaches end of function '%s' without return value",subprogram->name);
         yyerror(str_err);
     }
@@ -93,7 +94,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;
-        sem_2->subprogram->stack_size = 0;
+        sem_2->subprogram->stack_size = STACK_INIT_SIZE;
 
         if (!list) {
             yyerror("functions must have at least one parameter.");
@@ -104,13 +105,14 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
         return_value->id_is = ID_RETURN;
         return_value->datatype = return_type;
         return_value->name = sem_2->name;
-        //do not set the scope or Lvalue here, we are not inside the function yet
+        return_value->scope = sem_2->subprogram;
 
         return_value->status_value = VALUE_GARBAGE;
         return_value->status_use = USE_YES;
         return_value->status_known = KNOWN_NO;
 
         sem_2->subprogram->return_value = return_value;
+        return_value->Lvalue = mem_allocate_return_value(sem_2->subprogram);
 
         configure_formal_parameters(list,sem_2->subprogram);
     }
@@ -131,7 +133,7 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;
         sem_2->subprogram->return_value = NULL;
-        sem_2->subprogram->stack_size = 0;
+        sem_2->subprogram->stack_size = STACK_INIT_SIZE;
 
         configure_formal_parameters(list,sem_2->subprogram);
     }

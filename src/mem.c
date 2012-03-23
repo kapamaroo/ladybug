@@ -82,24 +82,6 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
     int i;
     mem_t *new_mem;
 
-    //procedures have zero memsize so the stack_size initializes to zero for them
-    subprogram->stack_size = STACK_INIT_SIZE; //standard independent stack size
-
-    if (subprogram->return_value) {
-        //add space for return_value if subprogram is a function
-
-        //current scope is the subprogram, use it directly
-        //printf("debug: %s\t%s\t%s\n",
-        //       subprogram->name,
-        //       subprogram->return_value->name,
-        //       subprogram->return_value->scope->name);
-
-        //subprogram->return_value->scope = get_current_scope_owner();
-        subprogram->return_value->scope = subprogram;
-
-        subprogram->return_value->Lvalue = mem_allocate_return_value(subprogram);
-    }
-
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
         new_mem = (mem_t*)malloc(sizeof(mem_t));

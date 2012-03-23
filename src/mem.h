@@ -20,6 +20,7 @@
 
 mem_t *mem_allocate_symbol(data_t *d);
 mem_t *mem_allocate_string(char *string);
+mem_t *mem_allocate_return_value(func_t *subprogram);
 
 void configure_stack_size_and_param_lvalues(func_t *subprogram);
 
