@@ -367,10 +367,6 @@ ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list) {
     return new_proc_call;
 }
 
-ir_node_t *new_ir_comp_stmt(ir_node_t *body) {
-    return body;
-}
-
 /** Assume that read and write statements have meaning only for standard types and STRINGS
  * these are the only serializeable datatypes
  * booleans are considered chars here and we must check their value after we read them

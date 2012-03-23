@@ -81,7 +81,6 @@ ir_node_t *new_ir_while(expr_t *cond,ir_node_t *true_stmt);
 ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt);
 ir_node_t *new_ir_with(ir_node_t *body);
 ir_node_t *new_ir_procedure_call(func_t *subprogram,expr_list_t *list);
-ir_node_t *new_ir_comp_stmt(ir_node_t *body);
 ir_node_t *new_ir_read(var_list_t *list);
 ir_node_t *new_ir_write(expr_list_t *list);
 
