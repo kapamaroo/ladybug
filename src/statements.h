@@ -17,8 +17,11 @@ enum StatementType {
     ST_With,
     ST_Read,
     ST_Write,
+    ST_Comp,
     ST_BadStatement
 };
+
+#define NEW_STMT_BLOCK_STARTS_FROM(s) (s->type==ST_If || s->type==ST_While || s->type==ST_For)
 
 enum IterSpaceType {
     FT_DownTo,
@@ -71,6 +74,10 @@ struct statement_write_t {
     expr_list_t *expr_list;
 };
 
+struct statement_comp_t {
+    struct statement_t *first_stmt;
+};
+
 typedef struct statement_t {
     enum StatementType type;
     union {
@@ -82,6 +89,7 @@ typedef struct statement_t {
         struct statement_with_t _with;
         struct statement_read_t _read;
         struct statement_write_t _write;
+        struct statement_comp_t _comp;
     };
     int return_point; //we check this to see if a function always returns a return value
 
@@ -108,6 +116,7 @@ statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
 statement_t *statement_with(var_t *var, statement_t *statement);
 statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
+statement_t *statement_comp(statement_t *first_stmt);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement);

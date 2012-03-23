@@ -312,8 +312,6 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
     return new_assign;
 }
 
-//statement_t *statement_assignment_str(var_t *var, char *string) {}
-
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
     statement_t *new_for;
 
@@ -459,6 +457,20 @@ statement_t *statement_write(expr_list_t *expr_list) {
     new_write->_write.expr_list = expr_list;
 
     return new_write;
+}
+
+statement_t *statement_comp(statement_t *first_stmt) {
+    statement_t *new_comp;
+
+    if (!first_stmt) {
+        //ignore empty comp statement
+        return NULL;
+    }
+
+    new_comp = new_statement_t(ST_Comp);
+    new_comp->_comp.first_stmt = first_stmt;
+
+    return new_comp;
 }
 
 inline void check_boolean(data_t *d) {
