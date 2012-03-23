@@ -98,6 +98,11 @@ var_t *reference_to_variable_or_enum_element(char *id) {
                 new_enum_const->Lvalue = NULL;
                 new_enum_const->cond_assign = NULL;
                 new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
+
+                new_enum_const->status_value = VALUE_VALID;
+                new_enum_const->status_use = USE_NONE;
+                new_enum_const->status_known = KNOWN_YES;
+
                 //do not set the scope, this is not a variable
                 return new_enum_const;
             }

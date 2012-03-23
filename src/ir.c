@@ -338,11 +338,9 @@ ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
     right_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
     total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
 
-    //this is a hack, if we ever do multithreading this is not gona work
-    var->id_is = ID_VAR;
+    //ignore any high level info
     dark_init_for = new_ir_assign(var,range->start);
     dark_cond_step = new_ir_assign(var,expr_step);
-    var->id_is = ID_VAR_GUARDED;
 
     dark_init_for->label = new_label_unique("FOR_ENTER");
 

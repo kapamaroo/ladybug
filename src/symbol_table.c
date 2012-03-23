@@ -144,7 +144,7 @@ sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
     else {
         sprintf(str_err,"`%s` already declared in this scope",id);
         yyerror(str_err);
-        return NULL;
+        return existing_sem; //for more inspection
     }
 }
 
@@ -163,7 +163,6 @@ void sm_remove(char *id) {
     //INFO: do not free() the elements, just remove them from symbol_table
 
     switch (symbol->id_is) {
-    case ID_VAR_GUARDED:
     case ID_VAR:
         if (symbol->var->status_use==USE_NONE) {
             sprintf(str_err, "variable '%s' of type '%s' not used in '%s'", symbol->var->name,
@@ -200,6 +199,9 @@ void sm_remove(char *id) {
         sprintf(str_err,"subprogram '%s' without body in module %s.",id,scope_owner->name);
         yyerror(str_err);
         break;
+    case ID_VAR_GUARDED: //this is a virtual variable type, we should never see it here
+    default:
+        die("INTERNAL_ERROR: in sm_remove()");
     }
     //free(symbol->name);
     free(scope_owner->symbol_table.pool[symbol->index]);
@@ -234,24 +236,30 @@ void declare_consts(char *id,expr_t *l) {
     }
 
     sem = sm_insert(id,ID_CONST);
-    if (sem) {
-        new_var = (var_t*)malloc(sizeof(var_t));
-        new_var->id_is = ID_CONST;
-        new_var->datatype = l->datatype;
-        new_var->name = sem->name;
-        new_var->ival = l->ival;
-        new_var->fval = l->fval;
-        new_var->cval = l->cval;
-        //new_var->cstr = l->cstr;
-        new_var->scope = sem->scope;
-        sem->var = new_var;
-
-        sem->var->Lvalue = mem_allocate_symbol(l->datatype);
-    }
-    else {
+    if (!sem) {
         sprintf(str_err,"'%s' already declared",id);
         yyerror(str_err);
+        return;
     }
+
+    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var->id_is = ID_CONST;
+    new_var->datatype = l->datatype;
+    new_var->name = sem->name;
+    new_var->ival = l->ival;
+    new_var->fval = l->fval;
+    new_var->cval = l->cval;
+    //new_var->cstr = l->cstr;
+    new_var->scope = sem->scope;
+
+    new_var->status_value = VALUE_VALID;
+    new_var->status_use = USE_NONE;
+    new_var->status_known = KNOWN_YES;
+
+    sem->var = new_var;
+
+#warning we can skip the allocation of constants
+    sem->var->Lvalue = mem_allocate_symbol(l->datatype);
 }
 
 void declare_vars(data_t* type){
@@ -347,19 +355,18 @@ void sm_insert_lost_symbol(const char *id, const char *error_msg) {
     pool = current_scope->symbol_table.lost;
     empty = current_scope->symbol_table.lost_empty;
 
-    if (empty>0) {
-        //printf("debug: insert lost symbol '%s' in scope '%s'\n", id, current_scope->name);
-        tmp = strdup(id);
-        pool[MAX_LOST_SYMBOLS - empty] = tmp;
-        current_scope->symbol_table.lost_empty--;
-
-        //print error if any
-        if (error_msg) {
-            yyerror(error_msg);
-        }
-    }
-    else {
+    if (empty<=0) {
         die("FATAL_ERROR: reached maximun lost symbols for current scope");
+    }
+
+    //printf("debug: insert lost symbol '%s' in scope '%s'\n", id, current_scope->name);
+    tmp = strdup(id);
+    pool[MAX_LOST_SYMBOLS - empty] = tmp;
+    current_scope->symbol_table.lost_empty--;
+
+    //print error if any
+    if (error_msg) {
+        yyerror(error_msg);
     }
 }
 

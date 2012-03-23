@@ -336,7 +336,7 @@ if_tail: ELSE statement {$$ = $2;}
 while_statement: WHILE expression {prepare_branch_stmt($2);} DO statement {$$ = statement_while($2,$5);}
 ;
 
-for_statement: FOR ID ASSIGN iter_space DO {$<var>$ = protect_guard_var($2);} statement {$$ = statement_for($<var>6,$4,$7);unprotect_guard_var($<var>6);}
+for_statement: FOR ID ASSIGN iter_space DO {$<var>$ = protect_guard_var($2);} statement {$$ = statement_for($<var>6,$4,$7);}
 ;
 
 iter_space: expression TO expression {$$ = make_iter_space($1,1,$3);}

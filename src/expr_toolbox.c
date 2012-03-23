@@ -37,8 +37,10 @@ expr_t *expr_from_variable(var_t *v) {
     //mark variable as used
     v->status_use = USE_YES;
 
-    if (v->id_is==ID_CONST || v->status_known == KNOWN_YES) {
-        //if (v->id_is==ID_CONST ) {
+    //if (v->status_known==KNOWN_YES) {  //constants are always marked as KNOWN_YES
+    //if (v->id_is==ID_CONST ) { //do not propagate known variables
+
+    if (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED) { //always use the lvalue for ID_VAR_GUARDED
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
             l->datatype = v->datatype; //if enum, set the enumeration type
