@@ -180,7 +180,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             case RELOP_LE:
             case RELOP_NE:
             case RELOP_EQU:
-                //default is IR_RVAL, if we need only to compare them we must set them as NODE_BRANCH_COND
+                //default is IR_RVAL, if we need only to compare them we must set them as NODE_BRANCH
                 break;
             case OP_PLUS:
             case OP_MINUS:
