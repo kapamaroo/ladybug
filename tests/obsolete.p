@@ -18,7 +18,7 @@ begin
    b := 10;
    c := 15;
    d := 20;
-   e :=25;
+   e := 25;
 
    x := a + b * obsolete(a,e) * c - d + e * 3;
    a := try_me(f,d);
