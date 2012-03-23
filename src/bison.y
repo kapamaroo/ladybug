@@ -15,6 +15,7 @@
 #include "subprograms_toolbox.h"
 #include "ir.h"
 #include "statements.h"
+#include "analysis.h"
 #include "err_buff.h"
 #include "generator.h"
 #include "ir_parser.h"
@@ -304,7 +305,7 @@ pass: VAR {$$ = PASS_REF;}
 | /* empty */ {$$ = PASS_VAL;}
 ;
 
-comp_statement: T_BEGIN statements END {$$ = $2;}
+comp_statement: T_BEGIN statements END {$$ = statement_comp($2);}
 ;
 
 statements: statements SEMI statement {$$ = link_statements($3,$1);}
@@ -312,13 +313,13 @@ statements: statements SEMI statement {$$ = link_statements($3,$1);}
 ;
 
 statement: assignment
-| if_statement
-| while_statement
-| for_statement
+| if_statement {analyse_dependencies($1);}
+| while_statement {analyse_dependencies($1);}
+| for_statement {analyse_dependencies($1);}
 | with_statement
 | subprogram_call
 | io_statement
-| comp_statement
+| comp_statement {analyse_dependencies($1);}
 | /* empty */ {$$ = NULL;}
 ;
 

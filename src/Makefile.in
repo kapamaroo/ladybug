@@ -52,9 +52,9 @@ am_ladybug_OBJECTS = FuncTools.$(OBJEXT) symbol_table.$(OBJEXT) \
 	expr_toolbox.$(OBJEXT) ir_toolbox.$(OBJEXT) main_app.$(OBJEXT) \
 	subprograms.$(OBJEXT) subprograms_toolbox.$(OBJEXT) \
 	scope.$(OBJEXT) bitmap.$(OBJEXT) ir_parser.$(OBJEXT) \
-	reg.$(OBJEXT) statements.$(OBJEXT) generator.$(OBJEXT) \
-	final_code.$(OBJEXT) instruction_set.$(OBJEXT) bison.$(OBJEXT) \
-	flex.$(OBJEXT)
+	reg.$(OBJEXT) statements.$(OBJEXT) analysis.$(OBJEXT) \
+	generator.$(OBJEXT) final_code.$(OBJEXT) \
+	instruction_set.$(OBJEXT) bison.$(OBJEXT) flex.$(OBJEXT)
 ladybug_OBJECTS = $(am_ladybug_OBJECTS)
 ladybug_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -186,6 +186,7 @@ ladybug_SOURCES = FuncTools.c \
 	ir_parser.c \
 	reg.c \
 	statements.c \
+	analysis.c \
 	generator.c \
 	final_code.c \
 	instruction_set.c \
@@ -275,6 +276,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FuncTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/analysis.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bison.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bitmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/datatypes.Po@am__quote@

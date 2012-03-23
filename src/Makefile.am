@@ -22,6 +22,7 @@ ladybug_SOURCES = FuncTools.c \
 	ir_parser.c \
 	reg.c \
 	statements.c \
+	analysis.c \
 	generator.c \
 	final_code.c \
 	instruction_set.c \
