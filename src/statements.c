@@ -82,12 +82,8 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
     }
 
     //synonym datatype matching
-    if (vd->is==ld->is) {
+    if (TYPE_IS_STANDARD(vd) && vd->is==ld->is) {
         return 1;
-    }
-    else if (vd->is==TYPE_BOOLEAN) {
-        //we can only assign booleans to booleans
-        return 0;
     }
 
     //compatible datatype matching
@@ -122,9 +118,8 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
         }
         return 0;
     }
-    else {
-        return 0;
-    }
+
+    return 0;
 }
 
 statement_t *new_statement_t(enum StatementType type) {

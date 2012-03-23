@@ -258,8 +258,8 @@ void declare_consts(char *id,expr_t *l) {
 
     sem->var = new_var;
 
-#warning we can skip the allocation of constants
-    sem->var->Lvalue = mem_allocate_symbol(l->datatype);
+#warning we skip the allocation of constants
+    //sem->var->Lvalue = mem_allocate_symbol(l->datatype);
 }
 
 void declare_vars(data_t* type){
