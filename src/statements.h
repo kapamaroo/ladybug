@@ -10,16 +10,22 @@
 struct statement_t;
 
 enum StatementType {
+    ST_BadStatement,
+
+    //blocks
     ST_If,
     ST_While,
     ST_For,
+    ST_Comp,
+
+    //virtual statement, it is more of a scope modifier
+    ST_With,
+
     ST_Call,
     ST_Assignment,
-    ST_With,
+
     ST_Read,
     ST_Write,
-    ST_Comp,
-    ST_BadStatement
 };
 
 #define NEW_STMT_BLOCK_STARTS_FROM(s) (s->type==ST_If || s->type==ST_While || \
@@ -41,7 +47,6 @@ struct statement_while_t {
     struct statement_t* loop;
     struct statement_t *epilogue;
     expr_t *condition;
-    loop_stats_t loop_status;
 };
 
 struct statement_assignment_t {
@@ -57,20 +62,15 @@ struct statement_for_t {
     struct statement_t *prologue;
     struct statement_t *loop;
     struct statement_t *epilogue;
-    loop_stats_t loop_status;
 };
 
 struct statement_call_t {
-    //char *id;
-    //param_t *params;
-    //data_t *type;
-    //int size;
     func_t *subprogram;
     expr_list_t *expr_params;
 };
 
 struct statement_with_t {
-    struct statement_t *statement;
+    struct statement_t *body;
     var_t *var;
 };
 
@@ -99,6 +99,17 @@ typedef struct statement_t {
         struct statement_write_t _write;
         struct statement_comp_t _comp;
     };
+
+    //statistics
+    union {
+        loop_stats_t _while;
+        loop_stats_t _for;
+        common_stats_t _assign;
+        common_stats_t _call;
+        common_stats_t _read;
+        common_stats_t _write;
+    } stats_of;
+
     int return_point; //we check this to see if a function always returns a return value
 
     struct statement_t *next;
@@ -121,7 +132,7 @@ statement_t *statement_while(expr_t *cond, statement_t *loop);
 statement_t *statement_assignment(var_t *v, expr_t *l);
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop);
 statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
-statement_t *statement_with(var_t *var, statement_t *statement);
+statement_t *statement_with(var_t *var, statement_t *body);
 statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
 statement_t *statement_comp(statement_t *first_stmt);
