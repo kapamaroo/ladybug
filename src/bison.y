@@ -313,13 +313,13 @@ statements: statements SEMI statement {$$ = link_statements($3,$1);}
 ;
 
 statement: assignment
-| if_statement {analyse_dependencies($1);}
-| while_statement {analyse_dependencies($1);}
-| for_statement {analyse_dependencies($1);}
+| if_statement
+| while_statement
+| for_statement
 | with_statement
 | subprogram_call
 | io_statement
-| comp_statement {analyse_dependencies($1);}
+| comp_statement
 | /* empty */ {$$ = NULL;}
 ;
 
@@ -405,7 +405,8 @@ int main(int argc, char *argv[]) {
     case 0:
         if (!err_num) {
             /* Frontend @ statement_t *statement_root_module[MAX_NUM_OF_MODULES]; */
-
+            define_blocks();
+            analyse_blocks();
 
 
             /* high level optimizations go here */
