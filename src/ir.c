@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <string.h> //memcpy()
+#include <string.h> //memcpy(), memset()
 
 #include "build_flags.h"
 #include "semantics.h"
@@ -101,25 +101,13 @@ ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     ir_node_t *new_node;
 
     new_node = (ir_node_t*)malloc(sizeof(ir_node_t));
-    new_node->node_type = node_type;
+    memset(new_node,0,sizeof(ir_node_t));
 
+    new_node->node_type = node_type;
     new_node->reg = new_virtual_register();
     new_node->op_rval = OP_IGNORE;
-
-    new_node->ir_lval = NULL;
-    new_node->ir_lval2 = NULL;
-    new_node->ir_rval = NULL;
-    new_node->ir_rval2 = NULL;
-
-    new_node->address = NULL;
-    new_node->offset = NULL;
-    new_node->ir_lval_dest = NULL;
-    new_node->ir_goto = NULL;
-
-    new_node->next = NULL;
-    new_node->prev = NULL; //new_node;
     new_node->last = new_node;
-    new_node->label = NULL;
+
     return new_node;
 }
 

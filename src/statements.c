@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h> //memset()
 
 #include "statements.h"
 #include "symbol_table.h" //ladybug's symbol table
@@ -16,6 +17,8 @@ int statement_root_module_current_free;
 unsigned int inside_branch = 0;
 unsigned int inside_loop = 0;
 
+statement_t *new_statement_t(enum StatementType type);
+
 void init_statements() {
     int i;
 
@@ -28,6 +31,10 @@ void init_statements() {
 
 statement_t *link_statements(statement_t *child, statement_t *parent) {
     //return the head of the linked list
+    statement_t *head;
+
+    head = (parent) ? parent : child;
+
     if (parent && child) {
         //if child's return_point is not set, propagate the parent's return_point value
         if (child->last->return_point==0) {
@@ -46,13 +53,9 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
         parent->last->next = child;
         child->prev = parent->last;
         parent->last = child->last;
-
-        return parent;
-    } else if (!parent) {
-        return child;
-    } else {
-        return parent;
     }
+
+    return head;
 }
 
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement) {
@@ -128,12 +131,10 @@ statement_t *new_statement_t(enum StatementType type) {
     statement_t *new_statement;
 
     new_statement = (statement_t*)malloc(sizeof(struct statement_t));
+    memset(new_statement,0,sizeof(struct statement_t));
+
     new_statement->type = type;
-    new_statement->prev = NULL;
-    new_statement->next = NULL;
     new_statement->last = new_statement;
-    new_statement->join = NULL;
-    new_statement->return_point = 0;
 
     return new_statement;
 }
@@ -469,6 +470,7 @@ statement_t *statement_comp(statement_t *first_stmt) {
 
     new_comp = new_statement_t(ST_Comp);
     new_comp->_comp.first_stmt = first_stmt;
+    new_comp->return_point = first_stmt->last->return_point;
 
     return new_comp;
 }

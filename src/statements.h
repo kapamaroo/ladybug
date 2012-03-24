@@ -2,6 +2,7 @@
 #define __STATEMENTS_H
 
 #include "semantics.h"
+#include "statistics.h"
 
 //module zero is the main program
 #define MAX_NUM_OF_MODULES 128
@@ -21,7 +22,8 @@ enum StatementType {
     ST_BadStatement
 };
 
-#define NEW_STMT_BLOCK_STARTS_FROM(s) (s->type==ST_If || s->type==ST_While || s->type==ST_For)
+#define NEW_STMT_BLOCK_STARTS_FROM(s) (s->type==ST_If || s->type==ST_While || \
+                                       s->type==ST_For || s->type==ST_Comp)
 
 enum IterSpaceType {
     FT_DownTo,
@@ -35,8 +37,11 @@ struct statement_if_t {
 };
 
 struct statement_while_t {
+    struct statement_t *prologue;
     struct statement_t* loop;
+    struct statement_t *epilogue;
     expr_t *condition;
+    loop_stats_t loop_status;
 };
 
 struct statement_assignment_t {
@@ -49,7 +54,10 @@ struct statement_for_t {
     //expr_t *from, *to;
     iter_t *iter;
     var_t *var;
+    struct statement_t *prologue;
     struct statement_t *loop;
+    struct statement_t *epilogue;
+    loop_stats_t loop_status;
 };
 
 struct statement_call_t {

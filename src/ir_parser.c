@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ir.h"
 #include "final_code.h"
@@ -20,16 +21,10 @@ instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
     instr_t *new_instr;
 
     new_instr = (instr_t*)malloc(sizeof(instr_t));
+    memset(new_instr,0,sizeof(instr_t));
 
     new_instr->id = ++unique_instr_id;
-    new_instr->prev = NULL;
-    new_instr->next = NULL;
     new_instr->last = new_instr;
-
-    new_instr->Rd = NULL;
-    new_instr->Rs = NULL;
-    new_instr->Rt = NULL;
-
     new_instr->label = label;
     new_instr->mips_instr = mips_instr;
 
