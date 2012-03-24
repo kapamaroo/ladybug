@@ -63,7 +63,7 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
                                s->_assignment.expr);
         break;
     case ST_With:
-        ir_tmp1 = generate_ir_from_statement(s->_with.statement);
+        ir_tmp1 = generate_ir_from_statement(s->_with.body);
         ir_new = new_ir_with(ir_tmp1);
         break;
     case ST_Read:
