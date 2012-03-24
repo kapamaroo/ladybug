@@ -772,21 +772,18 @@ var_list_t *var_list_add(var_list_t *new_list, var_t *v) {
         list = new_list;
     }
 
-    //the supposed number of expressions, assume that there are no NULL expressions
+    if (!list->var_list_empty) {
+        die("UNIMPLEMENTED: cannot handle too much variables in variable list yet");
+    }
+
+    //the supposed number of expressions, assuming no errors
     list->all_var_num++;
 
-    if (!v) {
-#if BISON_DEBUG_LEVEL >= 1
-        yyerror("null variable to var_list (debugging info) ");
-#endif
-    }
-    else if (list->var_list_empty) {
+    if (v->id_is!=ID_LOST) {
         list->var_list[MAX_VAR_LIST-list->var_list_empty] = v;
         list->var_list_empty--;
     }
-    else {
-        yyerror("too much variables");
-    }
+
     return list;
 }
 
@@ -832,7 +829,7 @@ elexpr_list_t *elexpr_list_add(elexpr_list_t *new_list,elexpr_t *el) {
         }
     }
     else {
-        yyerror("too many elexpressions");
+        die("UNIMPLEMENTED: cannot handle too much expressions in expression list yet");
     }
     return list;
 }

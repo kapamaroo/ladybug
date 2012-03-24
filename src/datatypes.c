@@ -79,48 +79,50 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     char *lost_id;
 
     sem_1 = sm_find(id);
-    if (sem_1) {
-        if (sem_1->id_is==ID_VAR || sem_1->id_is==ID_CONST) {
-            return sem_1->var;
-        }
-        else if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
-            //the name of the function acts like a variable
-            return sem_1->subprogram->return_value;
-        }
-        else if (sem_1->id_is==ID_TYPEDEF && sem_1->comp->is==TYPE_ENUM) {
-            //ALLOW this if only enumerations and subsets can declare an iter_space
-            if (strcmp(sem_1->comp->name,id)!=0) {
-                //the ID is an enumeration element
-                new_enum_const = (var_t*)malloc(sizeof(var_t));
-                new_enum_const->id_is = ID_CONST;
-                new_enum_const->datatype = sem_1->comp;
-                new_enum_const->name = sem_1->comp->field_name[enum_num_of_id(sem_1->comp,id)];
-                new_enum_const->Lvalue = NULL;
-                new_enum_const->cond_assign = NULL;
-                new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
-
-                new_enum_const->status_value = VALUE_VALID;
-                new_enum_const->status_use = USE_NONE;
-                new_enum_const->status_known = KNOWN_YES;
-
-                //do not set the scope, this is not a variable
-                return new_enum_const;
-            }
-
-            sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
-            yyerror(str_err);
-        }
-        else {
-            sprintf(str_err,"'%s' is not a variable or constant",id);
-            yyerror(str_err);
-        }
-    }
-    else {
+    if (!sem_1) {
         sprintf(str_err,"bad reference: undeclared symbol '%s'",id);
         sm_insert_lost_symbol(id,str_err);
+        return lost_var_reference();
     }
 
-    return lost_var_reference();
+    if (sem_1->id_is==ID_VAR || sem_1->id_is==ID_CONST) {
+        return sem_1->var;
+    }
+
+    if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
+        //the name of the function acts like a variable
+        return sem_1->subprogram->return_value;
+    }
+
+    if (sem_1->id_is!=ID_TYPEDEF || sem_1->comp->is!=TYPE_ENUM) {
+        sprintf(str_err,"'%s' is not a variable or constant",id);
+        yyerror(str_err);
+        return lost_var_reference();
+    }
+
+    //ALLOW this if only enumerations and subsets can declare an iter_space
+    if (strcmp(sem_1->comp->name,id)==0) {
+        sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
+        yyerror(str_err);
+        return lost_var_reference();
+    }
+
+    //ID is an enumeration element
+
+    new_enum_const = (var_t*)malloc(sizeof(var_t));
+    new_enum_const->id_is = ID_CONST;
+    new_enum_const->datatype = sem_1->comp;
+    new_enum_const->name = sem_1->comp->field_name[enum_num_of_id(sem_1->comp,id)];
+    new_enum_const->Lvalue = NULL;
+    new_enum_const->cond_assign = NULL;
+    new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
+
+    new_enum_const->status_value = VALUE_VALID;
+    new_enum_const->status_use = USE_NONE;
+    new_enum_const->status_known = KNOWN_YES;
+
+    //do not set the scope, this is not a variable but a constant value
+    return new_enum_const;
 }
 
 var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
@@ -132,43 +134,39 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
     var_t *new_var;
 
     if (!v || !list) {
-        die("UNEXPECTED_ERROR: null parameter for array reference");
+        die("UNEXPECTED_ERROR: bad parameters for array reference");
     }
 
-    if (v->id_is==ID_VAR) {
-        if (v->datatype->is==TYPE_ARRAY) {
-            if (valid_expr_list_for_array_reference(v->datatype,list)) {
-                //we print any possible messages in "valid_expr_list_for_array_reference()"
-
-                new_var = (var_t*)malloc(sizeof(var_t));
-                new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
-
-                new_var->datatype = v->datatype->def_datatype;
-                new_var->cond_assign = cond_expr;
-
-                new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
-                new_var->from_comp->base = v;
-                new_var->from_comp->element = -1;
-                new_var->from_comp->index_list = list;
-
-                return new_var;
-            }
-        }
-        else {
-            sprintf(str_err,"variable '%s' is not an array",v->name);
-            yyerror(str_err);
-        }
-    }
-    else if (v->id_is==ID_LOST) {
-        //avoid duplucate error messages
-        return v; //this points to lost variable
-    }
-    else {
+    if (v->id_is!=ID_VAR) {
         sprintf(str_err,"id '%s' is not a variable",v->name);
         yyerror(str_err);
+        return lost_var_reference();
     }
 
-    return lost_var_reference();
+    if (v->datatype->is!=TYPE_ARRAY) {
+        sprintf(str_err,"variable '%s' is not an array",v->name);
+        yyerror(str_err);
+        return lost_var_reference();
+    }
+
+    if (!valid_expr_list_for_array_reference(v->datatype,list)) {
+        return lost_var_reference();
+    }
+
+    //we print any possible messages in "valid_expr_list_for_array_reference()"
+
+    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+
+    new_var->datatype = v->datatype->def_datatype;
+    new_var->cond_assign = cond_expr;
+
+    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+    new_var->from_comp->base = v;
+    new_var->from_comp->element = -1;
+    new_var->from_comp->index_list = list;
+
+    return new_var;
 }
 
 var_t *reference_to_record_element(var_t *v, char *id) {
@@ -179,54 +177,47 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     expr_t *final_expr_offset;
     mem_t *new_mem;
 
-    if (v) {
-        if (v->id_is==ID_VAR) {
-            if (v->datatype->is==TYPE_RECORD) {
-                elem_num = check_for_id_in_datatype(v->datatype,id);
-                if (elem_num>=0) {
-                    //element's position does not change so it is represented as a hardcoded constant
-
-                    offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
-                    //size = v->datatype->field_datatype[elem_num]->memsize;
-
-                    new_var = (var_t*)malloc(sizeof(var_t));
-                    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
-
-                    //new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
-                    new_var->name = strdup(v->datatype->field_name[elem_num]);
-
-                    new_var->datatype = v->datatype->field_datatype[elem_num];
-
-                    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
-                    new_var->from_comp->base = v;
-                    new_var->from_comp->element = elem_num;
-
-                    return new_var;
-                }
-                else {
-                    sprintf(str_err,"no element named '%s' in record type",id);
-                    yyerror(str_err);
-                    return lost_var_reference();
-                }
-            }
-            else {
-                yyerror("type of variable is not a record");
-                return lost_var_reference();
-            }
-        }
-        else if (v->id_is==ID_LOST) {
-            return v; //avoid unreal error messages
-        }
-        else {
-            sprintf(str_err,"id '%s' is not a variable",v->name);
-            yyerror(str_err);
-            return lost_var_reference();
-        }
-    }
-    else {
+    if (!v) {
         die("INTERNAL_ERROR: 43");
         return NULL; //keep the compiler happy
     }
+
+    if (v->id_is!=ID_VAR) {
+        sprintf(str_err,"id '%s' is not a variable",v->name);
+        yyerror(str_err);
+        return lost_var_reference();
+    }
+
+    if (v->datatype->is!=TYPE_RECORD) {
+        yyerror("type of variable is not a record");
+        return lost_var_reference();
+    }
+
+    elem_num = check_for_id_in_datatype(v->datatype,id);
+    if (elem_num<0) {
+        sprintf(str_err,"no element named '%s' in record type",id);
+        yyerror(str_err);
+        return lost_var_reference();
+    }
+
+    //element's position does not change so it is represented as a hardcoded constant
+
+    offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
+    //size = v->datatype->field_datatype[elem_num]->memsize;
+
+    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+
+    //new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
+    new_var->name = strdup(v->datatype->field_name[elem_num]);
+
+    new_var->datatype = v->datatype->field_datatype[elem_num];
+
+    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+    new_var->from_comp->base = v;
+    new_var->from_comp->element = elem_num;
+
+    return new_var;
 }
 
 int enum_num_of_id(const data_t *data,const char *id) {

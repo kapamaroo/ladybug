@@ -357,21 +357,21 @@ statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params) {
     return new_call;
 }
 
-statement_t *statement_with(var_t *var, statement_t *statement) {
+statement_t *statement_with(var_t *var, statement_t *body) {
     statement_t *new_with;
 
     if (!var) {
         return new_statement_t(ST_BadStatement);
     }
 
-    if (!statement) {
+    if (!body) {
         //ignore empty with
         return NULL;
     }
 
     new_with = new_statement_t(ST_With);
     new_with->_with.var = var;
-    new_with->_with.statement = statement;
+    new_with->_with.body = body;
 
     return new_with;
 }

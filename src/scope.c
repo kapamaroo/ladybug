@@ -156,9 +156,9 @@ void start_new_with_statement_scope(var_t *var) {
     //sure. see semantics.h for more information about the
     //representation of variables and structs.
 
-    if (!var) {
+    if (var->id_is!=ID_VAR) {
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
-        sprintf(str_err,"null variable in with_statement (debugging info)");
+        sprintf(str_err,"non variable in with_statement (debugging info)");
         yyerror(str_err);
         return;
 #endif
