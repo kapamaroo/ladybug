@@ -102,12 +102,8 @@ typedef struct statement_t {
 
     //statistics
     union {
-        loop_stats_t _while;
-        loop_stats_t _for;
-        common_stats_t _assign;
-        common_stats_t _call;
-        common_stats_t _read;
-        common_stats_t _write;
+        block_stats_t block;
+        common_stats_t stmt;
     } stats_of;
 
     int return_point; //we check this to see if a function always returns a return value
