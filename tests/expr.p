@@ -1,5 +1,5 @@
 program test1;
-var a,b,c,d,e,x: integer;
+var a,b,c,d,e,x,z: integer;
 function try_me(i,j:integer): integer;
 begin
   i := i+j;
@@ -13,5 +13,6 @@ begin
    e :=25;
 
    x := a + b * try_me(a,e) * c - d + e * 3;
+   z := a + b * try_me(a,e) * z - d + e * 3;
 
 end.

@@ -45,7 +45,9 @@ begin
         a:=100;
         b:=200;
         c:=300;
-     end
+     end;
+   c:=300;
+
 end; { proc_1 }
 
 begin
