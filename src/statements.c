@@ -61,7 +61,11 @@ void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_st
     close_scope(subprogram);
 
 #warning we leak memory on obsolete functions //FIXME
-    //if (subprogram->status==FUNC_OBSOLETE) { return; }
+    if (subprogram->status==FUNC_OBSOLETE) {
+        sprintf(str_err,"known return value at compile time of function '%s'",subprogram->name);
+        yywarning(str_err);
+        //return;
+    }
 
     statement_root_module[subprogram->unique_id] =
         link_statements(new_statement,statement_root_module[subprogram->unique_id]);
