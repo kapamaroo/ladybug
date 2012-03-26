@@ -91,7 +91,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
     //function name belongs to current scope
     sem_2 = sm_insert(id,ID_FORWARDED_FUNC);
     if (sem_2) {
-        sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
+        sem_2->subprogram = (func_t*)calloc(1,sizeof(func_t));
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;
         sem_2->subprogram->stack_size = STACK_INIT_SIZE;
@@ -101,7 +101,7 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
             //continue to avoid false error messages
         }
 
-        return_value = (var_t*)malloc(sizeof(var_t));
+        return_value = (var_t*)calloc(1,sizeof(var_t));
         return_value->id_is = ID_RETURN;
         return_value->datatype = return_type;
         return_value->name = sem_2->name;
@@ -129,7 +129,7 @@ sem_t *declare_procedure_header(char *id,param_list_t *list) {
     sem_2  = sm_insert(id,ID_FORWARDED_PROC);
     if (sem_2) {
         //do something with formal parameters
-        sem_2->subprogram = (func_t*)malloc(sizeof(func_t));
+        sem_2->subprogram = (func_t*)calloc(1,sizeof(func_t));
         sem_2->subprogram->status = FUNC_USEFULL;
         sem_2->subprogram->name = sem_2->name;
         sem_2->subprogram->return_value = NULL;

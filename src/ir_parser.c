@@ -20,8 +20,7 @@ instr_t *new_instruction(char *label,mips_instr_t *mips_instr) {
     static unsigned long unique_instr_id = 0;
     instr_t *new_instr;
 
-    new_instr = (instr_t*)malloc(sizeof(instr_t));
-    memset(new_instr,0,sizeof(instr_t));
+    new_instr = (instr_t*)calloc(1,sizeof(instr_t));
 
     new_instr->id = ++unique_instr_id;
     new_instr->last = new_instr;

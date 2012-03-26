@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> //memset()
 
 #include "statements.h"
 #include "symbol_table.h" //ladybug's symbol table
@@ -62,7 +61,7 @@ void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_st
     close_scope(subprogram);
 
 #warning we leak memory on obsolete functions //FIXME
-    if (subprogram->status==FUNC_OBSOLETE) { return; }
+    //if (subprogram->status==FUNC_OBSOLETE) { return; }
 
     statement_root_module[subprogram->unique_id] =
         link_statements(new_statement,statement_root_module[subprogram->unique_id]);
@@ -130,8 +129,7 @@ int check_assign_similar_comp_datatypes(data_t* vd, data_t* ld){
 statement_t *new_statement_t(enum StatementType type) {
     statement_t *new_statement;
 
-    new_statement = (statement_t*)malloc(sizeof(struct statement_t));
-    memset(new_statement,0,sizeof(struct statement_t));
+    new_statement = (statement_t*)calloc(1,sizeof(struct statement_t));
 
     new_statement->type = type;
     new_statement->last = new_statement;

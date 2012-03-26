@@ -86,7 +86,7 @@ void idf_init(int idf_free_memory) {
     static unsigned int first_call = 1;
 
     if (first_call) {
-        idf_table = (idf_t*)malloc(MAX_IDF*sizeof(idf_t));
+        idf_table = (idf_t*)calloc(MAX_IDF,sizeof(idf_t));
         first_call = 0;
     }
 

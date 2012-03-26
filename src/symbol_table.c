@@ -22,7 +22,7 @@ func_t *create_main_program(char *name) {
     sem_main_program = sm_insert(name,ID_PROGRAM_NAME);
 
     //see scope.h
-    main_program = (func_t*)malloc(sizeof(func_t));
+    main_program = (func_t*)calloc(1,sizeof(func_t));
     main_program->status = FUNC_USEFULL;
 
     //main_program->name = sem_main_program->name;
@@ -44,7 +44,7 @@ void init_symbol_table() {
 
     init_datatypes();
 
-    lost_var = (var_t*)malloc(sizeof(var_t));
+    lost_var = (var_t*)calloc(1,sizeof(var_t));
     lost_var->id_is = ID_LOST;
     lost_var->name = "__lost_variable__";
     lost_var->datatype = void_datatype;
@@ -52,7 +52,7 @@ void init_symbol_table() {
     lost_var->ival = 0;
     lost_var->fval = 0;
     lost_var->cval = 0;
-    lost_var->Lvalue = (mem_t*)malloc(sizeof(mem_t));
+    lost_var->Lvalue = (mem_t*)calloc(1,sizeof(mem_t));
     lost_var->Lvalue->content_type = PASS_VAL;
     lost_var->Lvalue->offset_expr = expr_from_hardcoded_int(0);
     lost_var->Lvalue->seg_offset = expr_from_hardcoded_int(0);
@@ -127,7 +127,7 @@ sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
     existing_sem = sm_find(id);
 
     if ((!existing_sem || existing_sem->scope!=scope_owner || root_scope_with) && sm_empty) {
-        new_sem = (sem_t*)malloc(sizeof(sem_t));
+        new_sem = (sem_t*)calloc(1,sizeof(sem_t));
         new_sem->id_is = ID_TYPE;
         new_sem->name = strdup(id);
         new_sem->scope = scope_owner;
@@ -150,6 +150,7 @@ sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
 
 void sm_remove(char *id) {
     //int i;
+    int index;
     sem_t *symbol;
     func_t *scope_owner;
 
@@ -204,8 +205,9 @@ void sm_remove(char *id) {
         die("INTERNAL_ERROR: in sm_remove()");
     }
     //free(symbol->name);
-    free(scope_owner->symbol_table.pool[symbol->index]);
-    scope_owner->symbol_table.pool[symbol->index] = NULL;
+    index = symbol->index;
+    free(scope_owner->symbol_table.pool[index]);
+    scope_owner->symbol_table.pool[index] = NULL;
     scope_owner->symbol_table.pool_empty++;
     //printf("debug: remove symbol '%s' of scope '%s'\n", symbol->name, scope_owner->name);
 }
@@ -242,7 +244,7 @@ void declare_consts(char *id,expr_t *l) {
         return;
     }
 
-    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var->id_is = ID_CONST;
     new_var->datatype = l->datatype;
     new_var->name = sem->name;
@@ -278,7 +280,8 @@ void declare_vars(data_t* type){
         for (i=0;i<MAX_IDF-idf_empty;i++) {
             new_sem = sm_insert(idf_table[i].name,ID_VAR);
             if (new_sem) {
-                new_sem->var = (var_t*)malloc(sizeof(var_t));
+                //new_sem->var = (var_t*)calloc(1,sizeof(var_t));
+                new_sem->var = (var_t*)calloc(1,sizeof(var_t));
                 new_sem->var->id_is = ID_VAR;
                 new_sem->var->datatype = type;
                 new_sem->var->name = new_sem->name;
@@ -325,7 +328,7 @@ void declare_formal_parameters(func_t *subprogram) {
             die("INTERNAL_ERROR: declaration of formal parameter failed");
         }
 
-        new_var = (var_t*)malloc(sizeof(var_t));
+        new_var = (var_t*)calloc(1,sizeof(var_t));
         new_var->id_is = ID_VAR;
         new_var->datatype = subprogram->param[i]->datatype;
         new_var->name = new_sem->name;

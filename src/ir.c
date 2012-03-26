@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <string.h> //memcpy(), memset()
+#include <string.h> //memcpy()
 
 #include "build_flags.h"
 #include "semantics.h"
@@ -28,7 +28,7 @@ var_t *variable_from_comp_datatype_element(var_t *var);
 reg_t *new_virtual_register() {
     reg_t *new_reg;
 
-    new_reg = (reg_t*)malloc(sizeof(reg_t));
+    new_reg = (reg_t*)calloc(1,sizeof(reg_t));
     new_reg->type = REG_VIRT;
     new_reg->virtual = unique_virt_reg++;
     new_reg->live = NULL;
@@ -100,8 +100,7 @@ ir_node_t *link_ir_to_ir(ir_node_t *child,ir_node_t *parent) {
 ir_node_t *new_ir_node_t(ir_node_type_t node_type) {
     ir_node_t *new_node;
 
-    new_node = (ir_node_t*)malloc(sizeof(ir_node_t));
-    memset(new_node,0,sizeof(ir_node_t));
+    new_node = (ir_node_t*)calloc(1,sizeof(ir_node_t));
 
     new_node->node_type = node_type;
     new_node->reg = new_virtual_register();
@@ -507,13 +506,13 @@ ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
     elem_offset_num = v->datatype->dim[0]->relative_distance*v->datatype->dim[0]->range*v->datatype->def_datatype->memsize;
     new_stmt = NULL;
     for(i=0; i<elem_offset_num; i+=v->datatype->def_datatype->memsize) {
-        dummy_mem_array = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_array = (mem_t*)calloc(1,sizeof(mem_t));
         dummy_mem_array = (mem_t*)memcpy(dummy_mem_array,v->Lvalue,sizeof(mem_t));
 
         dummy_mem_array->size = v->datatype->def_datatype->memsize;
         dummy_mem_array->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
 
-        dummy_var_array = (var_t*)malloc(sizeof(var_t));
+        dummy_var_array = (var_t*)calloc(1,sizeof(var_t));
         dummy_var_array->id_is = ID_VAR;
         dummy_var_array->datatype = v->datatype->def_datatype;
         dummy_var_array->name = "__internal_dummy_variable_for_array_assignment__";
@@ -521,13 +520,13 @@ ir_node_t *expand_array_assign(var_t *v,expr_t *l) {
         dummy_var_array->cond_assign = NULL;
         dummy_var_array->Lvalue = dummy_mem_array;
 
-        dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_l = (mem_t*)calloc(1,sizeof(mem_t));
         dummy_mem_l = (mem_t*)memcpy(dummy_mem_l,l->var->Lvalue,sizeof(mem_t));
 
         dummy_mem_l->size = l->var->datatype->def_datatype->memsize;
         dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(i));
 
-        dummy_var_l = (var_t*)malloc(sizeof(var_t));
+        dummy_var_l = (var_t*)calloc(1,sizeof(var_t));
         dummy_var_l->id_is = ID_VAR;
         dummy_var_l->datatype = l->var->datatype->def_datatype;
         dummy_var_l->name = "__internal_dummy_variable_for_array_assignment__";
@@ -557,13 +556,13 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
 
     new_stmt = NULL;
     for(i=0; i<v->datatype->field_num; i++) {
-        dummy_mem_record = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_record = (mem_t*)calloc(1,sizeof(mem_t));
         dummy_mem_record = (mem_t*)memcpy(dummy_mem_record,v->Lvalue,sizeof(mem_t));
 
         dummy_mem_record->size = v->datatype->field_datatype[i]->memsize;
         dummy_mem_record->offset_expr = expr_relop_equ_addop_mult(v->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(v->datatype->field_offset[i]));
 
-        dummy_var_record = (var_t*)malloc(sizeof(var_t));
+        dummy_var_record = (var_t*)calloc(1,sizeof(var_t));
         dummy_var_record->id_is = ID_VAR;
         dummy_var_record->datatype = v->datatype->field_datatype[i];
         dummy_var_record->name = "__internal_dummy_variable_for_record_assignment__";
@@ -571,13 +570,13 @@ ir_node_t *expand_record_assign(var_t *v,expr_t *l) {
         dummy_var_record->cond_assign = NULL;
         dummy_var_record->Lvalue = dummy_mem_record;
 
-        dummy_mem_l = (mem_t*)malloc(sizeof(mem_t));
+        dummy_mem_l = (mem_t*)calloc(1,sizeof(mem_t));
         dummy_mem_l = (mem_t*)memcpy(dummy_mem_l,l->var->Lvalue,sizeof(mem_t));
 
         dummy_mem_l->size = l->var->datatype->field_datatype[i]->memsize;
         dummy_mem_l->offset_expr = expr_relop_equ_addop_mult(l->var->Lvalue->offset_expr,OP_PLUS,expr_from_hardcoded_int(l->var->datatype->field_offset[i]));
 
-        dummy_var_l = (var_t*)malloc(sizeof(var_t));
+        dummy_var_l = (var_t*)calloc(1,sizeof(var_t));
         dummy_var_l->id_is = ID_VAR;
         dummy_var_l->datatype = l->var->datatype->field_datatype[i];
         dummy_var_l->name = "__internal_dummy_variable_for_record_assignment__";
@@ -750,7 +749,7 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
 
     var->cond_assign = final_cond;
 
-    new_mem = (mem_t*)malloc(sizeof(mem_t));
+    new_mem = (mem_t*)calloc(1,sizeof(mem_t));
     new_mem = (mem_t*)memcpy(new_mem,base_Lvalue,sizeof(mem_t));
     new_mem->offset_expr = final_offset;
     new_mem->size = var->datatype->memsize;

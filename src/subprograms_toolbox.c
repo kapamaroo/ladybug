@@ -12,7 +12,7 @@ param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
     param_list_t *list;
 
     if (!new_list) {
-        list = (param_list_t*)malloc(sizeof(param_list_t));
+        list = (param_list_t*)calloc(1,sizeof(param_list_t));
         list->param_empty = MAX_PARAMS;
     }
     else {
@@ -31,7 +31,7 @@ param_list_t *param_insert(param_list_t *new_list,pass_t mode,data_t *type) {
     }
     else if (list->param_empty>=MAX_IDF-idf_empty) {
         for (i=0;i<MAX_IDF-idf_empty;i++) {
-            new_param = (param_t*)malloc(sizeof(param_t));
+            new_param = (param_t*)calloc(1,sizeof(param_t));
             new_param->name = idf_table[i].name;
             new_param->pass_mode = mode;
             new_param->datatype = type;

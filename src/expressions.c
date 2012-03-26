@@ -75,7 +75,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
                 datatype = l1->datatype; //the result set has the same datadef type
             }
 
-            new_expr = (expr_t*)malloc(sizeof(expr_t));
+            new_expr = (expr_t*)calloc(1,sizeof(expr_t));
             new_expr->parent = new_expr;
             new_expr->datatype = datatype;
             new_expr->expr_is = EXPR_SET;
@@ -125,7 +125,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
     if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
         (l2->expr_is==EXPR_RVAL || l2->expr_is==EXPR_LVAL || l2->expr_is==EXPR_HARDCODED_CONST)) {
-        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr = (expr_t*)calloc(1,sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
@@ -327,7 +327,7 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     else {
         //no hardcoded value
 
-        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr = (expr_t*)calloc(1,sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->datatype = SEM_BOOLEAN;
         new_expr->expr_is = EXPR_RVAL;
@@ -402,7 +402,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_REAL; }
         else if (l2->datatype->is!=TYPE_REAL) { l2->convert_to = SEM_REAL; }
 
-        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr = (expr_t*)calloc(1,sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
@@ -429,7 +429,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         if (l2->expr_is==EXPR_HARDCODED_CONST) { l2->datatype = SEM_INTEGER; }
         else if (l2->datatype->is!=TYPE_INT) { l2->convert_to = SEM_INTEGER; }
 
-        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr = (expr_t*)calloc(1,sizeof(expr_t));
         new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
@@ -482,7 +482,7 @@ expr_t *expr_sign(op_t op,expr_t *l) {
             }
         }
 
-        new_expr = (expr_t*)malloc(sizeof(expr_t));
+        new_expr = (expr_t*)calloc(1,sizeof(expr_t));
         new_expr->parent = new_expr;
 
         if (l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) {
@@ -511,9 +511,8 @@ expr_t *expr_sign(op_t op,expr_t *l) {
 int expr_lval_with_comp_datatype(expr_t *l) {
     var_t *v;
 
-    v = l->var;
-
     if (l->expr_is==EXPR_LVAL && TYPE_IS_COMPOSITE(l->datatype)) {
+        v = l->var;
         sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->name);
         yyerror(str_err);
         l->expr_is = EXPR_LOST;

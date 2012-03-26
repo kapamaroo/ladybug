@@ -20,7 +20,7 @@ void init_buf(T_buf *buf_ptr) {
     buf_ptr->factor = 1;
     buf_ptr->empty = DEFAULT_STR_SIZE;
     free(buf_ptr->buf); //any previous string
-    buf_ptr->buf = (char*)malloc(DEFAULT_STR_SIZE*sizeof(char));
+    buf_ptr->buf = (char*)calloc(DEFAULT_STR_SIZE,sizeof(char));
     buf_ptr->ptr = buf_ptr->buf;
 }
 

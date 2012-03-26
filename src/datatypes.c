@@ -27,7 +27,7 @@ void init_datatypes() {
 
     //insert the standard types
     sem_INTEGER = sm_insert("integer",ID_TYPEDEF);
-    sem_INTEGER->comp = (data_t*)malloc(sizeof(data_t));
+    sem_INTEGER->comp = (data_t*)calloc(1,sizeof(data_t));
     sem_INTEGER->comp->is = TYPE_INT;
     sem_INTEGER->comp->def_datatype = sem_INTEGER->comp;
     sem_INTEGER->comp->name = sem_INTEGER->name;
@@ -35,7 +35,7 @@ void init_datatypes() {
     SEM_INTEGER = sem_INTEGER->comp;
 
     sem_REAL = sm_insert("real",ID_TYPEDEF);
-    sem_REAL->comp = (data_t*)malloc(sizeof(data_t));
+    sem_REAL->comp = (data_t*)calloc(1,sizeof(data_t));
     sem_REAL->comp->is = TYPE_REAL;
     sem_REAL->comp->def_datatype = sem_REAL->comp;
     sem_REAL->comp->name = sem_REAL->name;
@@ -43,7 +43,7 @@ void init_datatypes() {
     SEM_REAL = sem_REAL->comp;
 
     sem_BOOLEAN = sm_insert("boolean",ID_TYPEDEF);
-    sem_BOOLEAN->comp = (data_t*)malloc(sizeof(data_t));
+    sem_BOOLEAN->comp = (data_t*)calloc(1,sizeof(data_t));
     sem_BOOLEAN->comp->is = TYPE_BOOLEAN;
     sem_BOOLEAN->comp->def_datatype = sem_BOOLEAN->comp;
     sem_BOOLEAN->comp->name = sem_BOOLEAN->name;
@@ -51,23 +51,23 @@ void init_datatypes() {
     SEM_BOOLEAN = sem_BOOLEAN->comp;
 
     sem_CHAR = sm_insert("char",ID_TYPEDEF);
-    sem_CHAR->comp = (data_t*)malloc(sizeof(data_t));
+    sem_CHAR->comp = (data_t*)calloc(1,sizeof(data_t));
     sem_CHAR->comp->is = TYPE_CHAR;
     sem_CHAR->comp->def_datatype = sem_CHAR->comp;
     sem_CHAR->comp->name = sem_CHAR->name;
     sem_CHAR->comp->memsize = MEM_SIZEOF_CHAR;
     SEM_CHAR = sem_CHAR->comp;
 
-    usr_datatype = (data_t*)malloc(sizeof(data_t));
+    usr_datatype = (data_t*)calloc(1,sizeof(data_t));
 
-    void_datatype = (data_t*)malloc(sizeof(struct data_t));
+    void_datatype = (data_t*)calloc(1,sizeof(struct data_t));
     void_datatype->is = TYPE_VOID;
     void_datatype->def_datatype = void_datatype;
     void_datatype->name = "__void_datatype__";
     void_datatype->memsize = 0;
 
     //(d->is==TYPE_ARRAY && d->field_num==1 && d->def_datatype->is==TYPE_CHAR)
-    VIRTUAL_STRING_DATATYPE = (data_t*)malloc(sizeof(data_t));
+    VIRTUAL_STRING_DATATYPE = (data_t*)calloc(1,sizeof(data_t));
     VIRTUAL_STRING_DATATYPE->is = TYPE_ARRAY;
     VIRTUAL_STRING_DATATYPE->field_num = 1;
     VIRTUAL_STRING_DATATYPE->def_datatype = SEM_CHAR;
@@ -109,7 +109,7 @@ var_t *reference_to_variable_or_enum_element(char *id) {
 
     //ID is an enumeration element
 
-    new_enum_const = (var_t*)malloc(sizeof(var_t));
+    new_enum_const = (var_t*)calloc(1,sizeof(var_t));
     new_enum_const->id_is = ID_CONST;
     new_enum_const->datatype = sem_1->comp;
     new_enum_const->name = sem_1->comp->field_name[enum_num_of_id(sem_1->comp,id)];
@@ -155,13 +155,13 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
 
     //we print any possible messages in "valid_expr_list_for_array_reference()"
 
-    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
 
     new_var->datatype = v->datatype->def_datatype;
     new_var->cond_assign = cond_expr;
 
-    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+    new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
     new_var->from_comp->base = v;
     new_var->from_comp->element = -1;
     new_var->from_comp->index_list = list;
@@ -205,7 +205,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
     //size = v->datatype->field_datatype[elem_num]->memsize;
 
-    new_var = (var_t*)malloc(sizeof(var_t));
+    new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
 
     //new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
@@ -213,7 +213,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
 
     new_var->datatype = v->datatype->field_datatype[elem_num];
 
-    new_var->from_comp = (info_comp_t*)malloc(sizeof(info_comp_t));
+    new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
     new_var->from_comp->base = v;
     new_var->from_comp->element = elem_num;
 
@@ -233,7 +233,7 @@ data_t *close_datatype_start_new() {
     data_t *old_usr_datatype;
 
     old_usr_datatype = usr_datatype;
-    usr_datatype = (data_t*)malloc(sizeof(data_t));
+    usr_datatype = (data_t*)calloc(1,sizeof(data_t));
     return old_usr_datatype;
 }
 

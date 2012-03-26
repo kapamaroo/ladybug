@@ -64,7 +64,7 @@ expr_t *expr_from_variable(var_t *v) {
         return l;
     }
 
-    l = (expr_t*)malloc(sizeof(expr_t));
+    l = (expr_t*)calloc(1,sizeof(expr_t));
     l->parent = l;
     l->l1 = NULL;
     l->l2 = NULL;
@@ -133,7 +133,7 @@ expr_t *expr_from_STRING(char *id) {
     expr_t *new_expr;
     var_t *dummy_var;
 
-    dummy_var = (var_t*)malloc(sizeof(var_t));
+    dummy_var = (var_t*)calloc(1,sizeof(var_t));
     dummy_var->id_is = ID_STRING;
     dummy_var->datatype = SEM_CHAR;
     dummy_var->cstr = id;
@@ -141,7 +141,7 @@ expr_t *expr_from_STRING(char *id) {
     //dummy_var->scope = get_current_scope_owner();
     dummy_var->Lvalue = mem_allocate_string(id);
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -156,7 +156,7 @@ expr_t *expr_from_STRING(char *id) {
 expr_t *expr_from_hardcoded_int(int value) {
     expr_t *new_expr;
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -275,7 +275,7 @@ expr_t *expr_from_signed_hardcoded_int(op_t op,int value) {
 expr_t *expr_from_hardcoded_real(float value) {
     expr_t *new_expr;
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -292,7 +292,7 @@ expr_t *expr_from_hardcoded_real(float value) {
 expr_t *expr_from_hardcoded_boolean(int value) {
     expr_t *new_expr;
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -309,7 +309,7 @@ expr_t *expr_from_hardcoded_boolean(int value) {
 expr_t *expr_from_hardcoded_char(char value) {
     expr_t *new_expr;
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -330,7 +330,7 @@ expr_t *expr_from_setexpression(elexpr_list_t *list) {
     //In both cases an error is printed
     expr_t *new_expr;
 
-    new_expr = (expr_t*)malloc(sizeof(expr_t));
+    new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->parent = new_expr;
     new_expr->expr_is = EXPR_NULL_SET;
     new_expr->l1 = NULL;
@@ -368,7 +368,7 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
     op = expr_set->op;
     switch (op) {
     case OP_IGNORE:
-        new_inop = (expr_t*)malloc(sizeof(expr_t));
+        new_inop = (expr_t*)calloc(1,sizeof(expr_t));
         new_inop->parent = new_inop;
         new_inop->datatype = SEM_BOOLEAN;
         new_inop->expr_is = EXPR_RVAL;
@@ -380,7 +380,7 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
         return new_inop;
     case OP_MULT:	//becomes OP_AND
     case OP_PLUS:	//becomes OP_OR
-        new_cond = (expr_t*)malloc(sizeof(expr_t));
+        new_cond = (expr_t*)calloc(1,sizeof(expr_t));
         new_cond->parent = new_cond;
         new_cond->datatype = SEM_BOOLEAN;
         new_cond->expr_is = EXPR_RVAL;
@@ -399,12 +399,12 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
         left_cond = expr_distribute_inop_to_set(el,expr_set->l1);
         right_cond = expr_distribute_inop_to_set(el,expr_set->l2);
 
-        new_cond = (expr_t*)malloc(sizeof(expr_t));
+        new_cond = (expr_t*)calloc(1,sizeof(expr_t));
         new_cond->parent = new_cond;
         new_cond->datatype = SEM_BOOLEAN;
         new_cond->expr_is = EXPR_RVAL;
 
-        new_not_cond = (expr_t*)malloc(sizeof(expr_t));
+        new_not_cond = (expr_t*)calloc(1,sizeof(expr_t));
         new_not_cond->parent = new_not_cond;
         new_not_cond->datatype = SEM_BOOLEAN;
         new_not_cond->expr_is = EXPR_RVAL;
@@ -476,7 +476,7 @@ dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {
     //maybe we need one more parameter to identify if the check is for subset `limits` or for an array's dimension
     dim_t *new_dim;
 
-    new_dim = (dim_t*)malloc(sizeof(dim_t));
+    new_dim = (dim_t*)calloc(1,sizeof(dim_t));
     new_dim->first = 0;
     new_dim->range = 1;
 
@@ -503,7 +503,7 @@ dim_t *make_dim_bound_from_id(char *id) {
     dim_t *new_dim;
     sem_t *sem_1;
 
-    new_dim = (dim_t*)malloc(sizeof(dim_t));
+    new_dim = (dim_t*)calloc(1,sizeof(dim_t));
     new_dim->first = 0;
     new_dim->range = 1;
 
@@ -669,7 +669,7 @@ iter_t *make_iter_space(expr_t *l1,int step,expr_t *l3) {
 
     iter_t *new_iter;
 
-    new_iter = (iter_t*)malloc(sizeof(iter_t));
+    new_iter = (iter_t*)calloc(1,sizeof(iter_t));
 
     if (!l1 || !l3) {
 #if BISON_DEBUG_LEVEL >= 1
@@ -734,7 +734,7 @@ expr_list_t *expr_list_add(expr_list_t *new_list, expr_t *l) {
     expr_list_t *list;
 
     if (!new_list) {
-        list = (expr_list_t*)malloc(sizeof(expr_list_t));
+        list = (expr_list_t*)calloc(1,sizeof(expr_list_t));
         list->expr_list_empty = MAX_EXPR_LIST;
         list->all_expr_num = 0;
     }
@@ -764,7 +764,7 @@ var_list_t *var_list_add(var_list_t *new_list, var_t *v) {
     var_list_t *list;
 
     if (!new_list) {
-        list = (var_list_t*)malloc(sizeof(var_list_t));
+        list = (var_list_t*)calloc(1,sizeof(var_list_t));
         list->var_list_empty = MAX_VAR_LIST;
         list->all_var_num = 0;
     }
@@ -791,7 +791,7 @@ elexpr_list_t *elexpr_list_add(elexpr_list_t *new_list,elexpr_t *el) {
     elexpr_list_t *list;
 
     if (!new_list) {
-        list = (elexpr_list_t*)malloc(sizeof(elexpr_list_t));
+        list = (elexpr_list_t*)calloc(1,sizeof(elexpr_list_t));
         list->elexpr_list_usage = EXPR_NULL_SET;
         list->elexpr_list_empty = MAX_SET_ELEM;
         list->elexpr_list_datatype = TYPE_VOID; //init value, usefull for debugging
@@ -875,7 +875,7 @@ elexpr_t *make_elexpr_range(expr_t *l1, expr_t *l2) {
         }
     }
 
-    new_elexpr = (elexpr_t*)malloc(sizeof(elexpr_t));
+    new_elexpr = (elexpr_t*)calloc(1,sizeof(elexpr_t));
     if (l1->expr_is==EXPR_LOST) {
         new_elexpr->left = l2;
         new_elexpr->right = l2;
@@ -922,7 +922,7 @@ elexpr_t *make_elexpr(expr_t *l) {
 
     //this is one element of a set and not a range, so both
     //expressions of struct elexpr_t are the same
-    new_elexpr = (elexpr_t*)malloc(sizeof(elexpr_t));
+    new_elexpr = (elexpr_t*)calloc(1,sizeof(elexpr_t));
     new_elexpr->left = l;
     new_elexpr->right = l;
     new_elexpr->elexpr_datatype = l->datatype;
