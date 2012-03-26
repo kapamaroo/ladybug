@@ -25,6 +25,9 @@ func_t *create_main_program(char *name) {
     main_program = (func_t*)calloc(1,sizeof(func_t));
     main_program->status = FUNC_USEFULL;
 
+    //reminder: flex called strdup, but we do not use it
+    //free(name);
+
     //main_program->name = sem_main_program->name;
     main_program->name = "main";
     sem_main_program->subprogram = main_program;
@@ -111,7 +114,7 @@ sem_t *sm_find(const char *id) {
     return NULL;
 }
 
-sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
+sem_t *sm_insert(char *id, idt_t ID_TYPE) {
     //sets only the name of the symbol
     sem_t *existing_sem;
     sem_t *new_sem;
@@ -129,7 +132,7 @@ sem_t *sm_insert(const char *id, const idt_t ID_TYPE) {
     if ((!existing_sem || existing_sem->scope!=scope_owner || root_scope_with) && sm_empty) {
         new_sem = (sem_t*)calloc(1,sizeof(sem_t));
         new_sem->id_is = ID_TYPE;
-        new_sem->name = strdup(id);
+        new_sem->name = id; //strdup(id);
         new_sem->scope = scope_owner;
         new_sem->index = MAX_SYMBOLS - sm_empty;
         sm_table[MAX_SYMBOLS - sm_empty] = new_sem;
@@ -241,6 +244,7 @@ void declare_consts(char *id,expr_t *l) {
     if (!sem) {
         sprintf(str_err,"'%s' already declared",id);
         yyerror(str_err);
+        free(id); //flex strdup'ed it
         return;
     }
 
@@ -276,41 +280,40 @@ void declare_vars(data_t* type){
     //              type = SEM_INTEGER;
     //      }
 
-    if (type) {
-        for (i=0;i<MAX_IDF-idf_empty;i++) {
-            new_sem = sm_insert(idf_table[i].name,ID_VAR);
-            if (new_sem) {
-                //new_sem->var = (var_t*)calloc(1,sizeof(var_t));
-                new_sem->var = (var_t*)calloc(1,sizeof(var_t));
-                new_sem->var->id_is = ID_VAR;
-                new_sem->var->datatype = type;
-                new_sem->var->name = new_sem->name;
-                new_sem->var->scope = new_sem->scope;
-                new_sem->var->Lvalue = mem_allocate_symbol(type);
-                new_sem->var->from_comp = NULL;
-
-                new_sem->var->status_value = VALUE_GARBAGE;
-                new_sem->var->status_use = USE_NONE;
-                new_sem->var->status_known = KNOWN_NO;
-            }
-            else {
-                sprintf(str_err,"'%s' already declared",idf_table[i].name);
-                yyerror(str_err);
-            }
-        }
-    }
-    else {
+    if (!type) {
         for (i=0;i<MAX_IDF-idf_empty;i++) {
             sm_insert_lost_symbol(idf_table[i].name,NULL);
             //sprintf(str_err,"undeclared symbol '%s'",id);
             //yyerror(str_err);
         }
-#if BISON_DEBUG_LEVEL >= 1
-        yyerror("trying to declare variable(s) of unknown datatype (debugging info)");
-#endif
+
+        return;
     }
 
-    idf_init(IDF_FREE_MEM);
+    for (i=0;i<MAX_IDF-idf_empty;i++) {
+        new_sem = sm_insert(idf_table[i].name,ID_VAR);
+        if (new_sem) {
+            //new_sem->var = (var_t*)calloc(1,sizeof(var_t));
+            new_sem->var = (var_t*)calloc(1,sizeof(var_t));
+            new_sem->var->id_is = ID_VAR;
+            new_sem->var->datatype = type;
+            new_sem->var->name = new_sem->name;
+            new_sem->var->scope = new_sem->scope;
+            new_sem->var->Lvalue = mem_allocate_symbol(type);
+            new_sem->var->from_comp = NULL;
+
+            new_sem->var->status_value = VALUE_GARBAGE;
+            new_sem->var->status_use = USE_NONE;
+            new_sem->var->status_known = KNOWN_NO;
+        }
+        else {
+            sprintf(str_err,"'%s' already declared",idf_table[i].name);
+            yyerror(str_err);
+            free(idf_table[i].name); //flex strdup'ed it
+        }
+    }
+
+    idf_init(IDF_KEEP_MEM);
 }
 
 void declare_formal_parameters(func_t *subprogram) {
@@ -363,7 +366,7 @@ void sm_insert_lost_symbol(const char *id, const char *error_msg) {
     }
 
     //printf("debug: insert lost symbol '%s' in scope '%s'\n", id, current_scope->name);
-    tmp = strdup(id);
+    tmp = id; //strdup(id);
     pool[MAX_LOST_SYMBOLS - empty] = tmp;
     current_scope->symbol_table.lost_empty--;
 

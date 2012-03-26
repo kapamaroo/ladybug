@@ -86,17 +86,20 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     }
 
     if (sem_1->id_is==ID_VAR || sem_1->id_is==ID_CONST) {
+        free(id); //flex strdup'ed it
         return sem_1->var;
     }
 
     if (sem_1->id_is==ID_FORWARDED_FUNC) { //we are inside a function declaration
         //the name of the function acts like a variable
+        free(id); //flex strdup'ed it
         return sem_1->subprogram->return_value;
     }
 
     if (sem_1->id_is!=ID_TYPEDEF || sem_1->comp->is!=TYPE_ENUM) {
         sprintf(str_err,"'%s' is not a variable or constant",id);
         yyerror(str_err);
+        free(id); //flex strdup'ed it
         return lost_var_reference();
     }
 
@@ -104,6 +107,7 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     if (strcmp(sem_1->comp->name,id)==0) {
         sprintf(str_err,"'%s' is the name of the enumeration, expected only an element",id);
         yyerror(str_err);
+        free(id); //flex strdup'ed it
         return lost_var_reference();
     }
 
@@ -122,6 +126,7 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     new_enum_const->status_known = KNOWN_YES;
 
     //do not set the scope, this is not a variable but a constant value
+    free(id); //flex strdup'ed it
     return new_enum_const;
 }
 
@@ -138,8 +143,6 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
     }
 
     if (v->id_is!=ID_VAR) {
-        sprintf(str_err,"id '%s' is not a variable",v->name);
-        yyerror(str_err);
         return lost_var_reference();
     }
 
@@ -183,13 +186,13 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     }
 
     if (v->id_is!=ID_VAR) {
-        sprintf(str_err,"id '%s' is not a variable",v->name);
-        yyerror(str_err);
+        free(id); //flex strdup'ed it
         return lost_var_reference();
     }
 
     if (v->datatype->is!=TYPE_RECORD) {
         yyerror("type of variable is not a record");
+        free(id); //flex strdup'ed it
         return lost_var_reference();
     }
 
@@ -197,6 +200,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     if (elem_num<0) {
         sprintf(str_err,"no element named '%s' in record type",id);
         yyerror(str_err);
+        free(id); //flex strdup'ed it
         return lost_var_reference();
     }
 
@@ -208,8 +212,8 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
 
-    //new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
-    new_var->name = strdup(v->datatype->field_name[elem_num]);
+    new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
+    //new_var->name = strdup(v->datatype->field_name[elem_num]);
 
     new_var->datatype = v->datatype->field_datatype[elem_num];
 
@@ -217,6 +221,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     new_var->from_comp->base = v;
     new_var->from_comp->element = elem_num;
 
+    free(id); //flex strdup'ed it
     return new_var;
 }
 
@@ -412,10 +417,12 @@ void make_type_definition(char *id, data_t *type) {
             sem_1->comp->name = sem_1->name;
         }
         else {
+            free(id); //flex strdup'ed it
             yyerror("id type declaration already exists");
         }
     }
     else {
+        free(id); //flex strdup'ed it
         yyerror("data type NOT defined (debugging info)");
     }
 }

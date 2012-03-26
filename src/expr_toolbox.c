@@ -249,15 +249,17 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
                 //postpone optimizaton for expr_tree_to_ir_tree()
                 new_expr = expr_from_variable(sem_1->subprogram->return_value);
                 new_expr->expr_list = list; //this is a hack, see ir_toolbox.c: expr_tree_to_ir_tree() //FIXME
+                free(id); //flex strdup'ed it
                 return new_expr;
             }
         } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            sprintf(str_err,"invalid procedure call '%s', expected function",id);
+            sprintf(str_err,"invalid procedure call '%s', expected function",sem_1->name);
             yyerror(str_err);
         } else {
-            sprintf(str_err,"'%s' is not subprogram",id);
+            sprintf(str_err,"'%s' is not subprogram",sem_1->name);
             yyerror(str_err);
         }
+        free(id); //flex strdup'ed it
     } else {
         sprintf(str_err,"undeclared subprogram '%s'",id);
         sm_insert_lost_symbol(id,str_err);
@@ -518,12 +520,13 @@ dim_t *make_dim_bound_from_id(char *id) {
             else {
                 //id is an element name of enum or subset type
                 //which means the size of dimension is 1
-                yyerror("id name is an element of a enum or subset type, the size of dimension is 1");
+                yywarning("id name is an element of a enum or subset type, the size of dimension is 1");
             }
         }
         else {
             yyerror("`limit` id type mismatch");
         }
+        free(id); //flex strdup'ed it
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
@@ -968,10 +971,12 @@ expr_t *limit_from_id(char *id) {
             yyerror(str_err);
             new_expr = expr_from_hardcoded_int(0);
         }
+        free(id); //flex strdup'ed it
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
         //sm_insert_lost_symbol(id,str_err);
+        free(id); //flex strdup'ed it
         yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
@@ -997,10 +1002,12 @@ expr_t *limit_from_signed_id(op_t op,char *id) {
             yyerror("signed `limit` can be only integer constant");
             new_expr = expr_from_hardcoded_int(0);
         }
+        free(id); //flex strdup'ed it
     }
     else {
         sprintf(str_err,"undeclared symbol '%s'",id);
         //sm_insert_lost_symbol(id,str_err);
+        free(id); //flex strdup'ed it
         yyerror(str_err);
         new_expr = expr_from_hardcoded_int(0);
     }
@@ -1011,6 +1018,7 @@ data_t *reference_to_typename(char *id) {
     sem_t *sm_1;
     sm_1 = sm_find(id);
     if (sm_1) {
+        free(id); //flex strdup'ed it
         if (sm_1->id_is == ID_TYPEDEF) {
             return sm_1->comp;
         }
@@ -1019,6 +1027,7 @@ data_t *reference_to_typename(char *id) {
     else {
         sprintf(str_err,"undeclared datatype '%s'",id);
         //sm_insert_lost_symbol(id,str_err);
+        free(id); //flex strdup'ed it
         yyerror(str_err);
     }
     return NULL; //we return NULL here because we handle differently the various cases

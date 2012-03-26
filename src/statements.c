@@ -508,6 +508,7 @@ var_t *prepare_for_stmt(char *id) {
     if (sem_2->id_is==ID_VAR) {
         if (sem_2->var->datatype->is==TYPE_INT) {
             sem_2->var->id_is = ID_VAR_GUARDED;
+            free(id); //flex strdup'ed it
             return sem_2->var;
         }
         else {
@@ -524,5 +525,6 @@ var_t *prepare_for_stmt(char *id) {
         yyerror(str_err);
     }
 
+    free(id); //flex strdup'ed it
     return lost_var_reference();
 }

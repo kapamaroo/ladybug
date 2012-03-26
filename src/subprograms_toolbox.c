@@ -64,9 +64,9 @@ sem_t *reference_to_forwarded_function(char *id) {
         else if (sem_2->id_is!=ID_FORWARDED_FUNC) {
             yyerror("id is not declared as a subprogram");
         }
-        else {
-            return sem_2;
-        }
+
+        free(id); //flex strdup'ed it
+        return sem_2;
     }
     else {
         sprintf(str_err,"invalid forwarded function. '%s' not declared before in this scope",id);
@@ -80,16 +80,20 @@ func_t *find_subprogram(char *id) {
 
     sem_1 = sm_find(id);
     if (sem_1) {
-        //it is possible to call a subprogram before defining its body, so check for _FORWARDED_ subprograms too
-        //if the sub_type is valid, continue as the subprogram args are correct, to avoid false error messages afterwards
+        free(id); //flex strdup'ed it
+
+        //it is possible to call a subprogram before defining its body,
+        //so check for _FORWARDED_ subprograms too
+        //if the sub_type is valid, continue as the subprogram args are correct,
+        //to avoid false error messages afterwards
+
         if (sem_1->id_is == ID_FUNC || sem_1->id_is == ID_FORWARDED_FUNC) {
-            sprintf(str_err,"invalid '%s' function call, expected procedure",id);
+            sprintf(str_err,"invalid '%s' function call, expected procedure",sem_1->name);
             yyerror(str_err);
-            //continue as usual
-        } else if (sem_1->id_is == ID_PROC || sem_1->id_is == ID_FORWARDED_PROC) {
-            return sem_1->subprogram;
-        } else {
+        } else if (sem_1->id_is!=ID_PROC && sem_1->id_is!=ID_FORWARDED_PROC) {
             yyerror("ID is not a subprogram.");
+        } else {
+            return sem_1->subprogram;
         }
     } else {
         sprintf(str_err,"undeclared subprogram '%s'",id);
