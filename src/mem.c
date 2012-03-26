@@ -22,7 +22,7 @@ mem_t* mem_allocate_symbol(data_t *d) {
         t = MEM_STACK;
     }
 
-    m = (mem_t*)malloc(sizeof(struct mem_t));
+    m = (mem_t*)calloc(1,sizeof(struct mem_t));
     m->segment = t;
     m->offset_expr = expr_from_hardcoded_int(0);
     m->content_type = PASS_VAL;
@@ -48,7 +48,7 @@ mem_t* mem_allocate_symbol(data_t *d) {
 mem_t *mem_allocate_string(char *string) {
     mem_t *m;
 
-    m = (mem_t*)malloc(sizeof(struct mem_t));
+    m = (mem_t*)calloc(1,sizeof(struct mem_t));
     m->segment = MEM_GLOBAL;
     m->offset_expr = expr_from_hardcoded_int(0);
     m->content_type = PASS_VAL;
@@ -66,7 +66,7 @@ mem_t *mem_allocate_return_value(func_t *subprogram) {
 
     subprogram->stack_size += STACK_RETURN_VALUE_OFFSET;
 
-    m = (mem_t*)malloc(sizeof(struct mem_t));
+    m = (mem_t*)calloc(1,sizeof(struct mem_t));
     m->segment = MEM_STACK;
     m->offset_expr = expr_from_hardcoded_int(0);
     m->seg_offset = expr_from_hardcoded_int(subprogram->stack_size);
@@ -84,7 +84,7 @@ void configure_stack_size_and_param_lvalues(func_t *subprogram) {
 
     //we do not put the variables in the stack here, just declare them in scope and allocate them
     for (i=0;i<subprogram->param_num;i++) {
-        new_mem = (mem_t*)malloc(sizeof(mem_t));
+        new_mem = (mem_t*)calloc(1,sizeof(mem_t));
         new_mem->offset_expr = expr_from_hardcoded_int(0);
         new_mem->content_type = subprogram->param[i]->pass_mode;
         new_mem->segment = MEM_STACK;
