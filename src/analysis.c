@@ -32,6 +32,7 @@ statement_t *do_blocks_in_module(statement_t *root) {
             current->prev->next = NULL;
 
             //make new block and link it to new_root
+#warning whatif pending is already comp statement?
             new_block = statement_comp(pending);
             new_root = link_statements(new_block,new_root);
             new_root = link_statements(current,new_root);
@@ -66,15 +67,47 @@ void define_blocks() {
     }
 }
 
-var_list_t *do_expr_tree_analysis(var_list_t *var_list, expr_t *l) {
+var_list_t *insert_to_var_list(var_list_t *var_list, var_t *var) {
     int i;
 
-    //reminder: we are error free
-
-    if (!l) {
-        return;
+    //do not insert if already in the list
+    if (var_list) {
+        for (i=0; i<var_list->all_var_num; i++) {
+            if (var_list->var_list[i]==var) {
+                return var_list;
+            }
+        }
     }
 
+    var_list = var_list_add(var_list,var);
+    return var_list;
+}
+
+var_list_t *merge_var_lists(var_list_t *dest, var_list_t *src) {
+    int i;
+
+    if (src)
+        for (i=0; i<src->all_var_num; i++) {
+            dest = insert_to_var_list(dest, src->var_list[i]);
+        }
+
+    return dest;
+}
+
+void merge_stmt_analysis_to_block(statement_t *stmt, statement_t *block) {
+    block->stats_of.block.read =
+        merge_var_lists(
+                        block->stats_of.block.read,
+                        stmt->stats_of.block.read);
+
+    block->stats_of.block.write =
+        merge_var_lists(
+                        block->stats_of.block.write,
+                        stmt->stats_of.block.write);
+}
+
+var_list_t *do_expr_tree_analysis(var_list_t *var_list, expr_t *l) {
+    //reminder: we are error free
     switch (l->expr_is) {
     case EXPR_RVAL:
         var_list = do_expr_tree_analysis(var_list,l->l1);
@@ -87,13 +120,7 @@ var_list_t *do_expr_tree_analysis(var_list_t *var_list, expr_t *l) {
             //why is this working? see expr_toolbox.c: expression_from_function_call()
             var_list = do_expr_list_analysis(var_list,l->expr_list);
         } else {
-            //do not insert if already in the list
-            for (i=0;(var_list && i<var_list->all_var_num);i++) {
-                if (var_list->var_list[i]==l->var) {
-                    return var_list;
-                }
-            }
-            var_list = var_list_add(var_list,l->var);
+            var_list = insert_to_var_list(var_list,l->var);
         }
         break;
     case EXPR_HARDCODED_CONST:
@@ -123,18 +150,18 @@ var_list_t *do_expr_list_analysis(var_list_t *var_list, expr_list_t *expr_list) 
 }
 
 void do_assign_analysis(statement_t *s) {
-    s->stats_of.stmt.write =
-        var_list_add(s->stats_of.stmt.write,s->_assignment.var);
+    s->stats_of.block.write =
+        var_list_add(s->stats_of.block.write,s->_assignment.var);
 
-    s->stats_of.stmt.read =
-        do_expr_tree_analysis(s->stats_of.stmt.read,s->_assignment.expr);
+    s->stats_of.block.read =
+        do_expr_tree_analysis(s->stats_of.block.read,s->_assignment.expr);
 }
 
 void do_call_analysis(statement_t *s) {
     //reminder: this is a procedure call, no write dependencies
 
-    s->stats_of.stmt.read =
-        do_expr_list_analysis(s->stats_of.stmt.read,s->_call.expr_params);
+    s->stats_of.block.read =
+        do_expr_list_analysis(s->stats_of.block.read,s->_call.expr_params);
 
 }
 
@@ -142,82 +169,23 @@ void do_read_analysis(statement_t *s) {
     //read stmt has only write dependencies
 
     //variable list is ready, see bison.y
-    s->stats_of.stmt.write = s->_read.var_list;
+    s->stats_of.block.write = s->_read.var_list;
 }
 
 void do_write_analysis(statement_t *s) {
     //write stmt has only read dependencies
 
-    s->stats_of.stmt.read =
-        do_expr_list_analysis(s->stats_of.stmt.read,s->_write.expr_list);
+    s->stats_of.block.read =
+        do_expr_list_analysis(s->stats_of.block.read,s->_write.expr_list);
 
-}
-
-inline void merge_stmt_analysis_to_block(statement_t *s, statement_t *block) {
-    int i;
-    int size;
-
-    size = block->stats_of.block.size;
-    //printf("debug: initial size: %d\n",size);
-
-    switch (s->type) {
-    case ST_If:
-        size += s->_if._true->stats_of.block.size;
-        if (s->_if._false) { size += s->_if._false->stats_of.block.size; }
-        //printf("debug: line %d\tsize: %d\n",__LINE__,size);
-        if (size>MAX_BLOCK_SIZE) { die("UNIMPLEMENTED: cannot handle block size"); }
-
-        for (i=0;i<s->_if._true->stats_of.block.size;i++) {
-            s->stats_of.block.dependencies[s->stats_of.block.size++] =
-                s->_if._true->stats_of.block.dependencies[i];
-        }
-
-        if (s->_if._false) {
-            for (i=0;i<s->_if._false->stats_of.block.size;i++) {
-                s->stats_of.block.dependencies[s->stats_of.block.size++] =
-                    s->_if._false->stats_of.block.dependencies[i];
-            }
-        }
-        break;
-    case ST_While:
-        size += s->_while.loop->stats_of.block.size;
-        //printf("debug: line %d\tsize: %d\n",__LINE__,size);
-        if (size>MAX_BLOCK_SIZE) { die("UNIMPLEMENTED: cannot handle block size"); }
-
-        for (i=0;i<s->_while.loop->stats_of.block.size;i++) {
-            s->stats_of.block.dependencies[s->stats_of.block.size++] =
-                s->_while.loop->stats_of.block.dependencies[i];
-        }
-        break;
-    case ST_For:
-        size += s->_while.loop->stats_of.block.size;
-        printf("debug: line %d\tsize: %d\n",__LINE__,size);
-        if (size>MAX_BLOCK_SIZE) { die("UNIMPLEMENTED: cannot handle block size"); }
-
-        for (i=0;i<s->_for.loop->stats_of.block.size;i++) {
-            s->stats_of.block.dependencies[s->stats_of.block.size++] =
-                s->_for.loop->stats_of.block.dependencies[i];
-        }
-        break;
-    case ST_Comp:
-        size += s->stats_of.block.size;
-        //printf("debug: line %d\tsize: %d\n",__LINE__,size);
-        if (size>MAX_BLOCK_SIZE) { die("UNIMPLEMENTED: cannot handle block size"); }
-
-        for (i=0;i<s->stats_of.block.size;i++) {
-            block->stats_of.block.dependencies[block->stats_of.block.size++] =
-                s->stats_of.block.dependencies[i];
-        }
-        break;
-    default:
-        //printf("debug: line %d\tsize: %d\n",__LINE__,size);
-        if (size>MAX_BLOCK_SIZE) { die("UNIMPLEMENTED: cannot handle block size"); }
-
-        block->stats_of.block.dependencies[block->stats_of.block.size++] = &s->stats_of.stmt;
-    }
 }
 
 void do_analyse_stmt(statement_t *s,statement_t *block) {
+#if (BISON_DEBUG_LEVEL >=1)
+    int i=0;
+    int j=0;
+#endif
+
     while (s) {
         switch (s->type) {
             //block statements
@@ -237,7 +205,37 @@ void do_analyse_stmt(statement_t *s,statement_t *block) {
         default:
             die("UNEXPECTED_ERROR: expected statement for analysis");
         }
+
+        //merge analysis
         merge_stmt_analysis_to_block(s,block);
+
+        block->stats_of.block.size++;
+        /*
+#if (BISON_DEBUG_LEVEL >=1)
+        printf("debug:\t\t\tstmt %d:",i);
+        if (s->stats_of.block.write) {
+            printf("\t\tOUT_VECTOR(");
+            for (j=0;j<s->stats_of.block.write->all_var_num;j++) {
+                printf("%s,",s->stats_of.block.write->var_list[j]->name);
+            }
+            printf(")");
+        } else {
+            //align output
+            printf("\t\t\t");
+        }
+
+        if (s->stats_of.block.read) {
+            printf("\t\tIN_VECTOR(");
+            for (j=0;j<s->stats_of.block.read->all_var_num;j++) {
+                printf("%s,",s->stats_of.block.read->var_list[j]->name);
+            }
+            printf(")");
+        }
+
+        printf("\n");
+        i++;
+        #endif
+*/
         s = s->next;
     }
 }
@@ -248,11 +246,30 @@ void do_analyse_block(statement_t *block) {
     nesting++;
 
     switch (block->type) {
-    case ST_If:            do_analyse_stmt(block->_if._true,block);
-                           do_analyse_stmt(block->_if._false,block);        break;
-    case ST_While:         do_analyse_stmt(block->_while.loop,block);       break;
-    case ST_For:           do_analyse_stmt(block->_for.loop,block);         break;
-    case ST_Comp:          do_analyse_stmt(block->_comp.first_stmt,block);  break;
+    case ST_If:
+        block->stats_of.block.read =
+            do_expr_tree_analysis(
+                                  block->stats_of.block.read,
+                                  block->_if.condition);
+
+        do_analyse_stmt(block->_if._true,block->_if._true);
+        do_analyse_stmt(block->_if._false,block->_if._false);
+
+        merge_stmt_analysis_to_block(block->_if._true,block);
+        merge_stmt_analysis_to_block(block->_if._false,block);
+
+        break;
+    case ST_While:
+        block->stats_of.block.read =
+            do_expr_tree_analysis(
+                                  block->stats_of.block.read,
+                                  block->_while.condition);
+
+        do_analyse_stmt(block->_while.loop,block);       break;
+    case ST_For:
+        do_analyse_stmt(block->_for.loop,block);         break;
+    case ST_Comp:
+        do_analyse_stmt(block->_comp.first_stmt,block);  break;
     default:
         die("UNEXPECTED_ERROR: expected block for analysis");
     }
@@ -262,32 +279,29 @@ void do_analyse_block(statement_t *block) {
     nesting--;
 
 #if (BISON_DEBUG_LEVEL >=1)
-    printf("debug:\tblock-nesting: %d <==> statements %d\t\n",block->stats_of.block.depth,block->stats_of.block.size);
+    printf("debug:\tblock-nesting: %d <==> statements %d\t",block->stats_of.block.depth,block->stats_of.block.size);
 
-    int i,j;
-    for (i=0;i<block->stats_of.block.size;i++) {
-        printf("debug:\t\t\tstmt %d:",i);
-        if (block->stats_of.block.dependencies[i]->write) {
-            printf("\t\tOUT_VECTOR(");
-            for (j=0;j<block->stats_of.block.dependencies[i]->write->all_var_num;j++) {
-                printf("%s,",block->stats_of.block.dependencies[i]->write->var_list[j]->name);
-            }
-            printf(")");
-        } else {
-            //align output
-            printf("\t\t\t");
+    int j;
+    //printf("debug:\t\t\tblock:");
+    if (block->stats_of.block.write) {
+        printf("\t\tOUT_VECTOR(");
+        for (j=0;j<block->stats_of.block.write->all_var_num;j++) {
+            printf("%s,",block->stats_of.block.write->var_list[j]->name);
         }
-
-        if (block->stats_of.block.dependencies[i]->read) {
-            printf("\t\tIN_VECTOR(");
-            for (j=0;j<block->stats_of.block.dependencies[i]->read->all_var_num;j++) {
-                printf("%s,",block->stats_of.block.dependencies[i]->read->var_list[j]->name);
-            }
-            printf(")");
-        }
-
-        printf("\n");
+        printf(")");
+    } else {
+        //align output
+        printf("\t\t\t");
     }
+
+    if (block->stats_of.block.read) {
+        printf("\t\tIN_VECTOR(");
+        for (j=0;j<block->stats_of.block.read->all_var_num;j++) {
+            printf("%s,",block->stats_of.block.read->var_list[j]->name);
+        }
+        printf(")");
+    }
+    printf("\n");
 #endif
 }
 

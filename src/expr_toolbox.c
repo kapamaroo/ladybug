@@ -9,6 +9,7 @@
 #include "symbol_table.h"
 #include "datatypes.h"
 #include "mem.h"
+#include "statements.h"
 #include "err_buff.h"
 
 expr_t *expr_from_variable(var_t *v) {
@@ -40,7 +41,13 @@ expr_t *expr_from_variable(var_t *v) {
     //if (v->status_known==KNOWN_YES) {  //constants are always marked as KNOWN_YES
     //if (v->id_is==ID_CONST ) { //do not propagate known variables
 
-    if (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED) { //always use the lvalue for ID_VAR_GUARDED
+
+    //always use the lvalue for ID_VAR_GUARDED and inside branches and loops
+    //propagation of constants inside loops must wait until a second pass when
+    //the body of the loop will be fully defined
+
+    if (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED &&
+        !inside_branch && !inside_loop) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
             l->datatype = v->datatype; //if enum, set the enumeration type

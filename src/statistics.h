@@ -14,7 +14,9 @@ typedef struct common_stats_t {
 typedef struct block_stats_t {
     unsigned int size; //num of statements (high level)
     unsigned int depth; //depth of nested loop, 0 for outermost loop
-    common_stats_t *dependencies[MAX_BLOCK_SIZE];
+
+    var_list_t *write;
+    var_list_t *read;
 } block_stats_t;
 
 #endif

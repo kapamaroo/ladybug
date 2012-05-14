@@ -103,7 +103,8 @@ typedef struct statement_t {
     //statistics
     union {
         block_stats_t block;
-        common_stats_t stmt;
+        //block_stats_t stmt;
+        //common_stats_t stmt;
     } stats_of;
 
     int return_point; //we check this to see if a function always returns a return value
@@ -116,6 +117,9 @@ typedef struct statement_t {
 
 extern statement_t *statement_root_module[MAX_NUM_OF_MODULES];
 extern int statement_root_module_current_free;
+
+extern unsigned int inside_branch;
+extern unsigned int inside_loop;
 
 void init_statements();
 
