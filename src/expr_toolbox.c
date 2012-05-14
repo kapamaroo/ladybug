@@ -46,8 +46,9 @@ expr_t *expr_from_variable(var_t *v) {
     //propagation of constants inside loops must wait until a second pass when
     //the body of the loop will be fully defined
 
-    if (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED &&
-        !inside_branch && !inside_loop) {
+    if (v->id_is==ID_CONST ||
+        (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED &&
+         !inside_branch && !inside_loop)) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
             l->datatype = v->datatype; //if enum, set the enumeration type
