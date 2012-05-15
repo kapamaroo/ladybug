@@ -16,12 +16,24 @@ statement_t *do_blocks_in_module(statement_t *root) {
     statement_t *new_root;
     statement_t *current;
 
-    new_root = NULL;
-
     //set initial start point
     //reminder: root statement of modules are comp_statements
-    current = root->_comp.first_stmt->next;
     pending = root->_comp.first_stmt;
+    current = NULL;
+
+    if (NEW_STMT_BLOCK_STARTS_FROM(pending)) {
+        new_root = pending;
+        pending = pending->next;
+        while (pending && NEW_STMT_BLOCK_STARTS_FROM(pending)) pending = pending->next;
+        if (pending) {
+            //break from new_root
+            pending->prev->next = NULL;
+            current = pending->next;
+        }
+    } else {
+        new_root = NULL;
+        current = pending->next;
+    }
 
     //we don't need the initial big block
     free(root);
@@ -32,7 +44,6 @@ statement_t *do_blocks_in_module(statement_t *root) {
             current->prev->next = NULL;
 
             //make new block and link it to new_root
-#warning whatif pending is already comp statement?
             new_block = statement_comp(pending);
             new_root = link_statements(new_block,new_root);
             new_root = link_statements(current,new_root);
@@ -315,8 +326,8 @@ void analyse_blocks() {
         current = statement_root_module[i];
         printf("debug:\ndebug:\t*** MODULE %d ***\ndebug:\n",i);
         while (current) {
-            if (current->type!=ST_Comp) {
-                die("UNEXPECTED_ERROR: expected block");
+            if (!NEW_STMT_BLOCK_STARTS_FROM(current)) {
+                die("UNEXPECTED_ERROR: expected block, bad block generator");
             }
             do_analyse_block(current);
             current = current->next;
