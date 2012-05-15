@@ -5,18 +5,13 @@
 
 #define MAX_BLOCK_SIZE 128
 
-typedef struct common_stats_t {
-    //write and call statements have multiple read dependencies and no write dependencies
-    var_list_t *write;
-    var_list_t *read;
-} common_stats_t;
-
-typedef struct block_stats_t {
+typedef struct stat_vars_t {
     unsigned int size; //num of statements (high level)
     unsigned int depth; //depth of nested loop, 0 for outermost loop
 
+    //write and call statements have multiple read dependencies and no write dependencies
     var_list_t *write;
     var_list_t *read;
-} block_stats_t;
+} stat_vars_t;
 
 #endif

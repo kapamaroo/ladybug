@@ -21,9 +21,13 @@ enum StatementType {
     //virtual statement, it is more of a scope modifier
     ST_With,
 
-    ST_Call,
+    //primitive statement
     ST_Assignment,
 
+    //function calls, consider them as blocks too
+    ST_Call,
+
+    //system calls, consider them as blocks too
     ST_Read,
     ST_Write,
 };
@@ -101,11 +105,7 @@ typedef struct statement_t {
     };
 
     //statistics
-    union {
-        block_stats_t block;
-        //block_stats_t stmt;
-        //common_stats_t stmt;
-    } stats_of;
+    stat_vars_t stat_of_vars;
 
     int return_point; //we check this to see if a function always returns a return value
 
