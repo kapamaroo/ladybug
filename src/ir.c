@@ -717,12 +717,12 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
 
     comp = var->from_comp;
     while (comp) {
-        base = comp->base;
-        index = comp->index_list;
-        base_Lvalue = comp->base->Lvalue;
-
-        switch (base->datatype->is) {
+        switch (comp->comp_type) {
         case TYPE_ARRAY:
+            base = comp->array.base;
+            index = comp->array.index;
+            base_Lvalue = comp->array.base->Lvalue;
+
             if (valid_expr_list_for_array_reference(base->datatype,index)) {
                 relative_offset = make_array_reference(index,base->datatype);
                 cond = make_array_bound_check(index,base->datatype);
@@ -736,7 +736,10 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
             }
             break;
         case TYPE_RECORD:
-            relative_offset = expr_from_hardcoded_int(base->datatype->field_offset[comp->element]);
+            base = comp->record.base;
+            int element = comp->record.element;
+            base_Lvalue = comp->record.base->Lvalue;
+            relative_offset = expr_from_hardcoded_int(base->datatype->field_offset[element]);
             break;
         default:
             die("UNEXPECTED_ERROR: no array/record in variable_from_comp_datatype_element()");

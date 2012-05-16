@@ -148,10 +148,22 @@ typedef struct mem_t {
     int size; //memory size
 } mem_t;
 
+struct info_array_t {
+    struct var_t *base;   //array base
+    struct expr_list_t *index;  //array index (list size must be equal to array dimensions)
+};
+
+struct info_record_t {
+    struct var_t *base;  //record base
+    int element;         //record element offset (hardcoded)
+};
+
 typedef struct info_comp_t {
-    struct var_t *base;              //array/record base variable
-    struct expr_list_t *index_list;  //array index
-    int element;                     //record element offset (hardcoded)
+    type_t comp_type;
+    union {
+        struct info_array_t array;
+        struct info_record_t record;
+    };
 } info_comp_t;
 
 /** Variables & declared Constants struct

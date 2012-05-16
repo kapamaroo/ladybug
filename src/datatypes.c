@@ -165,9 +165,9 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
     new_var->cond_assign = cond_expr;
 
     new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
-    new_var->from_comp->base = v;
-    new_var->from_comp->element = -1;
-    new_var->from_comp->index_list = list;
+    new_var->from_comp->comp_type = v->datatype->is;
+    new_var->from_comp->array.base = v;
+    new_var->from_comp->array.index = list;
 
     return new_var;
 }
@@ -218,8 +218,9 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     new_var->datatype = v->datatype->field_datatype[elem_num];
 
     new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
-    new_var->from_comp->base = v;
-    new_var->from_comp->element = elem_num;
+    new_var->from_comp->comp_type = v->datatype->is;
+    new_var->from_comp->record.base = v;
+    new_var->from_comp->record.element = elem_num;
 
     free(id); //flex strdup'ed it
     return new_var;
