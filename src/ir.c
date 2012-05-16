@@ -724,8 +724,8 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
             base_Lvalue = comp->array.base->Lvalue;
 
             if (valid_expr_list_for_array_reference(base->datatype,index)) {
-                relative_offset = make_array_reference(index,base->datatype);
-                cond = make_array_bound_check(index,base->datatype);
+                relative_offset = make_array_reference(base->datatype,index);
+                cond = make_array_bound_check(base->datatype,index);
                 final_cond = expr_relop_equ_addop_mult(final_cond,OP_PLUS,cond);
             } else {
                 //static bound checks failed in IR level

@@ -586,7 +586,7 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
     return 1;
 }
 
-expr_t *make_array_reference(expr_list_t *list,data_t *data) {
+expr_t *make_array_reference(data_t *data, expr_list_t *list) {
     int i;
     expr_t *l;
     expr_t *dim_size;
@@ -621,7 +621,7 @@ expr_t *make_array_reference(expr_list_t *list,data_t *data) {
     return total_offset;
 }
 
-expr_t *make_array_bound_check(expr_list_t *list,data_t *data) {
+expr_t *make_array_bound_check(data_t *data, expr_list_t *list) {
     int i;
     int index;
     expr_t *l;
