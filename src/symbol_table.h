@@ -31,7 +31,7 @@ void declare_consts(char *id,expr_t *l);
 void declare_vars(data_t *type);
 void declare_formal_parameters(func_t *subprogram);
 
-void sm_insert_lost_symbol(const char *id, const char *error_msg);
+void sm_insert_lost_symbol(char *id, const char *error_msg);
 char *sm_find_lost_symbol(const char *id);
 
 var_t *lost_var_reference();

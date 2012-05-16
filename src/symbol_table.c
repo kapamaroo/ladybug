@@ -346,7 +346,7 @@ void declare_formal_parameters(func_t *subprogram) {
     }
 }
 
-void sm_insert_lost_symbol(const char *id, const char *error_msg) {
+void sm_insert_lost_symbol(char *id, const char *error_msg) {
     char **pool;
     char *tmp;
     func_t *current_scope;
