@@ -39,6 +39,14 @@ void check_if_function_is_obsolete(func_t *subprogram) {
         //we know the return value at compile time
         //mark function as obsolete
         subprogram->status = FUNC_OBSOLETE;
+
+        //downgrade return value to hardoced expression
+        subprogram->return_value->to_expr->expr_is = EXPR_HARDCODED_CONST;
+
+        //also update its value
+        subprogram->return_value->to_expr->ival = subprogram->return_value->ival;
+        subprogram->return_value->to_expr->fval = subprogram->return_value->fval;
+        subprogram->return_value->to_expr->cval = subprogram->return_value->cval;
     }
 }
 
@@ -112,6 +120,8 @@ sem_t *declare_function_header(char *id,param_list_t *list,data_t *return_type) 
     return_value->datatype = return_type;
     return_value->name = sem_2->name;
     return_value->scope = sem_2->subprogram;
+
+    return_value->to_expr = expr_version_of_variable(return_value);
 
     return_value->status_value = VALUE_GARBAGE;
     return_value->status_use = USE_YES;

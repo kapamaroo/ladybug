@@ -178,6 +178,8 @@ typedef struct var_t {
 
     info_comp_t *from_comp;
 
+    struct expr_t *to_expr;
+
     data_t *datatype;
     char *name;
     //scope_t *scope;

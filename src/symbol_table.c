@@ -62,6 +62,9 @@ void init_symbol_table() {
     lost_var->Lvalue->segment = MEM_STACK;
     lost_var->Lvalue->size = 0;
 
+    lost_var->to_expr = expr_version_of_variable(lost_var);
+    lost_var->to_expr->expr_is = EXPR_LOST;
+
 #if SYMBOL_TABLE_DEBUG_LEVEL >= 1
     printf("OK\n");
 #endif
@@ -258,6 +261,13 @@ void declare_consts(char *id,expr_t *l) {
     //new_var->cstr = l->cstr;
     new_var->scope = sem->scope;
 
+    switch (new_var->datatype->is) {
+    case TYPE_INT:        new_var->to_expr = expr_from_hardcoded_int(l->ival);      break;
+    case TYPE_REAL:       new_var->to_expr = expr_from_hardcoded_real(l->fval);     break;
+    case TYPE_CHAR:       new_var->to_expr = expr_from_hardcoded_char(l->cval);     break;
+    case TYPE_BOOLEAN:    new_var->to_expr = expr_from_hardcoded_boolean(l->cval);  break;
+    }
+
     new_var->status_value = VALUE_VALID;
     new_var->status_use = USE_NONE;
     new_var->status_known = KNOWN_YES;
@@ -293,14 +303,14 @@ void declare_vars(data_t* type){
     for (i=0;i<MAX_IDF-idf_empty;i++) {
         new_sem = sm_insert(idf_table[i].name,ID_VAR);
         if (new_sem) {
-            //new_sem->var = (var_t*)calloc(1,sizeof(var_t));
             new_sem->var = (var_t*)calloc(1,sizeof(var_t));
             new_sem->var->id_is = ID_VAR;
             new_sem->var->datatype = type;
             new_sem->var->name = new_sem->name;
             new_sem->var->scope = new_sem->scope;
             new_sem->var->Lvalue = mem_allocate_symbol(type);
-            new_sem->var->from_comp = NULL;
+
+            new_sem->var->to_expr = expr_version_of_variable(new_sem->var);
 
             new_sem->var->status_value = VALUE_GARBAGE;
             new_sem->var->status_use = USE_NONE;
@@ -337,6 +347,8 @@ void declare_formal_parameters(func_t *subprogram) {
         new_var->name = new_sem->name;
         new_var->scope = new_sem->scope;
         new_var->Lvalue = subprogram->param_Lvalue[i];
+
+        new_var->to_expr = expr_version_of_variable(new_var);
 
         new_var->status_value = VALUE_VALID;
         new_var->status_use = USE_YES;

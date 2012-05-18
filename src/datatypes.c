@@ -121,6 +121,8 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     new_enum_const->cond_assign = NULL;
     new_enum_const->ival = enum_num_of_id(sem_1->comp,id);
 
+    new_enum_const->to_expr = expr_version_of_variable(new_enum_const);
+
     new_enum_const->status_value = VALUE_VALID;
     new_enum_const->status_use = USE_NONE;
     new_enum_const->status_known = KNOWN_YES;
@@ -164,6 +166,8 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
     new_var->datatype = v->datatype->def_datatype;
     new_var->cond_assign = cond_expr;
 
+    new_var->to_expr = expr_version_of_variable(new_var);
+
     new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
     new_var->from_comp->comp_type = v->datatype->is;
     new_var->from_comp->array.base = v;
@@ -206,7 +210,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
 
     //element's position does not change so it is represented as a hardcoded constant
 
-    offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
+    //offset_expr = expr_from_hardcoded_int(v->datatype->field_offset[elem_num]);
     //size = v->datatype->field_datatype[elem_num]->memsize;
 
     new_var = (var_t*)calloc(1,sizeof(var_t));
@@ -216,6 +220,8 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     //new_var->name = strdup(v->datatype->field_name[elem_num]);
 
     new_var->datatype = v->datatype->field_datatype[elem_num];
+
+    new_var->to_expr = expr_version_of_variable(new_var);
 
     new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
     new_var->from_comp->comp_type = v->datatype->is;

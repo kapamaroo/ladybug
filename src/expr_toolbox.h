@@ -11,6 +11,7 @@ expr_t *expr_from_signed_hardcoded_int(op_t op,int value);
 expr_t *expr_from_hardcoded_real(float value);
 expr_t *expr_from_hardcoded_boolean(int value);
 expr_t *expr_from_hardcoded_char(char value);
+expr_t *expr_version_of_variable(var_t *v);
 
 int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list);
 expr_t *expr_from_function_call(char *id,expr_list_t *list);

@@ -23,6 +23,9 @@ expr_t *expr_from_variable(var_t *v) {
 
     //simple sanity check
     switch (v->id_is) {
+    case ID_LOST:
+        //reference to lost variable
+        return v->to_expr;
     case ID_STRING:
     case ID_FUNC:
     case ID_PROC:
@@ -46,9 +49,12 @@ expr_t *expr_from_variable(var_t *v) {
     //propagation of constants inside loops must wait until a second pass when
     //the body of the loop will be fully defined
 
-    if (v->id_is==ID_CONST ||
-        (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED &&
-         !inside_branch && !inside_loop)) {
+    if (v->id_is==ID_CONST) {
+        return v->to_expr;
+    }
+
+#warning make all constant expressions unique
+    if (v->status_known==KNOWN_YES && v->id_is!=ID_VAR_GUARDED && !inside_branch && !inside_loop) {
         if (v->datatype->is==TYPE_INT || v->datatype->is==TYPE_ENUM) {
             l = expr_from_hardcoded_int(v->ival);
             l->datatype = v->datatype; //if enum, set the enumeration type
@@ -69,24 +75,6 @@ expr_t *expr_from_variable(var_t *v) {
         else {
             die("UNEXPECTED_ERROR: 38");
         }
-        return l;
-    }
-
-    l = (expr_t*)calloc(1,sizeof(expr_t));
-    l->parent = l;
-    l->l1 = NULL;
-    l->l2 = NULL;
-    l->op = OP_IGNORE;
-    l->expr_is = EXPR_LVAL; //ID_VAR ID_VAR_GUARDED or ID_RETURN
-    l->cstr = NULL;
-    l->var = v;
-    l->datatype = v->datatype;
-    l->expr_list = NULL; //for ID_RETURN, see semantics.h
-    l->convert_to = NULL;
-
-    if (v->id_is==ID_LOST) {
-        //reference to lost variable
-        l->expr_is = EXPR_LOST;
         return l;
     }
 
@@ -113,10 +101,6 @@ expr_t *expr_from_variable(var_t *v) {
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
             sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->name);
             yywarning(str_err);
-
-            //pass the __actual__ datatype (integer,char,boolean, or enumeration)
-            //reminder: def_datatype is always standard scalar, see limit_from_id() below
-            l->datatype = v->datatype->def_datatype;
         }
 
         //decide later inside expressions.c
@@ -129,7 +113,7 @@ expr_t *expr_from_variable(var_t *v) {
         //}
 
         //let set variables in expressions
-        return l;
+        return v->to_expr;
     }
 
     die("UNEXPECTED ERROR: expr_from_variable()");
@@ -255,7 +239,7 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
             if (check_valid_subprogram_call(sem_1->subprogram,list)) {
                 //we do not know yet if the function we call is obsolete, (e.g. forwarded functions)
                 //postpone optimizaton for expr_tree_to_ir_tree()
-                new_expr = expr_from_variable(sem_1->subprogram->return_value);
+                new_expr = sem_1->subprogram->return_value->to_expr;
                 new_expr->expr_list = list; //this is a hack, see ir_toolbox.c: expr_tree_to_ir_tree() //FIXME
                 free(id); //flex strdup'ed it
                 return new_expr;
@@ -272,7 +256,9 @@ expr_t *expr_from_function_call(char *id,expr_list_t *list) {
         sprintf(str_err,"undeclared subprogram '%s'",id);
         sm_insert_lost_symbol(id,str_err);
     }
-    return expr_from_variable(lost_var_reference()); //EXPR_LOST
+
+    var_t *lost = lost_var_reference();
+    return lost->to_expr;
 }
 
 expr_t *expr_from_signed_hardcoded_int(op_t op,int value) {
@@ -1040,4 +1026,24 @@ data_t *reference_to_typename(char *id) {
     }
     return NULL; //we return NULL here because we handle differently the various cases
     //with reference to user-defined datatypes
+}
+
+expr_t *expr_version_of_variable(var_t *v) {
+    expr_t *l;
+
+    l = (expr_t*)calloc(1,sizeof(expr_t));
+    l->parent = l;
+    l->op = OP_IGNORE;
+    l->expr_is = EXPR_LVAL; //ID_VAR ID_VAR_GUARDED or ID_RETURN
+    l->var = v;
+    l->datatype = v->datatype;
+
+    if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
+        //pass the __actual__ datatype (integer,char,boolean, or enumeration)
+        //reminder: def_datatype is always standard scalar,
+        //see limit_from_id() in expr_toolbox.c
+        l->datatype = v->datatype->def_datatype;
+    }
+
+    return l;
 }

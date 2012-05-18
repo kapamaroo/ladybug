@@ -272,6 +272,9 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
 
         if (ltree->var->id_is==ID_RETURN) {
             if (ltree->var->scope->status==FUNC_OBSOLETE) {
+                die("UNEXPECTED_ERROR: ir_toolbox.c: obsolete function still has lvalue?");
+
+                /*
                 new_node = new_ir_node_t(NODE_HARDCODED_RVAL);
                 new_node->ival = ltree->var->ival;
                 new_node->fval = ltree->var->fval;
@@ -279,6 +282,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
                 new_node->data_is = ltree->var->datatype->is;
 
                 return new_node;
+                */
             }
 
             //printf("debug: function call: %s\treturn_value: %s\n", ltree->var->scope->name, ltree->var->name);
