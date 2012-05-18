@@ -61,6 +61,9 @@ struct statement_assignment_t {
 struct statement_for_t {
     //enum IterSpaceType type;
     //expr_t *from, *to;
+
+    int unroll_me;
+
     iter_t *iter;
     var_t *var;
     struct statement_t *prologue;
@@ -105,7 +108,8 @@ typedef struct statement_t {
     };
 
     //statistics
-    stat_vars_t stat_of_vars;
+    stat_vars_t stats_of_vars;
+    dep_vector_t *dep;
 
     int return_point; //we check this to see if a function always returns a return value
 
