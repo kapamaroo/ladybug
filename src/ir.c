@@ -321,9 +321,10 @@ ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
     expr_guard = expr_from_variable(var);
     expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
 
-    left_cond = expr_relop_equ_addop_mult(range->start,RELOP_LE,expr_guard);
-    right_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
-    total_cond = expr_orop_andop_notop(left_cond,OP_AND,right_cond);
+    if (range->step->ival==1)
+        total_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
+    else
+        total_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_BE,range->stop);
 
     //ignore any high level info
     dark_init_for = new_ir_assign(var,range->start);
