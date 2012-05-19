@@ -105,10 +105,13 @@ void parse_ir_node(ir_node_t *ir_node) {
     enum instr_req_t instr_req;
     mips_instr_t *new_mips_instr;
 
-    switch(ir_node->node_type) {
-    case NODE_DUMMY_LABEL:
+    if (ir_node->label) {
         new_instr = new_instruction(ir_node->label,&I_nop);
         final_tree_current = link_instructions(new_instr,final_tree_current);
+    }
+
+    switch(ir_node->node_type) {
+    case NODE_DUMMY_LABEL:
         return;
     case NODE_BRANCH:
         switch (ir_node->op_rval) {
@@ -140,12 +143,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_SYSCALL:
-        //the first instruction sets the label
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
         //prepare
         switch (ir_node->syscall_num) {
         case SVC_PRINT_INT:
@@ -223,11 +220,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         }
         break;
     case NODE_CONVERT_TO_INT:
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
         parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_w_s);
@@ -236,11 +228,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_CONVERT_TO_REAL:
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
         parse_ir_node(ir_node->ir_rval);
 
         new_instr = new_instruction(NULL,&I_cvt_s_w);
@@ -254,11 +241,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         parse_ir_node(ir_node->ir_lval);
         return;
     case NODE_LOAD:
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
         parse_ir_node(ir_node->ir_lval);
 
         if (ir_node->data_is==TYPE_REAL) {
@@ -294,11 +276,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         case RELOP_IN:	// 'in'
             die("UNEXPECTED ERROR: ir_parser: NODE_RVAL: logical and/or/not/in operator still alive??");
         default: break;
-        }
-
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
         }
 
         //handle NODE_HARDCODED_RVAL cases (init to common reg to reg instr)
@@ -443,11 +420,6 @@ void parse_ir_node(ir_node_t *ir_node) {
         printf("check_inop_bitmapped");
         return;
     case NODE_ASSIGN:
-        if (ir_node->label) {
-            new_instr = new_instruction(ir_node->label,&I_nop);
-            final_tree_current = link_instructions(new_instr,final_tree_current);
-        }
-
         switch (ir_node->ir_rval->node_type) {
         case NODE_HARDCODED_RVAL:
             new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
