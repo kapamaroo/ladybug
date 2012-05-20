@@ -78,9 +78,9 @@ ir_node_t *eliminate_notop_from_ir_cond(ir_node_t *ir_cond) {
             ir_cond->ir_rval2 = eliminate_notop_from_ir_cond(ir_cond->ir_rval2);
         break;
         case OP_NOT:
-            die("UNEXPECTED ERROR: ir_rval_to_ir_cond: not operator still alive");
+            die("UNEXPECTED ERROR: eliminate_notop_from_ir_cond: not operator still alive");
         default:
-            die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+            die("UNEXPECTED ERROR: eliminate_notop_from_ir_cond: bad operator");
         }
 
         //printf("%s --> %s\n",op_literal(ir_cond->op_rval),op_literal(op_invert_cond(ir_cond->op_rval)));
@@ -91,6 +91,10 @@ ir_node_t *eliminate_notop_from_ir_cond(ir_node_t *ir_cond) {
 }
 
 ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
+    if (ir_rval->op_rval==OP_IGNORE) {
+        die("UNEXPECTED ERROR: ir_tree_to_ir_cond(): boolean const or load value with no comparison to zero");
+    }
+
     switch (ir_rval->op_rval) {
     case RELOP_B:
     case RELOP_BE:
@@ -108,7 +112,8 @@ ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
         ir_rval->node_type = NODE_BRANCH;
         break;
     default:
-        die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+        //printf("debug: operator %s\t",op_literal(ir_rval->op_rval));
+        die("UNEXPECTED ERROR: ir_tree_to_ir_cond: bad operator");
     }
 
     return ir_rval;
@@ -117,16 +122,10 @@ ir_node_t *ir_tree_to_ir_cond(ir_node_t *ir_rval) {
 ir_node_t *expr_tree_to_ir_cond(expr_t *ltree) {
     ir_node_t *ir_cond;
 
-    ir_cond = expr_tree_to_ir_tree(ltree);
-
-    if (ir_cond->data_is!=TYPE_BOOLEAN) {
+    if (ltree->datatype->is!=TYPE_BOOLEAN)
         die("UNEXPECTED ERROR: expr_tree_to_ir_cond(): not boolean");
-    }
 
-    if (ir_cond->op_rval==OP_IGNORE) {
-        die("UNEXPECTED ERROR: expr_tree_to_ir_cond(): boolean const or load value with no comparison to zero");
-    }
-
+    ir_cond = expr_tree_to_ir_tree(ltree);
     ir_cond = ir_tree_to_ir_cond(ir_cond);
     ir_cond = eliminate_notop_from_ir_cond(ir_cond);
 
