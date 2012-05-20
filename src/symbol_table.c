@@ -269,6 +269,7 @@ void declare_consts(char *id,expr_t *l) {
     }
 
     new_var->status_value = VALUE_VALID;
+#warning do we care about unused constants?
     new_var->status_use = USE_NONE;
     new_var->status_known = KNOWN_YES;
 
