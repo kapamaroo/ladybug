@@ -10,7 +10,7 @@ void do_analyse_block(statement_t *block);
 var_list_t *do_expr_list_analysis(var_list_t *var_list, expr_list_t *expr_list);
 
 void dependence_analysis(statement_t *block);
-dep_vector_t *do_dependence_analysis(statement_t *comp_stmt);
+void do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt);
 
 statement_t *do_blocks_in_module(statement_t *root) {
     statement_t *pending;
@@ -139,7 +139,12 @@ var_list_t *do_expr_tree_analysis(var_list_t *var_list, expr_t *l) {
             //why is this working? see expr_toolbox.c: expression_from_function_call()
             var_list = do_expr_list_analysis(var_list,l->expr_list);
         } else {
-            var_list = insert_to_var_list(var_list,l->var);
+            if (l->var->from_comp && l->var->from_comp->comp_type==TYPE_ARRAY) {
+                var_list = insert_to_var_list(var_list,l->var->from_comp->array.base);
+            }
+            else {
+                var_list = insert_to_var_list(var_list,l->var);
+            }
         }
         break;
     case EXPR_HARDCODED_CONST:
@@ -370,10 +375,10 @@ int EXPR_CONTAINS_GUARD(var_t *guard, expr_t *l) {
     case EXPR_LVAL:
         if (l->var->id_is==ID_RETURN) {
             die("UNEXPECTED_ERROR: unrolling analysis of invalid for loop");
-        } else {
-            if (l->var==guard) {
-                return 1;
-            }
+        }
+
+        if (l->var==guard) {
+            return 1;
         }
         break;
     default:
@@ -383,34 +388,27 @@ int EXPR_CONTAINS_GUARD(var_t *guard, expr_t *l) {
     return 0;
 }
 
-inline expr_t *VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(var_t *guard, expr_list_t *index) {
+inline int VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(var_t *guard, expr_list_t *index) {
     int i;
 
-    for (i=0; i<index->all_expr_num; i++) {
-        if (EXPR_CONTAINS_GUARD(guard,index->expr_list[i])) {
-            return index->expr_list[i];
-        }
-    }
+    for (i=0; i<index->all_expr_num; i++)
+        if (EXPR_CONTAINS_GUARD(guard,index->expr_list[i]))
+            return i+1;
 
-    return NULL;
+    return 0;
 }
 
-inline var_t *VAR_IS_GUARDED_ARRAY_ELEMENT(dep_vector_t *dep, var_t *v, int from) {
+inline info_comp_t *VAR_IS_GUARDED_ARRAY_ELEMENT(dep_vector_t *dep, var_t *v) {
     info_comp_t *var_of;
 
     var_of = v->from_comp;
 
     while (var_of) {
         if (var_of->comp_type==TYPE_ARRAY) {
-            expr_t *conflict_index = VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(dep->guard,var_of->array.index);
-            if (conflict_index) {
-                if (from) {
-                    dep->pool[dep->next_free_spot].conflict_index_from = conflict_index;
-                } else {
-                    dep->pool[dep->next_free_spot].conflict_index_to = conflict_index;
-                }
-
-                return var_of->array.base;
+            int conflict_pos = VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(dep->guard,var_of->array.index);
+            if (conflict_pos) {
+                var_of->array.index_conflict_pos = conflict_pos;
+                return var_of;
             }
 
             var_of = var_of->array.base->from_comp;
@@ -424,16 +422,21 @@ inline var_t *VAR_IS_GUARDED_ARRAY_ELEMENT(dep_vector_t *dep, var_t *v, int from
     return NULL;
 }
 
-inline void GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *from_var, var_t *to_var) {
-    var_t *var_of1;
-    var_t *var_of2;
+inline int GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *from_var, var_t *to_var) {
+    info_comp_t *var_of1;
+    info_comp_t *var_of2;
 
-    var_of1 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,from_var,1);
-    var_of2 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,to_var,0);
+    var_of1 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,from_var);
+    var_of2 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,to_var);
 
-    if (var_of1 && var_of1 == var_of2) {
-        dep->pool[dep->next_free_spot].conflict_var = var_of1;
+    if (var_of1 && var_of2 &&
+        var_of1->array.base == var_of2->array.base) {
+        dep->pool[dep->next_free_spot].conflict_info_from = var_of1;
+        dep->pool[dep->next_free_spot].conflict_info_to = var_of2;
+        return 1;
     }
+
+    return 0;
 }
 
 void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, enum dependence_type dep_type) {
@@ -469,20 +472,45 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
 
     for (i=0; i<from_list->all_var_num; i++) {
         for (j=0; j<to_list->all_var_num; j++) {
-            if (from_list->var_list[i] == to_list->var_list[i]) {
-                if (dep->guard) {
-                    //for loop analysis
-                    //extra info
-                    GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep,
-                                                       from_list->var_list[i],
-                                                       to_list->var_list[j]);
-                }
-
+            var_t *var_from = from_list->var_list[i];
+            var_t *var_to = to_list->var_list[j];
+            if (var_from == var_to) {
                 //commit dependence
-                dep->pool[dep->next_free_spot].is = dep_type;
-                dep->pool[dep->next_free_spot].from = from;
-                dep->pool[dep->next_free_spot].to = to;
-                dep->next_free_spot++;
+                dep_t *this_dep = &dep->pool[dep->next_free_spot];
+                this_dep->is = dep_type;
+                this_dep->from = from;
+                this_dep->to = to;
+                this_dep->index = dep->next_free_spot++;
+
+                if (dep->guard) {
+                    //extra info for loop analysis
+                    if (GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep,var_from,var_to)) {
+
+                        //maybe we must swap the dependence according to index relation
+                        expr_t *l;
+
+                        l = this_dep->conflict_info_from->array.index->expr_list[0];
+                        int from_iter = 0;
+                        if (l->expr_is==EXPR_RVAL)
+                            from_iter = l->l2->ival;
+
+                        int to_iter = 0;
+                        l = this_dep->conflict_info_to->array.index->expr_list[0];
+                        if (l->expr_is==EXPR_RVAL)
+                            to_iter = l->l2->ival;
+
+                        //invert dependence
+                        if (from_iter > to_iter) {
+                            if (dep_type==DEP_RAW)
+                                this_dep->is = DEP_WAR;
+                            else if (dep_type==DEP_WAR)
+                                this_dep->is = DEP_RAW;
+
+                            this_dep->from = to;
+                            this_dep->to = from;
+                        }
+                    }
+                }
             }
         }
     }
@@ -506,15 +534,13 @@ int estimate_num_of_dependencies(statement_t *current) {
     return counter;
 }
 
-dep_vector_t *do_dependence_analysis(statement_t *comp_stmt) {
+void do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt) {
     int estimate;
-    dep_vector_t *dep;
     statement_t *from;
     statement_t *to;
 
     estimate = estimate_num_of_dependencies(comp_stmt->_comp.first_stmt);
 
-    dep = (dep_vector_t*)calloc(1,sizeof(dep_vector_t));
     dep->pool = (dep_t*)calloc(estimate,sizeof(dep_t));
 
     from = comp_stmt->_comp.first_stmt;
@@ -535,8 +561,18 @@ dep_vector_t *do_dependence_analysis(statement_t *comp_stmt) {
         from = from->next;
     }
 
-    return dep;
+    comp_stmt->dep = dep;
+}
 
+inline int EXPR_IS_SIMPLE_ENOUGH(expr_t *l) {
+    //reminder: we convert OP_MINUS to OP_PLUS when l->l2 is HARDCODED_CONST
+    if (l->expr_is == EXPR_RVAL && l->op == OP_PLUS) {
+        if (l->l1->expr_is != EXPR_LVAL ||
+            l->l2->expr_is != EXPR_HARDCODED_CONST)
+            return 0;
+    } else if (l->expr_is != EXPR_LVAL) {
+        return 0;
+    }
 }
 
 int can_unroll_this_for_stmt(statement_t *block) {
@@ -564,15 +600,15 @@ int can_unroll_this_for_stmt(statement_t *block) {
                     return 0;
                 }
 
-                //simple enough index expression
-                expr_t *l = v->from_comp->array.index->expr_list[0];
-
-                if (l->expr_is == EXPR_RVAL && (l->op == OP_PLUS || l->op == OP_MINUS)) {
-                    if (l->l1->expr_is == EXPR_LVAL && l->l2->expr_is != EXPR_HARDCODED_CONST) return 0;
-                    if (l->l2->expr_is == EXPR_LVAL && l->l1->expr_is != EXPR_HARDCODED_CONST) return 0;
-                } else if (l->expr_is != EXPR_LVAL) {
+                //no nested arrays in datatypes
+                if (v->from_comp->array.base->from_comp) {
                     return 0;
                 }
+
+                //simple enough index expression
+                expr_t *l = v->from_comp->array.index->expr_list[0];
+                if (!EXPR_IS_SIMPLE_ENOUGH(l))
+                    return 0;
             }
         }
 
@@ -584,15 +620,16 @@ int can_unroll_this_for_stmt(statement_t *block) {
                     return 0;
                 }
 
+                //no nested arrays in datatypes
+                if (v->from_comp->array.base->from_comp) {
+                    return 0;
+                }
+
                 //simple enough index expression
                 expr_t *l = v->from_comp->array.index->expr_list[0];
 
-                if (l->expr_is == EXPR_RVAL && (l->op == OP_PLUS || l->op == OP_MINUS)) {
-                    if (l->l1->expr_is == EXPR_LVAL && l->l2->expr_is != EXPR_HARDCODED_CONST) return 0;
-                    if (l->l2->expr_is == EXPR_LVAL && l->l1->expr_is != EXPR_HARDCODED_CONST) return 0;
-                } else if (l->expr_is != EXPR_LVAL) {
+                if (!EXPR_IS_SIMPLE_ENOUGH(l))
                     return 0;
-                }
             }
         }
 
@@ -603,26 +640,31 @@ int can_unroll_this_for_stmt(statement_t *block) {
 }
 
 void dependence_analysis(statement_t *block) {
+    dep_vector_t *dep;
+
+    dep = (dep_vector_t*)calloc(1,sizeof(dep_vector_t));
+
     switch (block->type) {
     case ST_If:
-        block->_if._true->dep = do_dependence_analysis(block->_if._true);
+        do_dependence_analysis(dep,block->_if._true);
+
         if (block->_if._false)
-            block->_if._false->dep = do_dependence_analysis(block->_if._false);
+            do_dependence_analysis(dep,block->_if._false);
         break;
     case ST_While:
         //there is no prologue or epilogue yet
-        block->dep = do_dependence_analysis(block->_while.loop);
+        do_dependence_analysis(dep,block->_while.loop);
         break;
     case ST_For:
-        block->dep->guard = block->_for.var;
+        dep->guard = block->_for.var;
 
         block->_for.unroll_me = can_unroll_this_for_stmt(block);
 
         //there is no prologue or epilogue yet
-        block->dep = do_dependence_analysis(block->_for.loop);
+        do_dependence_analysis(dep,block->_for.loop);
         break;
     case ST_Comp:
-        block->dep = do_dependence_analysis(block);
+        do_dependence_analysis(dep,block);
         break;
     default:
         die("UNEXPECTED_ERROR: do_dependence_analysis(): expected comp statement");

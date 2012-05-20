@@ -151,11 +151,12 @@ typedef struct mem_t {
 struct info_array_t {
     struct var_t *base;   //array base
     struct expr_list_t *index;  //array index (list size must be equal to array dimensions)
+    int index_conflict_pos;  //positive if there is conflict (subtract one to find the conflict index)
 };
 
 struct info_record_t {
     struct var_t *base;  //record base
-    int element;         //record element offset (hardcoded)
+    int element;         //record element
 };
 
 typedef struct info_comp_t {

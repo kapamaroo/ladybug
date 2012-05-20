@@ -24,12 +24,12 @@ enum dependence_type {
 };
 
 typedef struct dep_t {
+    int index;  //index in pool
     enum dependence_type is;
     struct statement_t *from;
     struct statement_t *to;
-    var_t *conflict_var;
-    expr_t *conflict_index_from;
-    expr_t *conflict_index_to;
+    info_comp_t *conflict_info_from;
+    info_comp_t *conflict_info_to;
 } dep_t;
 
 typedef struct dep_vector_t {
