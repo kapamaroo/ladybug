@@ -690,7 +690,7 @@ ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir
         break;
     case OP_NOT:
     default:
-        die("UNEXPECTED ERROR: ir_rval_to_ir_cond: bad operator");
+        die("UNEXPECTED ERROR: backpatch_ir_cond: bad operator");
     }
     return ir_cond;
 }
@@ -708,13 +708,16 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
     var_t *base;
     expr_list_t *index;
 
+    if (var->from_comp && var->Lvalue)
+        die("INTERNAL_ERROR: ir.c: Lvalue already?");
+
     if (var->Lvalue) {
         return var;
     }
 
     //we must create the final Lvalue
     final_offset = expr_from_hardcoded_int(0);
-    final_cond = expr_from_hardcoded_int(0);
+    final_cond = expr_from_hardcoded_boolean(1);
 
     comp = var->from_comp;
     while (comp) {
@@ -724,17 +727,17 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
             index = comp->array.index;
             base_Lvalue = comp->array.base->Lvalue;
 
-            if (valid_expr_list_for_array_reference(base->datatype,index)) {
-                relative_offset = make_array_reference(base->datatype,index);
-                cond = make_array_bound_check(base->datatype,index);
-                final_cond = expr_relop_equ_addop_mult(final_cond,OP_PLUS,cond);
-            } else {
+            if (!valid_expr_list_for_array_reference(base->datatype,index)) {
                 //static bound checks failed in IR level
                 //the array reference was valid in the frontend, see datatypes.c: reference_to_array_element()
                 //the loop optimizer has bugs
-                //bad optimizer
                 die("INTERNAL_ERROR: we generate out of bounds array references");
             }
+
+            relative_offset = make_array_reference(base->datatype,index);
+            cond = make_array_bound_check(base->datatype,index);
+            final_cond = expr_orop_andop_notop(final_cond,OP_AND,cond);
+
             break;
         case TYPE_RECORD:
             base = comp->record.base;
@@ -751,12 +754,15 @@ var_t *variable_from_comp_datatype_element(var_t *var) {
         comp = base->from_comp;
     }
 
-    var->cond_assign = final_cond;
+#warning enable me
+    //var->cond_assign = final_cond;
 
     new_mem = (mem_t*)calloc(1,sizeof(mem_t));
     new_mem = (mem_t*)memcpy(new_mem,base_Lvalue,sizeof(mem_t));
     new_mem->offset_expr = final_offset;
     new_mem->size = var->datatype->memsize;
+
+    var->Lvalue = new_mem;
 
     return var;
 }
