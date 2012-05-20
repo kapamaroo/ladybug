@@ -8,7 +8,7 @@
 #include "expressions.h"
 #include "err_buff.h"
 
-int expr_lval_with_comp_datatype(expr_t *l);
+inline int expr_lval_with_comp_datatype(expr_t *l);
 expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l2);
 
 /** Expression routines */
@@ -254,45 +254,12 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
         return expr_from_hardcoded_boolean(0);
     }
 
-    //if l2 is alerady OP_NOT return the initial expr;
+    //if l2 is already OP_NOT return the initial expr;
     if (op==OP_NOT && l2->op==OP_NOT) {
         //reminder: hardcoded expressions have op==OP_IGNORE
         //there is no case for l2 to be hardcoded in here
         return l2->l2;
     }
-
-    switch (op) {
-    case OP_AND:
-        //both hardcoded
-        if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST)
-            return expr_from_hardcoded_boolean((l1->cval && l2->cval)?1:0);  //and
-
-        if (l1->expr_is==EXPR_HARDCODED_CONST)
-            return (l1->cval) ? l2 : l1;
-
-        if (l2->expr_is==EXPR_HARDCODED_CONST)
-            return (l2->cval) ? l1 : l2;
-
-        break;
-    case OP_OR:
-        //both hardcoded
-        if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST)
-            return expr_from_hardcoded_boolean((l1->cval || l2->cval)?1:0);  //or
-
-        if (l1->expr_is==EXPR_HARDCODED_CONST)
-            return (l1->cval) ? l1 : l2;
-
-        if (l2->expr_is==EXPR_HARDCODED_CONST)
-            return (l2->cval) ? l2 : l1;
-
-        break;
-    case OP_NOT:
-        if (l2->expr_is==EXPR_HARDCODED_CONST)
-            return expr_from_hardcoded_boolean((l2->cval)?0:1); //not
-        break;
-    }
-
-    //no hardcoded value
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
     new_expr->datatype = SEM_BOOLEAN;
@@ -300,6 +267,8 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     new_expr->op = op;
     new_expr->l1 = l1;
     new_expr->l2 = l2;
+
+    new_expr = expr_simplify_hardcoded(new_expr,l1,op,l2);
 
     return new_expr;
 }
@@ -343,16 +312,6 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         return expr_from_hardcoded_int(0);
     }
 
-    if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {	//optimization
-        switch (op) {
-        case OP_RDIV: return expr_from_hardcoded_real(l1->fval / l2->fval);
-        case OP_DIV:  return expr_from_hardcoded_int(l1->ival / l2->ival);
-        case OP_MOD:  return expr_from_hardcoded_int(l1->ival % l2->ival);
-        default:
-            die("UNEXPECTED_ERROR: 89-2-1");
-        }
-    }
-
     switch (op) {
     case OP_RDIV:
         //the `/` op always returns real
@@ -369,7 +328,7 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
 
-        return new_expr;
+        break;
     case OP_DIV:
     case OP_MOD:
         //applies only on integer expressions
@@ -392,11 +351,15 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
 
-        return new_expr;
+        break;
     default:
         die("UNEXPECTED_ERROR: 89-4");
         return NULL; //keep the compiler happy
     }
+
+    new_expr = expr_simplify_hardcoded(new_expr,l1,op,l2);
+
+    return new_expr;
 }
 
 expr_t *expr_sign(op_t op,expr_t *l) {
@@ -458,16 +421,10 @@ expr_t *expr_sign(op_t op,expr_t *l) {
     return l;
 }
 
-int expr_lval_with_comp_datatype(expr_t *l) {
-    var_t *v;
-
+inline int expr_lval_with_comp_datatype(expr_t *l) {
     if (l->expr_is==EXPR_LVAL && TYPE_IS_COMPOSITE(l->datatype)) {
-        v = l->var;
-        sprintf(str_err,"doing math with '%s' of composite datatype '%s'",v->name,v->datatype->name);
+        sprintf(str_err,"doing math with '%s' of composite datatype '%s'",l->var->name,l->var->datatype->name);
         yyerror(str_err);
-        l->expr_is = EXPR_LOST;
-        l->var = lost_var_reference();
-        l->datatype = l->var->datatype;
         return 1;
     }
 
@@ -475,7 +432,7 @@ int expr_lval_with_comp_datatype(expr_t *l) {
 }
 
 expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l2) {
-    if (l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {
+    if (l1 && l1->expr_is==EXPR_HARDCODED_CONST && l2->expr_is==EXPR_HARDCODED_CONST) {
         //both datatypes are the same
         new_expr->expr_is = EXPR_HARDCODED_CONST;
         switch (op) {
@@ -494,6 +451,12 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
             new_expr->fval = l1->fval * l2->fval;	//if real
             new_expr->cval = l1->cval * l2->cval;	//if char, boolean
             break;
+        case OP_RDIV:
+            return expr_from_hardcoded_real(l1->fval / l2->fval);
+        case OP_DIV:
+            return expr_from_hardcoded_int(l1->ival / l2->ival);
+        case OP_MOD:
+            return expr_from_hardcoded_int(l1->ival % l2->ival);
         case RELOP_B:
             if (l1->fval > l2->fval || l1->ival > l2->ival) {
                 new_expr->ival = 1;
@@ -536,18 +499,24 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
                 new_expr->cval = 1;
             }
             break;
+        case OP_AND:
+            return expr_from_hardcoded_boolean((l1->cval && l2->cval)?1:0);  //and
+        case OP_OR:
+            return expr_from_hardcoded_boolean((l1->cval || l2->cval)?1:0);  //or
+        case OP_NOT:
+            break;
         default:
             die("UNEXPECTED ERROR: expressions.c : bad operator");
             break;
         }
-        //we don't need the previous hardcoded values any more
+        //we don't have relation any more
         new_expr->l1 = NULL;
         new_expr->l2 = NULL;
 
         return new_expr;
     }
 
-    if (l1->expr_is==EXPR_HARDCODED_CONST) {
+    if (l1 && l1->expr_is==EXPR_HARDCODED_CONST) {
         //both datatypes are the same
         switch (op) {
         case OP_PLUS:
@@ -558,17 +527,19 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
             break;
         case OP_MINUS:
             return new_expr;
-
-            break;
         case OP_MULT:
-            if (l1->ival==0 || l1->fval==0) {
-                free(new_expr);
-                return l1;
-            }
-
             if (l1->ival==1 || l1->fval==1) {
                 free(new_expr);
                 return l2;
+            }
+
+            //do not break here
+        case OP_RDIV:
+        case OP_DIV:
+        case OP_MOD:
+            if (l1->ival==0 || l1->fval==0) {
+                free(new_expr);
+                return l1;
             }
 
             break;
@@ -578,6 +549,12 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
         case RELOP_LE:
         case RELOP_NE:
         case RELOP_EQU:
+            break;
+        case OP_AND:
+            return ((l1->cval) ? l2 : l1);
+        case OP_OR:
+            return ((l1->cval) ? l1 : l2);
+        case OP_NOT:
             break;
         default:
             die("UNEXPECTED ERROR: expressions.c : bad operator");
@@ -603,6 +580,10 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
                 return l2;
             }
 
+            //do not break here
+        case OP_RDIV:
+        case OP_DIV:
+        case OP_MOD:
             if (l2->ival==1 || l2->fval==1) {
                 free(new_expr);
                 return l1;
@@ -616,6 +597,12 @@ expr_t *expr_simplify_hardcoded(expr_t *new_expr, expr_t *l1, op_t op, expr_t *l
         case RELOP_NE:
         case RELOP_EQU:
             break;
+        case OP_AND:
+            return ((l2->cval) ? l1 : l2);
+        case OP_OR:
+            return ((l2->cval) ? l2 : l1);
+        case OP_NOT:
+            return expr_from_hardcoded_boolean((l2->cval)?0:1); //not
         default:
             die("UNEXPECTED ERROR: expressions.c : bad operator");
             break;
