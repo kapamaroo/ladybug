@@ -272,7 +272,6 @@ typedef struct expr_t {
     int ival; //int value
     char cval; //char value
     char *cstr; //string constant
-    struct expr_t *parent;
     struct expr_t *l1;
     struct expr_t *l2;
 } expr_t;
