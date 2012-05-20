@@ -134,7 +134,6 @@ expr_t *expr_from_STRING(char *id) {
     dummy_var->Lvalue = mem_allocate_string(id);
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
@@ -149,7 +148,6 @@ expr_t *expr_from_hardcoded_int(int value) {
     expr_t *new_expr;
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
@@ -272,7 +270,6 @@ expr_t *expr_from_hardcoded_real(float value) {
     expr_t *new_expr;
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
@@ -289,7 +286,6 @@ expr_t *expr_from_hardcoded_boolean(int value) {
     expr_t *new_expr;
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
@@ -306,7 +302,6 @@ expr_t *expr_from_hardcoded_char(char value) {
     expr_t *new_expr;
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
     new_expr->op = OP_IGNORE;
@@ -327,7 +322,6 @@ expr_t *expr_from_setexpression(elexpr_list_t *list) {
     expr_t *new_expr;
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->expr_is = EXPR_NULL_SET;
     new_expr->l1 = NULL;
     new_expr->l2 = NULL;
@@ -365,27 +359,20 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
     switch (op) {
     case OP_IGNORE:
         new_inop = (expr_t*)calloc(1,sizeof(expr_t));
-        new_inop->parent = new_inop;
         new_inop->datatype = SEM_BOOLEAN;
         new_inop->expr_is = EXPR_RVAL;
         new_inop->op = RELOP_IN;
         new_inop->l1 = el;
         new_inop->l2 = expr_set;
-        el->parent = new_inop;
-        expr_set->parent = new_inop;
         return new_inop;
     case OP_MULT:	//becomes OP_AND
     case OP_PLUS:	//becomes OP_OR
         new_cond = (expr_t*)calloc(1,sizeof(expr_t));
-        new_cond->parent = new_cond;
         new_cond->datatype = SEM_BOOLEAN;
         new_cond->expr_is = EXPR_RVAL;
 
         left_cond = expr_distribute_inop_to_set(el,expr_set->l1);
         right_cond = expr_distribute_inop_to_set(el,expr_set->l2);
-
-        left_cond->parent = new_cond;
-        right_cond->parent = new_cond;
 
         new_cond->op = (op==OP_MULT)?OP_AND:OP_OR;
         new_cond->l1 = left_cond;
@@ -396,25 +383,20 @@ expr_t *expr_distribute_inop_to_set(expr_t *el,expr_t *expr_set) {
         right_cond = expr_distribute_inop_to_set(el,expr_set->l2);
 
         new_cond = (expr_t*)calloc(1,sizeof(expr_t));
-        new_cond->parent = new_cond;
         new_cond->datatype = SEM_BOOLEAN;
         new_cond->expr_is = EXPR_RVAL;
 
         new_not_cond = (expr_t*)calloc(1,sizeof(expr_t));
-        new_not_cond->parent = new_not_cond;
         new_not_cond->datatype = SEM_BOOLEAN;
         new_not_cond->expr_is = EXPR_RVAL;
 
         new_not_cond->op = OP_NOT;
         new_not_cond->l1 = NULL;
         new_not_cond->l2 = right_cond;
-        right_cond->parent = new_not_cond;
 
         new_cond->op = OP_AND;
         new_cond->l1 = left_cond;
         new_cond->l2 = new_not_cond;
-        left_cond->parent = new_cond;
-        new_not_cond->parent = new_cond;
 
         return new_cond;
     default:
@@ -1032,7 +1014,6 @@ expr_t *expr_version_of_variable(var_t *v) {
     expr_t *l;
 
     l = (expr_t*)calloc(1,sizeof(expr_t));
-    l->parent = l;
     l->op = OP_IGNORE;
     l->expr_is = EXPR_LVAL; //ID_VAR ID_VAR_GUARDED or ID_RETURN
     l->var = v;

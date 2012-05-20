@@ -77,14 +77,11 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
             }
 
             new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-            new_expr->parent = new_expr;
             new_expr->datatype = datatype;
             new_expr->expr_is = EXPR_SET;
             new_expr->op = op;
             new_expr->l1 = l1;
             new_expr->l2 = l2;
-            l1->parent = new_expr;
-            l2->parent = new_expr;
 
             return new_expr;
         default:
@@ -127,7 +124,6 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
     if ((l1->expr_is==EXPR_RVAL || l1->expr_is==EXPR_LVAL || l1->expr_is==EXPR_HARDCODED_CONST) &&
         (l2->expr_is==EXPR_RVAL || l2->expr_is==EXPR_LVAL || l2->expr_is==EXPR_HARDCODED_CONST)) {
         new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-        new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
         //new_expr->datatype = SEM_BOOLEAN; //decide later
@@ -136,9 +132,6 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
         new_expr->ival = 0;
         new_expr->fval = 0;
         new_expr->cval = 0;
-
-        l1->parent = new_expr;
-        l2->parent = new_expr;
 
         if (!TYPE_IS_ARITHMETIC(l1->datatype) /*&& l1->expr_is!=EXPR_LVAL*/) {
             sprintf(str_err,"doing math with '%s' value",l1->datatype->name);
@@ -302,18 +295,11 @@ expr_t *expr_orop_andop_notop(expr_t *l1,op_t op,expr_t *l2) {
     //no hardcoded value
 
     new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-    new_expr->parent = new_expr;
     new_expr->datatype = SEM_BOOLEAN;
     new_expr->expr_is = EXPR_RVAL;
     new_expr->op = op;
     new_expr->l1 = l1;
     new_expr->l2 = l2;
-    l2->parent = new_expr;
-
-    if (op!=OP_NOT) {
-        //in this case l1 is NULL
-        l1->parent = new_expr;
-    }
 
     return new_expr;
 }
@@ -377,15 +363,11 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         else if (l2->datatype->is!=TYPE_REAL) { l2->convert_to = SEM_REAL; }
 
         new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-        new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
         new_expr->datatype = SEM_REAL;
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
-
-        l1->parent = new_expr;
-        l2->parent = new_expr;
 
         return new_expr;
     case OP_DIV:
@@ -404,15 +386,11 @@ expr_t *expr_muldivandop(expr_t *l1,op_t op,expr_t *l2) {
         else if (l2->datatype->is!=TYPE_INT) { l2->convert_to = SEM_INTEGER; }
 
         new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-        new_expr->parent = new_expr;
         new_expr->l1 = l1;
         new_expr->l2 = l2;
         new_expr->datatype = SEM_INTEGER;
         new_expr->expr_is = EXPR_RVAL;
         new_expr->op = op;
-
-        l1->parent = new_expr;
-        l2->parent = new_expr;
 
         return new_expr;
     default:
@@ -457,7 +435,6 @@ expr_t *expr_sign(op_t op,expr_t *l) {
         }
 
         new_expr = (expr_t*)calloc(1,sizeof(expr_t));
-        new_expr->parent = new_expr;
 
         if (l->expr_is==EXPR_SET || l->expr_is==EXPR_NULL_SET) {
             new_expr->l1 = expr_from_setexpression(NULL);
@@ -472,7 +449,6 @@ expr_t *expr_sign(op_t op,expr_t *l) {
         new_expr->expr_is = EXPR_RVAL;
         //new_expr->op = OP_SIGN;
         new_expr->op = OP_MINUS;
-        l->parent = new_expr;
         return new_expr;
 
     }
