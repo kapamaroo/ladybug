@@ -124,6 +124,7 @@ var_t *reference_to_variable_or_enum_element(char *id) {
     new_enum_const->to_expr = expr_version_of_variable(new_enum_const);
 
     new_enum_const->status_value = VALUE_VALID;
+#warning do we care about unused constants?
     new_enum_const->status_use = USE_NONE;
     new_enum_const->status_known = KNOWN_YES;
 
@@ -162,6 +163,9 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
 
     new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+
+    //do not inherit base Lvalue, we calculate the final Lvalue later
+    new_var->Lvalue = NULL;
 
     new_var->datatype = v->datatype->def_datatype;
     new_var->cond_assign = cond_expr;
@@ -215,6 +219,9 @@ var_t *reference_to_record_element(var_t *v, char *id) {
 
     new_var = (var_t*)calloc(1,sizeof(var_t));
     new_var = (var_t*)memcpy(new_var,v,sizeof(var_t));
+
+    //do not inherit base Lvalue, we calculate the final Lvalue later
+    new_var->Lvalue = NULL;
 
     new_var->name = v->datatype->field_name[elem_num]; //BUG strdup the name because we free() it later
     //new_var->name = strdup(v->datatype->field_name[elem_num]);
