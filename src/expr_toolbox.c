@@ -467,12 +467,15 @@ dim_t *make_dim_bounds(expr_t *l1,expr_t *l2) {
     else if (l1->expr_is!=EXPR_HARDCODED_CONST || l2->expr_is!=EXPR_HARDCODED_CONST) {
         yyerror("dim bounds MUST be constants");
     }
-    else if (l2->ival - l1->ival + 1<=0 || l2->ival - l1->ival + 1>MAX_FIELDS) {
+    else if (l2->ival - l1->ival<=0 || l2->ival - l1->ival>MAX_FIELDS) {
         yyerror("dimension bounds are incorrect");
     }
     else {
         new_dim->first = l1->ival;
-        new_dim->range = l2->ival - l1->ival + 1;
+        new_dim->range = l2->ival - l1->ival;
+
+        if (!new_dim->range)
+            yyerror("zero size dimension in array type definition");
     }
     return new_dim;
 }
