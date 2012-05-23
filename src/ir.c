@@ -23,7 +23,6 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l);
 ir_node_t *expand_array_assign(var_t *v,expr_t *l);
 ir_node_t *expand_record_assign(var_t *v,expr_t *l);
 ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir_false);
-var_t *variable_from_comp_datatype_element(var_t *var);
 
 reg_t *new_virtual_register() {
     reg_t *new_reg;
@@ -125,8 +124,6 @@ ir_node_t *new_ir_assign(var_t *v, expr_t *l) {
 ir_node_t *new_ir_assign_str(var_t *v, expr_t *l) {
     ir_node_t *new_stmt;
 
-    v = variable_from_comp_datatype_element(v);
-
     //strings terminate with 0, copy until array is full
     new_stmt = new_ir_node_t(NODE_ASSIGN_STRING);
     new_stmt->ir_lval = calculate_lvalue(v);
@@ -222,7 +219,6 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
     }
 
     /**** some common assign actions */
-    v = variable_from_comp_datatype_element(v);
 
     new_stmt = new_ir_node_t(NODE_ASSIGN);
     new_stmt->ir_lval = calculate_lvalue(v);
@@ -373,7 +369,7 @@ ir_node_t *new_ir_read(var_list_t *list) {
     //we are error free here!
     read_stmt = NULL;
     for(i=0;i<MAX_VAR_LIST-list->var_list_empty;i++) {
-        v = variable_from_comp_datatype_element(list->var_list[i]);
+        v = list->var_list[i];
         d = v->datatype;
 
         new_ir = new_ir_node_t(NODE_SYSCALL);
@@ -693,76 +689,4 @@ ir_node_t *backpatch_ir_cond(ir_node_t *ir_cond,ir_node_t *ir_true,ir_node_t *ir
         die("UNEXPECTED ERROR: backpatch_ir_cond: bad operator");
     }
     return ir_cond;
-}
-
-var_t *variable_from_comp_datatype_element(var_t *var) {
-    expr_t *relative_offset;
-    expr_t *final_offset;
-    expr_t *cond;
-    expr_t *final_cond;
-
-    mem_t *new_mem;
-    mem_t *base_Lvalue;
-
-    info_comp_t *comp;
-    var_t *base;
-    expr_list_t *index;
-
-    if (var->from_comp && var->Lvalue)
-        die("INTERNAL_ERROR: ir.c: Lvalue already?");
-
-    if (var->Lvalue) {
-        return var;
-    }
-
-    //we must create the final Lvalue
-    final_offset = expr_from_hardcoded_int(0);
-    final_cond = expr_from_hardcoded_boolean(1);
-
-    comp = var->from_comp;
-    while (comp) {
-        switch (comp->comp_type) {
-        case TYPE_ARRAY:
-            base = comp->array.base;
-            index = comp->array.index;
-            base_Lvalue = comp->array.base->Lvalue;
-
-            if (!valid_expr_list_for_array_reference(base->datatype,index)) {
-                //static bound checks failed in IR level
-                //the array reference was valid in the frontend, see datatypes.c: reference_to_array_element()
-                //the loop optimizer has bugs
-                die("INTERNAL_ERROR: we generate out of bounds array references");
-            }
-
-            relative_offset = make_array_reference(base->datatype,index);
-            cond = make_array_bound_check(base->datatype,index);
-            final_cond = expr_orop_andop_notop(final_cond,OP_AND,cond);
-
-            break;
-        case TYPE_RECORD:
-            base = comp->record.base;
-            int element = comp->record.element;
-            base_Lvalue = comp->record.base->Lvalue;
-            relative_offset = expr_from_hardcoded_int(base->datatype->field_offset[element]);
-            break;
-        default:
-            die("UNEXPECTED_ERROR: no array/record in variable_from_comp_datatype_element()");
-        }
-
-        final_offset = expr_relop_equ_addop_mult(final_offset,OP_PLUS,relative_offset);
-
-        comp = base->from_comp;
-    }
-
-#warning enable me
-    //var->cond_assign = final_cond;
-
-    new_mem = (mem_t*)calloc(1,sizeof(mem_t));
-    new_mem = (mem_t*)memcpy(new_mem,base_Lvalue,sizeof(mem_t));
-    new_mem->offset_expr = final_offset;
-    new_mem->size = var->datatype->memsize;
-
-    var->Lvalue = new_mem;
-
-    return var;
 }

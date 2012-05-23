@@ -7,6 +7,8 @@
 #define MAX_LABEL_SIZE 64
 #define DEFAULT_LABEL_PREFIX "label"
 
+var_t *variable_from_comp_datatype_element(var_t *var);
+
 expr_t *make_enum_subset_bound_checks(var_t *v,expr_t *l);
 expr_t *make_ASCII_bound_checks(var_t *v,expr_t *l);
 ir_node_t *prepare_stack_and_call(func_t *subprogram, expr_list_t *list);
