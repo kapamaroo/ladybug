@@ -298,6 +298,7 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node = new_ir_node_t(NODE_LOAD);
             new_node->ir_lval = calculate_lvalue(ltree->var);
             new_node->data_is = ltree->datatype->is;
+            //new_node->lval_name = ltree->var->name;
         }
 
         if (ltree->convert_to==SEM_INTEGER) {
@@ -400,10 +401,16 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
     consider_all_offsets(v);
 
-    base_address = new_ir_node_t(NODE_RVAL_ARCH);
     if (v->Lvalue->segment==MEM_GLOBAL) {
+#if (USE_PSEUDO_INSTR_LA==1)
+        base_address = new_ir_node_t(NODE_LVAL_NAME);
+        base_address->lval_name = v->name;
+#else
+        base_address = new_ir_node_t(NODE_RVAL_ARCH);
         base_address->reg = &R_gp;
+#endif
     } else {
+        base_address = new_ir_node_t(NODE_RVAL_ARCH);
         base_address->reg = &R_sp;
     }
 
@@ -413,7 +420,13 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
         //set the address so far
         new_node->address = base_address;
-        new_node->offset = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
+
+#if (USE_PSEUDO_INSTR_LA==1)
+        if (v->Lvalue->segment==MEM_GLOBAL)
+            new_node->offset = expr_tree_to_ir_tree(expr_from_hardcoded_int(0));
+        else
+#endif
+            new_node->offset = expr_tree_to_ir_tree(v->Lvalue->seg_offset);
 
         //load the final address
         base_address = new_ir_node_t(NODE_LOAD);
@@ -421,7 +434,12 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
         offset_expr = expr_from_hardcoded_int(0);
     } else {
-        offset_expr = v->Lvalue->seg_offset;
+#if (USE_PSEUDO_INSTR_LA==1)
+        if (v->Lvalue->segment==MEM_GLOBAL)
+            offset_expr = expr_from_hardcoded_int(0);
+        else
+#endif
+            offset_expr = v->Lvalue->seg_offset;
     }
 
     if (v->Lvalue->offset_expr->expr_is==EXPR_HARDCODED_CONST) {

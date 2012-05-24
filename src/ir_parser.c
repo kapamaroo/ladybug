@@ -240,6 +240,17 @@ void parse_ir_node(ir_node_t *ir_node) {
         parse_ir_node(ir_node->address);
         parse_ir_node(ir_node->ir_lval);
         return;
+
+#if (USE_PSEUDO_INSTR_LA==1)
+    case NODE_LVAL_NAME:
+        new_instr = new_instruction(NULL,&I_la);
+        new_instr->Rd = ir_node->reg;
+        new_instr->lval_name = ir_node->lval_name;
+
+        final_tree_current = link_instructions(new_instr,final_tree_current);
+        break;
+#endif
+
     case NODE_LOAD:
         parse_ir_node(ir_node->ir_lval);
 

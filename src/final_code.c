@@ -110,9 +110,14 @@ void print_instr(instr_t *instr) {
         print_register(instr->Rd); COMMA();
         printf("%d",instr->ival);
         break;
+
+#if (USE_PSEUDO_INSTR_LA==1)
     case FMT_RD_LABEL:
-        print_register(instr->Rd);
+        print_register(instr->Rd); COMMA();
+        printf("%s",instr->lval_name);
         break;
+#endif
+
     case FMT_RS:
         print_register(instr->Rs);
         break;

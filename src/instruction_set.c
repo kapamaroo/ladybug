@@ -11,7 +11,11 @@ mips_instr_t I_subu  = {.name="subu",  .fmt=FMT_RD_RS_RT,      .datatype=I_INT, 
 mips_instr_t I_abs   = {.name="abs",   .fmt=FMT_RD_RS,         .datatype=I_INT, .type=INSTR_ISA};
 
 //expand to lui, ori
+
+#if (USE_PSEUDO_INSTR_LA==1)
 mips_instr_t I_la    = {.name="la",    .fmt=FMT_RD_LABEL,      .datatype=I_INT, .type=INSTR_PSEUDO_ISA};   //load address
+#endif
+
 mips_instr_t I_li    = {.name="li",    .fmt=FMT_RD_IMM32,      .datatype=I_INT, .type=INSTR_PSEUDO_ISA};   //load 32bit imm
 
 mips_instr_t I_move  = {.name="move",  .fmt=FMT_RD_RS,         .datatype=I_INT, .type=INSTR_PSEUDO_ISA};   //convert to add

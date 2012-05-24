@@ -17,6 +17,11 @@ typedef enum ir_node_type_t {
     NODE_CONVERT_TO_REAL,	//if it is neccessary
     NODE_MEMCPY,		//for assignment of identical arrays and records
     NODE_LOAD,		        //load a NODE_LVAL
+
+#if (USE_PSEUDO_INSTR_LA==1)
+    NODE_LVAL_NAME,             //load symbol using its name (with pseudo instriction 'la')
+#endif
+
     NODE_SHIFT_LEFT,
     NODE_SHIFT_RIGHT,
     NODE_LVAL,			//memory address with possible offset
@@ -40,6 +45,10 @@ typedef struct ir_node_t {
     reg_t *reg;
 
     char *label;               //the label of the node
+
+#if (USE_PSEUDO_INSTR_LA==1)
+    char *lval_name;
+#endif
 
     struct ir_node_t *next;
     struct ir_node_t *prev;

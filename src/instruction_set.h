@@ -5,6 +5,8 @@ struct instr_t;
 
 #include "reg.h"
 
+#define USE_PSEUDO_INSTR_LA 1
+
 enum instr_type_t {
     INSTR_ISA,
     INSTR_PSEUDO_ISA
@@ -18,7 +20,11 @@ enum instr_format {
     FMT_RD,
     FMT_RD_IMM,         //16-bit imm
     FMT_RD_IMM32,       //32-bit imm
+
+#if (USE_PSEUDO_INSTR_LA==1)
     FMT_RD_LABEL,       //32-bit address
+#endif
+
     FMT_RS,
     FMT_RD_RS_SHIFT,    // 5-bit imm
     FMT_RD_RS_IMM,      //16-bit imm
@@ -50,6 +56,11 @@ typedef struct instr_t {
     unsigned long id;
 
     char *label;
+
+#if (USE_PSEUDO_INSTR_LA==1)
+    char *lval_name;
+#endif
+
     struct reg_t *Rd;
     struct reg_t *Rs;
     struct reg_t *Rt;
