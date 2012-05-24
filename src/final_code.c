@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include "final_code.h"
+#include "scope.h"
+#include "symbol_table.h"
 #include "instruction_set.h"
 #include "reg.h"
 
@@ -173,9 +175,47 @@ void print_instr(instr_t *instr) {
     printf("\n");
 }
 
+void print_data_segment() {
+    int i;
+    int size;
+
+    sem_t **pool;
+
+    pool = main_program->symbol_table.pool;
+
+    if (!pool)
+        die("INTERNAL_ERROR: print_data_segment(): no pool");
+
+    size = MAX_SYMBOLS - main_program->symbol_table.pool_empty;
+
+    printf(".data\n");
+
+    for (i=0; i<size; i++) {
+        if (pool[i]->id_is==ID_VAR) {
+            printf("%s: %s ",pool[i]->var->name,pool[i]->var->dot_data.is);
+
+            if (TYPE_IS_STANDARD(pool[i]->var->datatype)) {
+                switch (pool[i]->var->datatype->is) {
+                case TYPE_INT:      printf("%d\n",pool[i]->var->dot_data.ival);  break;
+                case TYPE_REAL:     printf("%f\n",pool[i]->var->dot_data.fval);  break;
+                case TYPE_CHAR:     printf("%c\n",pool[i]->var->dot_data.cval);  break;
+                case TYPE_BOOLEAN:  printf("%d\n",pool[i]->var->dot_data.cval);  break;
+                }
+            } else {
+                printf("%d\n",pool[i]->var->dot_data.ival);
+            }
+        }
+    }
+}
+
 void print_assembly() {
     int i;
     instr_t *instr;
+
+    print_data_segment();
+
+    printf(".text\n");
+    printf(".global main\n");
 
     for(i=0;i<MAX_NUM_OF_MODULES;i++) {
         instr = final_tree[i];

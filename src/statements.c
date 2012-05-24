@@ -293,10 +293,29 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 #warning actually DO the .data segment
     if (v->id_is!=ID_RETURN &&
         v->scope==main_program &&           //ONLY main program variables can be in .data segment
+        //TYPE_IS_STANDARD(v->datatype) &&
+        //!v->from_comp &&
         v->status_value==VALUE_GARBAGE &&
         v->status_use==USE_NONE &&
         v->status_known==KNOWN_YES) {
+
         v->status_value = VALUE_VALID;
+
+        switch (v->datatype->is) {
+        case TYPE_INT:
+        case TYPE_REAL:
+            v->dot_data.is = DOT_WORD;
+            break;
+        case TYPE_CHAR:
+        case TYPE_BOOLEAN:
+            v->dot_data.is = DOT_BYTE;
+            break;
+        }
+
+        v->dot_data.ival = v->ival;
+        v->dot_data.fval = v->fval;
+        v->dot_data.cval = v->cval;
+
         //printf("debug: first unused assignement to '%s' in '%s' goes to '.data' segment\n", v->name, scope_owner->name);
         return NULL;
     }

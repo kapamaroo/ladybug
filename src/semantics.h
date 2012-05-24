@@ -98,8 +98,6 @@ typedef struct dim_t {
 } dim_t;
 
 typedef struct symbol_table_t {
-    int start_index; //for array symbol tables
-
     char **lost;
     int lost_empty;
 
@@ -148,6 +146,17 @@ typedef struct mem_t {
     int size; //memory size
 } mem_t;
 
+typedef struct info_dot_data {
+    char *is;
+
+    //possible initial values
+    int ival;  //if is==DOT_SPACE, ival has the size in bytes
+    float fval;
+    char cval;
+    char *str;
+
+} info_dot_data;
+
 struct info_array_t {
     struct var_t *base;   //array base
     struct expr_list_t *index;  //array index (list size must be equal to array dimensions)
@@ -156,7 +165,7 @@ struct info_array_t {
 
 struct info_record_t {
     struct var_t *base;  //record base
-    int element;         //record element
+    struct expr_t *el_offset;   //record element
 };
 
 typedef struct info_comp_t {
@@ -178,14 +187,20 @@ typedef struct var_t {
     var_status_known_t status_known;
 
     info_comp_t *from_comp;
+    info_dot_data dot_data;
 
     struct expr_t *to_expr;
 
     data_t *datatype;
     char *name;
-    //scope_t *scope;
     struct func_t *scope;
-    mem_t *Lvalue; //for formal parameters in symbol table, if Lvalue is NULL the variable is passed by value, else by reference and we load it from here
+
+
+    mem_t *Lvalue;  //for formal parameters in symbol table,
+                    //if Lvalue is NULL the variable is passed by value,
+                    //else by reference and we load it from here
+
+
     struct expr_t *cond_assign; //if not NULL, check this cond to assign
     float fval; //hardcoded float value
     int ival; //hardcoded int value

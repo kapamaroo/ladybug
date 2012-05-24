@@ -233,7 +233,7 @@ var_t *reference_to_record_element(var_t *v, char *id) {
     new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
     new_var->from_comp->comp_type = v->datatype->is;
     new_var->from_comp->record.base = v;
-    new_var->from_comp->record.element = elem_num;
+    new_var->from_comp->record.el_offset = expr_from_hardcoded_int(elem_num);
 
     free(id); //flex strdup'ed it
     return new_var;

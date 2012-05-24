@@ -16,6 +16,11 @@
 
 var_t *lost_var;
 
+const char * DOT_BYTE = ".byte";
+const char * DOT_WORD = ".word";
+const char * DOT_SPACE = ".space";
+const char * DOT_ASCIIZ = ".asciiz";
+
 func_t *create_main_program(char *name) {
     sem_t *sem_main_program;
 
@@ -312,6 +317,10 @@ void declare_vars(data_t* type){
             new_sem->var->Lvalue = mem_allocate_symbol(type);
 
             new_sem->var->to_expr = expr_version_of_variable(new_sem->var);
+
+            //unknown value yet
+            new_sem->var->dot_data.is = DOT_SPACE;
+            new_sem->var->dot_data.ival = type->memsize;
 
             new_sem->var->status_value = VALUE_GARBAGE;
             new_sem->var->status_use = USE_NONE;

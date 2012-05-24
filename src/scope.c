@@ -107,6 +107,7 @@ void close_scope(func_t *scope_owner) {
         //there is no main scope any more
         die("INTERNAL_ERROR: no scope to delete");
     }
+
     sm_clean_current_scope(scope_owner);
     invalidate_variables_out_of_scope(scope_owner);
 
@@ -124,15 +125,16 @@ void sm_clean_current_scope(func_t *scope_owner) {
     int i;
     int size;
 
+    /*
     size = MAX_SYMBOLS - scope_owner->symbol_table.pool_empty;
     for (i=size-1;i>=0;i--) {
-        //if (!scope_owner->symbol_table.pool[i]) { break; }
         //printf("debug: trying to remove symbol '%s' of scope '%s'\n",scope_owner->symbol_table.pool[i]->name, scope_owner->name);
         sm_remove(scope_owner->symbol_table.pool[i]->name);
     }
 
     free(scope_owner->symbol_table.pool);
     scope_owner->symbol_table.pool = NULL;
+    */
 
     //clean lost symbols of scope
     for (i=0;i<MAX_LOST_SYMBOLS;i++) {

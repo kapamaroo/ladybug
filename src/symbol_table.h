@@ -20,6 +20,11 @@ typedef struct sem_t {
     //mem_t *Lvalue;
 } sem_t;
 
+extern const char * DOT_BYTE;
+extern const char * DOT_WORD;
+extern const char * DOT_SPACE;
+extern const char * DOT_ASCIIZ;
+
 void init_symbol_table();
 func_t *create_main_program(char *name);
 
