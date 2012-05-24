@@ -180,7 +180,7 @@ expr_t *expr_relop_equ_addop_mult(expr_t *l1,op_t op,expr_t *l2) {
 
         //simplify hardcoded operators for dependence analysis later
         if (op==OP_MINUS && l2->expr_is==EXPR_HARDCODED_CONST) {
-            new_expr->expr_is = OP_PLUS;
+            new_expr->op = OP_PLUS;
             new_expr->ival = -new_expr->ival;
             new_expr->fval = -new_expr->fval;
             new_expr->cval = -new_expr->cval;
