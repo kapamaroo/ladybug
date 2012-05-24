@@ -20,6 +20,6 @@ begin
    d := 20;
    e := 25;
 
-   x := a + b * obsolete(a,e) * c - d + e * 3 + o;
+   x := o + a + b * obsolete(a,e) * c - d + e * 3 + n;
    a := try_me(f,d);
 end.
