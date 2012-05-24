@@ -192,27 +192,28 @@ void print_data_segment() {
 
     for (i=0; i<size; i++) {
         if (pool[i]->id_is==ID_VAR) {
-            printf("%s: %s ",pool[i]->var->name,pool[i]->var->dot_data.is);
+            var_t *var = pool[i]->var;
+            printf("%s: %s ",var->name,var->dot_data.is);
 
-            if (TYPE_IS_STANDARD(pool[i]->var->datatype)) {
-                switch (pool[i]->var->datatype->is) {
-                case TYPE_INT:      printf("%d\n",pool[i]->var->dot_data.ival);  break;
-                case TYPE_REAL:     printf("%f\n",pool[i]->var->dot_data.fval);  break;
-                case TYPE_CHAR:     printf("%c\n",pool[i]->var->dot_data.cval);  break;
-                case TYPE_BOOLEAN:  printf("%d\n",pool[i]->var->dot_data.cval);  break;
-                }
+            if (!TYPE_IS_STANDARD(var->datatype) || var->dot_data.is==DOT_SPACE) {
+                //print size
+                printf("%d\n",var->dot_data.ival);
             } else {
-                printf("%d\n",pool[i]->var->dot_data.ival);
+                //print value
+                switch (var->datatype->is) {
+                case TYPE_INT:      printf("%d\n",var->dot_data.ival);    break;
+                case TYPE_REAL:     printf("%f\n",var->dot_data.fval);    break;
+                case TYPE_CHAR:     printf("'%c'\n",var->dot_data.cval);  break;
+                case TYPE_BOOLEAN:  printf("%d\n",var->dot_data.cval);    break;
+                }
             }
         }
     }
 }
 
-void print_assembly() {
+void print_text_segment() {
     int i;
     instr_t *instr;
-
-    print_data_segment();
 
     printf(".text\n");
     printf(".global main\n");
@@ -232,4 +233,9 @@ void print_assembly() {
         }
         printf("\n");
     }
+}
+
+void print_assembly() {
+    print_data_segment();
+    print_text_segment();
 }
