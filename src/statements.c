@@ -290,11 +290,10 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 
     //skip first init with value known at compile time, EXCEPT for return_values
     //this will go to the .data segment
-#warning actually DO the .data segment
     if (v->id_is!=ID_RETURN &&
         v->scope==main_program &&           //ONLY main program variables can be in .data segment
-        //TYPE_IS_STANDARD(v->datatype) &&
-        //!v->from_comp &&
+        TYPE_IS_STANDARD(v->datatype) &&
+        !v->from_comp &&
         v->status_value==VALUE_GARBAGE &&
         v->status_use==USE_NONE &&
         v->status_known==KNOWN_YES) {
