@@ -10,7 +10,12 @@ void do_analyse_block(statement_t *block);
 var_list_t *do_expr_list_analysis(var_list_t *var_list, expr_list_t *expr_list);
 
 void dependence_analysis(statement_t *block);
-void do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt);
+dep_vector_t *do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt);
+
+#if (BISON_DEBUG_LEVEL >=1)
+void debug_print_block_analysis(statement_t *block);
+void debug_print_dependence_vectors(statement_t *block);
+#endif
 
 statement_t *do_blocks_in_module(statement_t *root) {
     statement_t *pending;
@@ -27,7 +32,10 @@ statement_t *do_blocks_in_module(statement_t *root) {
     if (NEW_STMT_BLOCK_STARTS_FROM(pending)) {
         new_root = pending;
         pending = pending->next;
-        while (pending && NEW_STMT_BLOCK_STARTS_FROM(pending)) pending = pending->next;
+
+        while (pending && NEW_STMT_BLOCK_STARTS_FROM(pending))
+            pending = pending->next;
+
         if (pending) {
             //break from new_root
             pending->prev->next = NULL;
@@ -139,12 +147,12 @@ var_list_t *do_expr_tree_analysis(var_list_t *var_list, expr_t *l) {
             //why is this working? see expr_toolbox.c: expression_from_function_call()
             var_list = do_expr_list_analysis(var_list,l->expr_list);
         } else {
-            if (l->var->from_comp && l->var->from_comp->comp_type==TYPE_ARRAY) {
+            /*
+            if (l->var->from_comp && l->var->from_comp->comp_type==TYPE_ARRAY)
                 var_list = insert_to_var_list(var_list,l->var->from_comp->array.base);
-            }
-            else {
+            else
+            */
                 var_list = insert_to_var_list(var_list,l->var);
-            }
         }
         break;
     case EXPR_HARDCODED_CONST:
@@ -205,10 +213,12 @@ void do_write_analysis(statement_t *s) {
 }
 
 void do_analyse_stmt(statement_t *s,statement_t *block) {
+    /*
 #if (BISON_DEBUG_LEVEL >=1)
     int i=0;
     int j=0;
 #endif
+    */
 
     while (s) {
         switch (s->type) {
@@ -233,7 +243,9 @@ void do_analyse_stmt(statement_t *s,statement_t *block) {
         //merge analysis
         merge_stmt_analysis_to_block(s,block);
 
-        block->stats_of_vars.size++;
+        //set statement id
+        s->stat_id = block->stats_of_vars.size++;
+
         /*
 #if (BISON_DEBUG_LEVEL >=1)
         printf("debug:\t\t\tstmt %d:",i);
@@ -302,38 +314,12 @@ void do_analyse_block(statement_t *block) {
         do_analyse_stmt(block->_comp.first_stmt,block);
         break;
     default:
-        die("UNEXPECTED_ERROR: expevcted block for analysis");
+        die("UNEXPECTED_ERROR: expected block for analysis");
     }
 
     block->stats_of_vars.depth = nesting;
 
     nesting--;
-
-#if (BISON_DEBUG_LEVEL >=1)
-    printf("debug:\tblock-nesting: %d <==> statements %d\t",block->stats_of_vars.depth,block->stats_of_vars.size);
-
-    int j;
-    //printf("debug:\t\t\tblock:");
-    if (block->stats_of_vars.write) {
-        printf("\t\tOUT_VECTOR(");
-        for (j=0;j<block->stats_of_vars.write->all_var_num;j++) {
-            printf("%s,",block->stats_of_vars.write->var_list[j]->name);
-        }
-        printf(")");
-    } else {
-        //align output
-        printf("\t\t\t");
-    }
-
-    if (block->stats_of_vars.read) {
-        printf("\t\tIN_VECTOR(");
-        for (j=0;j<block->stats_of_vars.read->all_var_num;j++) {
-            printf("%s,",block->stats_of_vars.read->var_list[j]->name);
-        }
-        printf(")");
-    }
-    printf("\n");
-#endif
 }
 
 void analyse_blocks() {
@@ -351,7 +337,14 @@ void analyse_blocks() {
             }
 
             do_analyse_block(current);
+#if (BISON_DEBUG_LEVEL >=1)
+            debug_print_block_analysis(current);
+#endif
             dependence_analysis(current);
+
+#if (BISON_DEBUG_LEVEL >=1)
+            debug_print_dependence_vectors(current);
+#endif
 
             current = current->next;
         }
@@ -550,16 +543,20 @@ int estimate_num_of_dependencies(statement_t *current) {
     return counter;
 }
 
-void do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt) {
+dep_vector_t *do_dependence_analysis(dep_vector_t *dep, statement_t *stmt) {
     int estimate;
     statement_t *from;
     statement_t *to;
 
-    estimate = estimate_num_of_dependencies(comp_stmt->_comp.first_stmt);
+    if (stmt->type==ST_Comp)
+        from = stmt->_comp.first_stmt;
+    else
+        from = stmt;
+
+    estimate = estimate_num_of_dependencies(from);
 
     dep->pool = (dep_t*)calloc(estimate,sizeof(dep_t));
 
-    from = comp_stmt->_comp.first_stmt;
     while (from) {
 
         to = from;
@@ -577,7 +574,7 @@ void do_dependence_analysis(dep_vector_t *dep, statement_t *comp_stmt) {
         from = from->next;
     }
 
-    comp_stmt->dep = dep;
+    return dep;
 }
 
 inline int EXPR_IS_SIMPLE_ENOUGH(expr_t *l) {
@@ -662,14 +659,17 @@ void dependence_analysis(statement_t *block) {
 
     switch (block->type) {
     case ST_If:
-        do_dependence_analysis(dep,block->_if._true);
+        block->_if._true->dep =
+            do_dependence_analysis(dep,block->_if._true);
 
         if (block->_if._false)
-            do_dependence_analysis(dep,block->_if._false);
+            block->_if._false->dep =
+                do_dependence_analysis(dep,block->_if._false);
         break;
     case ST_While:
         //there is no prologue or epilogue yet
-        do_dependence_analysis(dep,block->_while.loop);
+        block->dep =
+            do_dependence_analysis(dep,block->_while.loop);
         break;
     case ST_For:
         dep->guard = block->_for.var;
@@ -677,12 +677,65 @@ void dependence_analysis(statement_t *block) {
         block->_for.unroll_me = can_unroll_this_for_stmt(block);
 
         //there is no prologue or epilogue yet
-        do_dependence_analysis(dep,block->_for.loop);
+        block->dep = do_dependence_analysis(dep,block->_for.loop);
         break;
     case ST_Comp:
-        do_dependence_analysis(dep,block);
+        block->dep = do_dependence_analysis(dep,block);
         break;
     default:
         die("UNEXPECTED_ERROR: do_dependence_analysis(): expected comp statement");
     }
 }
+
+#if (BISON_DEBUG_LEVEL >=1)
+void debug_print_block_analysis(statement_t *block) {
+    printf("debug:\tblock-nesting: %d <==> statements %d\t",block->stats_of_vars.depth,block->stats_of_vars.size);
+
+    int j;
+    //printf("debug:\t\t\tblock:");
+    if (block->stats_of_vars.write) {
+        printf("\t\tOUT_VECTOR(");
+        for (j=0;j<block->stats_of_vars.write->all_var_num;j++) {
+            printf("%s,",block->stats_of_vars.write->var_list[j]->name);
+        }
+        printf(")");
+    } else {
+        //align output
+        printf("\t\t\t");
+    }
+
+    if (block->stats_of_vars.read) {
+        printf("\t\tIN_VECTOR(");
+        for (j=0;j<block->stats_of_vars.read->all_var_num;j++) {
+            printf("%s,",block->stats_of_vars.read->var_list[j]->name);
+        }
+        printf(")");
+    }
+    printf("\n");
+}
+
+void debug_print_dependence_vectors(statement_t *block) {
+    int i;
+
+    if (!block->dep) {
+        printf("__no dep__\n");
+        return;
+    }
+
+    for (i=0; i<block->dep->next_free_spot; i++) {
+        switch (block->dep->pool[i].is) {
+        case DEP_RAR:  printf("%s\t","DEP_RAR");  break;
+        case DEP_RAW:  printf("%s\t","DEP_RAW");  break;
+        case DEP_WAR:  printf("%s\t","DEP_WAR");  break;
+        case DEP_WAW:  printf("%s\t","DEP_WAW");  break;
+        }
+
+        printf("S%d <--> S%d",
+               block->dep->pool[i].from->stat_id,
+               block->dep->pool[i].to->stat_id);
+
+        printf("\n");
+    }
+}
+
+#endif

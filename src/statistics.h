@@ -34,8 +34,8 @@ typedef struct dep_t {
 
 typedef struct dep_vector_t {
     var_t *guard;
-    int size;
-    int next_free_spot;
+    int size;  //size of pool
+    int next_free_spot;  //existing elements in pool
     dep_t *pool;
 } dep_vector_t;
 

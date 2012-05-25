@@ -110,6 +110,7 @@ typedef struct statement_t {
     //statistics
     stat_vars_t stats_of_vars;
     dep_vector_t *dep;
+    int stat_id;
 
     int return_point; //we check this to see if a function always returns a return value
 
