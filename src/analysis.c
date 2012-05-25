@@ -384,6 +384,9 @@ int EXPR_CONTAINS_GUARD(var_t *guard, expr_t *l) {
 inline int VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(var_t *guard, expr_list_t *index) {
     int i;
 
+    if (!guard)
+        return 0;
+
     for (i=0; i<index->all_expr_num; i++)
         if (EXPR_CONTAINS_GUARD(guard,index->expr_list[i]))
             return i+1;
@@ -415,12 +418,15 @@ inline info_comp_t *VAR_IS_GUARDED_ARRAY_ELEMENT(dep_vector_t *dep, var_t *v) {
     return NULL;
 }
 
-inline int GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *from_var, var_t *to_var) {
+inline int GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *var_from, var_t *var_to) {
     info_comp_t *var_of1;
     info_comp_t *var_of2;
 
-    var_of1 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,from_var);
-    var_of2 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,to_var);
+    if (var_from == var_to)
+        return 1;
+
+    var_of1 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,var_from);
+    var_of2 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep,var_to);
 
     if (var_of1 && var_of2 &&
         var_of1->array.base == var_of2->array.base) {
@@ -723,16 +729,23 @@ void debug_print_dependence_vectors(statement_t *block) {
     }
 
     for (i=0; i<block->dep->next_free_spot; i++) {
-        switch (block->dep->pool[i].is) {
+        dep_t *this_dep = &block->dep->pool[i];
+        switch (this_dep->is) {
         case DEP_RAR:  printf("%s\t","DEP_RAR");  break;
         case DEP_RAW:  printf("%s\t","DEP_RAW");  break;
         case DEP_WAR:  printf("%s\t","DEP_WAR");  break;
         case DEP_WAW:  printf("%s\t","DEP_WAW");  break;
         }
 
+        //print statements
         printf("S%d <--> S%d",
-               block->dep->pool[i].from->stat_id,
-               block->dep->pool[i].to->stat_id);
+               this_dep->from->stat_id,
+               this_dep->to->stat_id);
+
+        //print conflicting variable
+        printf(" (%s,%s)",
+               this_dep->conflict_info_from->array.base->name,
+               this_dep->conflict_info_to->array.base->name);
 
         printf("\n");
     }
