@@ -439,6 +439,20 @@ inline int GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *from_var
     return 0;
 }
 
+inline int VARS_MAY_CONFLICT(var_t *var_from, var_t *var_to) {
+    if (var_from == var_to)
+        return 1;
+
+    if (var_from->from_comp && var_to->from_comp)
+        if (var_from->from_comp->comp_type==TYPE_ARRAY &&
+            var_to->from_comp->comp_type==TYPE_ARRAY)
+            if (var_from->from_comp->array.base==
+                var_to->from_comp->array.base)
+                return 1;
+
+    return 0;
+}
+
 void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, enum dependence_type dep_type) {
     int i;
     int j;
@@ -474,13 +488,14 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
         for (j=0; j<to_list->all_var_num; j++) {
             var_t *var_from = from_list->var_list[i];
             var_t *var_to = to_list->var_list[j];
-            if (var_from == var_to) {
+            if (VARS_MAY_CONFLICT(var_from,var_to)) {
+                //printf("debug:\t__new_dep__\n");
                 //commit dependence
                 dep_t *this_dep = &dep->pool[dep->next_free_spot];
                 this_dep->is = dep_type;
                 this_dep->from = from;
                 this_dep->to = to;
-                this_dep->index = dep->next_free_spot++;
+                this_dep->index = dep->next_free_spot;
 
                 if (dep->guard) {
                     //extra info for loop analysis
@@ -511,6 +526,7 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
                         }
                     }
                 }
+                dep->next_free_spot++;
             }
         }
     }
