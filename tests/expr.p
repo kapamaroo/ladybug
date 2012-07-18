@@ -15,4 +15,6 @@ begin
    x := a + b * try_me(a,e) * c - d + e * 3;
    z := a + b * try_me(a,e) * z - d + e * 3;
 
+   z := x + 7;
+
 end.
