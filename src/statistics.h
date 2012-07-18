@@ -30,6 +30,8 @@ typedef struct dep_t {
     struct statement_t *to;
     info_comp_t *conflict_info_from;
     info_comp_t *conflict_info_to;
+    var_t *var_from;
+    var_t *var_to;
 } dep_t;
 
 typedef struct dep_vector_t {
