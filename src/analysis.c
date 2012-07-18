@@ -452,6 +452,27 @@ inline int VARS_MAY_CONFLICT(var_t *var_from, var_t *var_to) {
     return 0;
 }
 
+inline int VAR_IS_WRITTEN_MEANWHILE(statement_t *from, statement_t *to, var_t *var_from) {
+    int i;
+    statement_t *tmp;
+    var_list_t *var_list;
+
+    tmp = from;
+
+    while (tmp != to) {
+        var_list = tmp->stats_of_vars.write;
+        for (i=0; i<var_list->all_var_num; i++) {
+            var_t *v = var_list->var_list[i];
+            if (var_from == v)
+                return 1;
+        }
+
+        tmp = tmp->next;
+    }
+
+    return 0;
+}
+
 void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, enum dependence_type dep_type) {
     int i;
     int j;
@@ -484,9 +505,16 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
     }
 
     for (i=0; i<from_list->all_var_num; i++) {
+
+        var_t *var_from = from_list->var_list[i];
+
+        if (dep_type == DEP_RAR || dep_type == DEP_WAR)
+            if (VAR_IS_WRITTEN_MEANWHILE(from,to,var_from))
+                continue;
+
         for (j=0; j<to_list->all_var_num; j++) {
-            var_t *var_from = from_list->var_list[i];
             var_t *var_to = to_list->var_list[j];
+
             if (VARS_MAY_CONFLICT(var_from,var_to)) {
                 //printf("debug:\t__new_dep__\n");
                 //commit dependence
@@ -495,6 +523,8 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
                 this_dep->from = from;
                 this_dep->to = to;
                 this_dep->index = dep->next_free_spot;
+                this_dep->var_from = var_from;
+                this_dep->var_to = var_to;
 
                 if (dep->guard) {
                     //extra info for loop analysis
@@ -566,14 +596,18 @@ dep_vector_t *do_dependence_analysis(dep_vector_t *dep, statement_t *stmt) {
     while (from) {
 
         to = from;
+        //self statement dependencies between lvalue and rvalue
         find_dependencies(dep,from,to,DEP_WAR);
         to = to->next;
 
         while (to) {
-            find_dependencies(dep,from,to,DEP_RAR);
+
             find_dependencies(dep,from,to,DEP_RAW);
             find_dependencies(dep,from,to,DEP_WAR);
+
+            find_dependencies(dep,from,to,DEP_RAR);
             find_dependencies(dep,from,to,DEP_WAW);
+
             to = to->next;
         }
 
@@ -730,11 +764,12 @@ void debug_print_dependence_vectors(statement_t *block) {
 
     for (i=0; i<block->dep->next_free_spot; i++) {
         dep_t *this_dep = &block->dep->pool[i];
+        printf("debug: ");
         switch (this_dep->is) {
-        case DEP_RAR:  printf("%s\t","DEP_RAR");  break;
-        case DEP_RAW:  printf("%s\t","DEP_RAW");  break;
-        case DEP_WAR:  printf("%s\t","DEP_WAR");  break;
-        case DEP_WAW:  printf("%s\t","DEP_WAW");  break;
+        case DEP_RAR:  printf("DEP_RAR\t");  break;
+        case DEP_RAW:  printf("DEP_RAW\t");  break;
+        case DEP_WAR:  printf("DEP_WAR\t");  break;
+        case DEP_WAW:  printf("DEP_WAW\t");  break;
         }
 
         //print statements
@@ -742,10 +777,21 @@ void debug_print_dependence_vectors(statement_t *block) {
                this_dep->from->stat_id,
                this_dep->to->stat_id);
 
+        char *name_from;
+        char *name_to;
+
+        if (this_dep->conflict_info_from)
+            name_from = this_dep->conflict_info_from->array.base->name;
+        else
+            name_from = this_dep->var_from->name;
+
+        if (this_dep->conflict_info_to)
+            name_to = this_dep->conflict_info_to->array.base->name;
+        else
+            name_to = this_dep->var_to->name;
+
         //print conflicting variable
-        printf(" (%s,%s)",
-               this_dep->conflict_info_from->array.base->name,
-               this_dep->conflict_info_to->array.base->name);
+        printf(" (%s,%s)",name_from,name_to);
 
         printf("\n");
     }
