@@ -44,15 +44,32 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
                            ir_tmp2);
         break;
     case ST_While:
-        ir_tmp1 = generate_ir_from_statement(s->_while.loop);
-        ir_new = new_ir_while(s->_while.condition,
-                              ir_tmp1);
+        ir_new = generate_ir_from_statement(s->_for.prologue);
+
+        ir_tmp = generate_ir_from_statement(s->_while.loop);
+
+        ir_tmp1 = new_ir_while(s->_while.condition,
+                              ir_tmp);
+
+        ir_tmp2 = generate_ir_from_statement(s->_for.epilogue);
+
+        ir_new = link_ir_to_ir(ir_tmp1,ir_new);
+        ir_new = link_ir_to_ir(ir_tmp2,ir_new);
+
         break;
     case ST_For:
-        ir_tmp1 = generate_ir_from_statement(s->_for.loop);
-        ir_new = new_ir_for(s->_for.var,
+        ir_new = generate_ir_from_statement(s->_for.prologue);
+        ir_tmp = generate_ir_from_statement(s->_for.loop);
+
+        ir_tmp1 = new_ir_for(s->_for.var,
                             s->_for.iter,
-                            ir_tmp1);
+                            ir_tmp);
+
+        ir_tmp2 = generate_ir_from_statement(s->_for.epilogue);
+
+        ir_new = link_ir_to_ir(ir_tmp1,ir_new);
+        ir_new = link_ir_to_ir(ir_tmp2,ir_new);
+
         break;
     case ST_Call:
         ir_new = new_ir_procedure_call(s->_call.subprogram,
