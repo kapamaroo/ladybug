@@ -5,6 +5,7 @@
 #include "build_flags.h"
 #include "subprograms.h"
 #include "subprograms_toolbox.h"
+#include "expr_toolbox.h"
 #include "symbol_table.h"
 #include "mem.h"
 #include "err_buff.h"
