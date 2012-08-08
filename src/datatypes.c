@@ -155,7 +155,14 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
         return lost_var_reference();
     }
 
-    if (!valid_expr_list_for_array_reference(v->datatype,list)) {
+    info_comp_t *new_comp;
+    new_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
+    new_comp->comp_type = v->datatype->is;
+    new_comp->array.base = v;
+    new_comp->array.index = list;
+
+    if (!valid_expr_list_for_array_reference(new_comp)) {
+        free(new_comp);
         return lost_var_reference();
     }
 
@@ -169,13 +176,8 @@ var_t *reference_to_array_element(var_t *v, expr_list_t *list) {
 
     new_var->datatype = v->datatype->def_datatype;
     new_var->cond_assign = cond_expr;
-
     new_var->to_expr = expr_version_of_variable(new_var);
-
-    new_var->from_comp = (info_comp_t*)calloc(1,sizeof(info_comp_t));
-    new_var->from_comp->comp_type = v->datatype->is;
-    new_var->from_comp->array.base = v;
-    new_var->from_comp->array.index = list;
+    new_var->from_comp = new_comp;
 
     return new_var;
 }
