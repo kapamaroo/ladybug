@@ -26,6 +26,7 @@ ladybug_SOURCES = FuncTools.c \
 	generator.c \
 	final_code.c \
 	instruction_set.c \
+	opt_for_stmt.c \
 	bison.y \
 	flex.l
 
