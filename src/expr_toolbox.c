@@ -514,12 +514,15 @@ dim_t *make_dim_bound_from_id(char *id) {
     return new_dim;
 }
 
-int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
+int valid_expr_list_for_array_reference(struct info_comp_t *comp) {
     int i;
     int index;
     int error=0;
 
     expr_t *l;
+
+    data_t *data = comp->array.base->datatype;
+    expr_list_t *list = comp->array.index;
 
     for (i=0;i<data->field_num;i++) {
         l = list->expr_list[i];
@@ -557,14 +560,19 @@ int valid_expr_list_for_array_reference(data_t *data,expr_list_t *list) {
     return 1;
 }
 
-expr_t *make_array_reference(data_t *data, expr_list_t *list) {
+expr_t *make_array_reference(struct info_comp_t *comp) {
     int i;
-    expr_t *l;
     expr_t *dim_size;
     expr_t *dim_index;
     expr_t *dim_offset;
     expr_t *total_offset;
     expr_t *datadef_size;
+
+    data_t *data = comp->array.base->datatype;
+    expr_list_t *list = comp->array.index;
+
+    //see semantics.h for more info about its semantics
+    int idx_confl = comp->array.index_conflict_pos;
 
     //start with zero offset
     total_offset = expr_from_hardcoded_int(0);
@@ -572,13 +580,23 @@ expr_t *make_array_reference(data_t *data, expr_list_t *list) {
     //make expression of datadef_type size
     datadef_size = expr_from_hardcoded_int(data->def_datatype->memsize);
     for (i=0;i<data->field_num;i++) {
-        l = list->expr_list[i];
-        switch (l->expr_is) {
+        dim_index = list->expr_list[i];
+        switch (dim_index->expr_is) {
         case EXPR_HARDCODED_CONST:
         case EXPR_LVAL:
         case EXPR_RVAL:
+            if (idx_confl && i == idx_confl - 1) {
+                //if offsets have 0-value, the expression optimizer ignores them
+                //just write the general case here, and watch the magic!
+
+                expr_t *expr_confl_dep = expr_from_hardcoded_int(comp->array.confl_dep_offset);
+                dim_index = expr_relop_equ_addop_mult(dim_index,OP_PLUS,expr_confl_dep);
+
+                expr_t *expr_unroll_offset = expr_from_hardcoded_int(comp->array.unroll_offset);
+                dim_index = expr_relop_equ_addop_mult(dim_index,OP_PLUS,expr_unroll_offset);
+            }
+
             //calculate partial offset
-            dim_index = l;
             dim_size = expr_from_hardcoded_int(data->dim[i]->relative_distance);
             dim_offset = expr_muldivandop(dim_size,OP_MULT,dim_index); //new offset for current dimension
             total_offset = expr_relop_equ_addop_mult(total_offset,OP_PLUS,dim_offset); //add the new offset with the previous
@@ -592,7 +610,7 @@ expr_t *make_array_reference(data_t *data, expr_list_t *list) {
     return total_offset;
 }
 
-expr_t *make_array_bound_check(data_t *data, expr_list_t *list) {
+expr_t *make_array_bound_check(struct info_comp_t *comp) {
     int i;
     int index;
     expr_t *l;
@@ -602,6 +620,9 @@ expr_t *make_array_bound_check(data_t *data, expr_list_t *list) {
     expr_t *right_cond;
     expr_t *tmp_cond;
     expr_t *total_cond;
+
+    data_t *data = comp->array.base->datatype;
+    expr_list_t *list = comp->array.index;
 
     total_cond = expr_from_hardcoded_boolean(1); //TRUE
 
