@@ -32,6 +32,9 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
     //return the head of the linked list
     statement_t *head;
 
+    if (parent && parent->prev)
+        die("INTERNAL_ERROR: link_statements(): parent is not the head (improper use of *last_ptr)");
+
     head = (parent) ? parent : child;
 
     if (parent && child) {
@@ -54,6 +57,50 @@ statement_t *link_statements(statement_t *child, statement_t *parent) {
         parent->last = child->last;
     }
 
+    return head;
+}
+
+statement_t *unlink_statement(statement_t *s, statement_t *head) {
+    statement_t *prev;
+    statement_t *next;
+
+#warning "what about return_points ??"
+
+    if (!s)
+        //nothing to remove
+        return head;
+
+    if (!head)
+        die("INTERNAL_ERROR: unlink_statement(): NULL head");
+
+    prev = s->prev;
+    next = s->next;
+
+    if (prev && next) {
+        prev->next = next;
+        next->prev = prev;
+    }
+    else if (prev) {
+        //no next
+        prev->next = NULL;
+        head->last = prev;
+    }
+    else if (next) {
+        //no prev
+        next->prev = NULL;
+        next->last = head->last;
+        head = next;
+    }
+    else {
+        head = NULL;
+    }
+
+    //clean pointers
+    s->prev = NULL;
+    s->next = NULL;
+    s->last = s;
+
+    //return the new head
     return head;
 }
 
@@ -336,12 +383,14 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
     statement_t *new_for;
 
-    if (!iter_space) {
-        //bad for
+    if (!iter_space)
         return new_statement_t(ST_BadStatement);
-    }
 
-    if (var->id_is!=ID_LOST) {
+    if (var->id_is==ID_LOST)
+        return new_statement_t(ST_BadStatement);
+
+    if (var->id_is==ID_VAR_GUARDED) {
+        //unlock var
         var->id_is = ID_VAR;
     }
 
@@ -355,7 +404,13 @@ statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop) {
     new_for = new_statement_t(ST_For);
     new_for->_for.var = var;
     new_for->_for.iter = iter_space;
-    new_for->_for.loop = loop;
+
+    //wrap single statement into a composite statement
+    //this helps later the loop optimizer
+    if (loop->type == ST_Assignment)
+        new_for->_for.loop = statement_comp(loop);
+    else
+        new_for->_for.loop = loop;
 
     return new_for;
 }

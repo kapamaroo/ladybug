@@ -48,7 +48,7 @@ struct statement_if_t {
 
 struct statement_while_t {
     struct statement_t *prologue;
-    struct statement_t* loop;
+    struct statement_t *loop;
     struct statement_t *epilogue;
     expr_t *condition;
 };
@@ -108,8 +108,12 @@ typedef struct statement_t {
     };
 
     //statistics
-    stat_vars_t stats_of_vars;
+    stat_vars_t io_vectors;
     dep_vector_t *dep;
+
+    unsigned int size; //num of statements (high level), only for block statements  //FIXME
+    unsigned int depth; //depth of nested loop, 0 for outermost loop, only for block statements  //FIXME
+
     int stat_id;
 
     int return_point; //we check this to see if a function always returns a return value
@@ -143,6 +147,7 @@ statement_t *statement_write(expr_list_t *expr_list);
 statement_t *statement_comp(statement_t *first_stmt);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
+statement_t *unlink_statement(statement_t *s, statement_t *head);
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement);
 void new_statement_module(func_t *subprogram);
 
