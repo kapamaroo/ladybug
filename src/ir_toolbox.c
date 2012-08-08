@@ -351,15 +351,15 @@ inline void consider_all_offsets(var_t *var) {
             index = comp->array.index;
             base_Lvalue = comp->array.base->Lvalue;
 
-            if (!valid_expr_list_for_array_reference(base->datatype,index)) {
+            if (!valid_expr_list_for_array_reference(comp)) {
                 //static bound checks failed in IR level
                 //the array reference was valid in the frontend, see datatypes.c: reference_to_array_element()
                 //the loop optimizer has bugs
                 die("INTERNAL_ERROR: we generate out of bounds array references");
             }
 
-            relative_offset = make_array_reference(base->datatype,index);
-            cond = make_array_bound_check(base->datatype,index);
+            relative_offset = make_array_reference(comp);
+            cond = make_array_bound_check(comp);
             final_cond = expr_orop_andop_notop(final_cond,OP_AND,cond);
 
             break;
