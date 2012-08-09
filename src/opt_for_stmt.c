@@ -14,6 +14,8 @@ void opt_move_independent_statements_out_of_loop(statement_t *stmt) {
     statement_t *new_s;
     var_t *locked_var;
 
+    die("UNSAFE_CALL: still missing basic checks for correct code generation");
+
     if (stmt->type != ST_For)
         die("INTERNAL_ERROR: expected for_stmt");
 
@@ -48,6 +50,9 @@ void opt_move_independent_statements_out_of_loop(statement_t *stmt) {
     stmt->_for.prologue = new_s;
 }
 
+//TODO
+//////////////////////////////////////////////////////////////////////
+
 void break_DEP_WAR(dep_vector_t *dep_vector, dep_t *dep) {}
 
 dep_t *detect_unbreakable_dep_route(dep_vector_t *dep_vector) {}
@@ -58,7 +63,36 @@ int break_dep_route(dep_vector_t *dep_vector, dep_t *dep) {}
 
 //////////////////////////////////////////////////////////////////////
 
-var_t *deep_copy_var(var_t *v, int copy_num) {
+void shift_lvalue(var_t *v, int copy_num) {
+    if (v->from_comp &&
+        v->from_comp->comp_type == TYPE_ARRAY)
+        v->from_comp->array.unroll_offset = copy_num;
+}
+
+void shift_all_expr_lvalues(expr_t *ltree, int copy_num) {
+    if (!ltree)
+        return;
+
+    if (ltree->expr_is == EXPR_LVAL)
+        shift_lvalue(ltree->var,copy_num);
+    else {
+        shift_all_expr_lvalues(ltree->l1,copy_num);
+        shift_all_expr_lvalues(ltree->l2,copy_num);
+    }
+}
+
+void shift_all_stmt_lvalues(statement_t *s, int copy_num) {
+    if (s->type != ST_Assignment)
+        die("NOT_IMPLEMENTED: expected assignment");
+
+    var_t *v = s->_assignment.var;
+    expr_t *l = s->_assignment.expr;
+
+    shift_lvalue(v,copy_num);
+    shift_all_expr_lvalues(l,copy_num);
+}
+
+var_t *deep_copy_var(var_t *v) {
     var_t *new_v;
     info_comp_t *new_info;
 
@@ -72,9 +106,6 @@ var_t *deep_copy_var(var_t *v, int copy_num) {
         new_info = (info_comp_t*)calloc(1,sizeof(info_comp_t));
         new_info = memcpy(new_info,v->from_comp,sizeof(info_comp_t));
         new_v->from_comp = new_info;
-
-        if (v->from_comp->comp_type == TYPE_ARRAY)
-            new_v->from_comp->array.unroll_offset = copy_num;
     }
 
     new_v->to_expr = expr_version_of_variable(new_v);
@@ -82,7 +113,7 @@ var_t *deep_copy_var(var_t *v, int copy_num) {
     return new_v;
 }
 
-expr_t *deep_copy_expr_tree(expr_t *ltree, int copy_num) {
+expr_t *deep_copy_expr_tree(expr_t *ltree) {
     expr_t *new_ltree;
 
     if (!ltree)
@@ -91,19 +122,17 @@ expr_t *deep_copy_expr_tree(expr_t *ltree, int copy_num) {
     new_ltree = (expr_t*)calloc(1,sizeof(expr_t));
     new_ltree = memcpy(new_ltree,ltree,sizeof(expr_t));
 
-    if (ltree->var)
-        new_ltree->var = deep_copy_var(ltree->var,copy_num);
-
-    if (ltree->l1)
-        new_ltree->l1 = deep_copy_expr_tree(ltree->l1,copy_num);
-
-    if (ltree->l2)
-        new_ltree->l2 = deep_copy_expr_tree(ltree->l2,copy_num);
+    if (ltree->expr_is == EXPR_LVAL)
+        new_ltree->var = deep_copy_var(ltree->var);
+    else {
+        new_ltree->l1 = deep_copy_expr_tree(ltree->l1);
+        new_ltree->l2 = deep_copy_expr_tree(ltree->l2);
+    }
 
     return new_ltree;
 }
 
-statement_t *deep_copy_stmt(statement_t *s, int copy_num) {
+statement_t *deep_copy_stmt(statement_t *s) {
     statement_t *new_s;
 
     if (!s)
@@ -115,8 +144,8 @@ statement_t *deep_copy_stmt(statement_t *s, int copy_num) {
     new_s = (statement_t*)calloc(1,sizeof(statement_t));
     new_s = memcpy(new_s,s,sizeof(statement_t));
 
-    new_s->_assignment.var = deep_copy_var(s->_assignment.var,copy_num);
-    new_s->_assignment.expr = deep_copy_expr_tree(s->_assignment.expr,copy_num);
+    new_s->_assignment.var = deep_copy_var(s->_assignment.var);
+    new_s->_assignment.expr = deep_copy_expr_tree(s->_assignment.expr);
 
     return new_s;
 }
@@ -132,6 +161,11 @@ void unroll_loop_body(statement_t *body, int times) {
     if (body->type != ST_For)
         die("INTERNAL_ERROR: loop_unroll: expected for_stmt");
 
+    //update iter, multiply step by times
+    body->_for.iter->step->ival *= times;
+
+#warning consider leftovers //IMPLEMENT ME
+
     new_head = NULL;
     head = body->_for.loop->_comp.first_stmt;
 
@@ -140,7 +174,8 @@ void unroll_loop_body(statement_t *body, int times) {
         curr = head;
 
         while (curr) {
-            new_s = deep_copy_stmt(curr,i);
+            new_s = deep_copy_stmt(curr);
+            shift_all_stmt_lvalues(new_s,i);
             replica = link_statements(new_s,replica);
             curr = curr->next;
         }
@@ -154,14 +189,30 @@ void unroll_loop_body(statement_t *body, int times) {
     body->_for.loop->_comp.first_stmt = new_head;
 }
 
-statement_t *gen_wrapper_for_sym_unroll(statement_t *head, int bsize, int gen_prologue) {
+void replace_var_with_hardcoded_int_in_stmt(statement_t *s, var_t *v, int known) {
+    if (s->type != ST_Assignment)
+        die("NOT_IMPLEMENTED: expected assignment");
+
+    if (s->_assignment.var == v)
+        die("UNEXPECTED_ERROR: replacing var in assignment with hardcoded value");
+
+    s->_assignment.expr = expr_replace_var_with_hardcoded_int(s->_assignment.expr,v,known);
+}
+
+statement_t *gen_wrapper_for_sym_unroll(statement_t *head, var_t *guard, int bsize, iter_t *iter, int gen_prologue) {
     //see algorithms/sym_unroll_wrapper.c
 
     int i;
     int j;
+
     statement_t *wrapper = NULL;
+    statement_t *tmp;
+
+    //create tmp hardcoded_value
+    int known = (gen_prologue) ? iter->start->ival : iter->stop->ival;
 
     for (i=0; i<bsize-1; i++) {
+        //controls the loop shift offset
         int copy_num = (gen_prologue) ? i : bsize - i - 1;
 
         statement_t *curr = head;
@@ -169,8 +220,11 @@ statement_t *gen_wrapper_for_sym_unroll(statement_t *head, int bsize, int gen_pr
 
         //make prologe for i-th iteration
         for (j=0; j<bsize-i-1; j++) {
-            statement_t *tmp = deep_copy_stmt(curr,copy_num);
-#warning must replace guard var with hardcoded value 'copy_num'
+            tmp = deep_copy_stmt(curr);
+            shift_all_stmt_lvalues(tmp,copy_num);
+            //guard var is known, replace it
+            replace_var_with_hardcoded_int_in_stmt(tmp,guard,known);
+
             new_p = link_statements(tmp,new_p);
             curr = curr->next;
         }
@@ -180,6 +234,9 @@ statement_t *gen_wrapper_for_sym_unroll(statement_t *head, int bsize, int gen_pr
         else
             //epilogue, reverse linking in respect of mem access pattern
             wrapper = link_statements(wrapper,new_p);
+
+        //update known value of guard var
+        ++known;
     }
 
     wrapper = statement_comp(wrapper);
@@ -194,15 +251,28 @@ void unroll_loop_symbolic(statement_t *body) {
     if (body->type != ST_For)
         die("INTERNAL_ERROR: symbolic_unroll: expected for_stmt");
 
+    int i;
     int bsize = body->size;
 
+    //update iter to avoid out of bounds code generation
+    //see the prologue/epilogue generator for more info
+    body->_for.iter->stop->ival -= bsize - 1;
+
     statement_t *head = body->_for.loop->_comp.first_stmt;
-    statement_t *prologue = gen_wrapper_for_sym_unroll(head,bsize,GEN_PROLOGUE);
-    statement_t *epilogue = gen_wrapper_for_sym_unroll(head,bsize,GEN_EPILOGUE);
+    var_t *guard = body->_for.var;
+    iter_t *iter = body->_for.iter;
 
-    //prologue may not be empty
+    statement_t *prologue = gen_wrapper_for_sym_unroll(head,guard,bsize,iter,GEN_PROLOGUE);
+    statement_t *epilogue = gen_wrapper_for_sym_unroll(head,guard,bsize,iter,GEN_EPILOGUE);
+
+    //now it is safe to change the original loop
+    statement_t *curr = head;
+    for (i=0; i<bsize-1; i++) {
+        shift_all_stmt_lvalues(curr,bsize-1-i);
+        curr = curr->next;
+    }
+
+    //prologue/epilogue may not be empty
     body->_for.prologue = link_statements(prologue,body->_for.prologue);
-
-    //epilogue may not be empty
     body->_for.epilogue = link_statements(epilogue,body->_for.epilogue);
 }
