@@ -1052,3 +1052,21 @@ expr_t *expr_version_of_variable(var_t *v) {
 
     return l;
 }
+
+expr_t *expr_replace_var_with_hardcoded_int(expr_t *l_dest, var_t *v_target, int known) {
+    if (v_target->datatype->is != TYPE_INT)
+        die("UNEXPECTED_ERROR: expected int variable");
+
+    if (!l_dest)
+        return NULL;
+
+    if (l_dest->expr_is == EXPR_LVAL && l_dest->var == v_target) {
+        expr_t *new_l = expr_from_hardcoded_int(known);
+        return new_l;
+    }
+    else {
+        l_dest->l1 = expr_replace_var_with_hardcoded_int(l_dest->l1,v_target,known);
+        l_dest->l2 = expr_replace_var_with_hardcoded_int(l_dest->l2,v_target,known);
+        return l_dest;
+    }
+}

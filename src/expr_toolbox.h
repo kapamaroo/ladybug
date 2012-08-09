@@ -13,6 +13,8 @@ expr_t *expr_from_hardcoded_boolean(int value);
 expr_t *expr_from_hardcoded_char(char value);
 expr_t *expr_version_of_variable(var_t *v);
 
+expr_t *expr_replace_var_with_hardcoded_int(expr_t *l_dest, var_t *v_target, int known);
+
 int check_valid_subprogram_call(func_t *subprogram, expr_list_t *list);
 expr_t *expr_from_function_call(char *id,expr_list_t *list);
 
