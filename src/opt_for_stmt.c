@@ -92,6 +92,15 @@ void shift_all_stmt_lvalues(statement_t *s, int copy_num) {
     shift_all_expr_lvalues(l,copy_num);
 }
 
+void shift_all_stmt_list_lvalues(statement_t *head, int known) {
+    statement_t *curr = head;
+
+    while (curr) {
+        shift_all_stmt_lvalues(curr,known);
+        curr = curr->next;
+    }
+}
+
 var_t *deep_copy_var(var_t *v) {
     var_t *new_v;
     info_comp_t *new_info;
@@ -150,40 +159,60 @@ statement_t *deep_copy_stmt(statement_t *s) {
     return new_s;
 }
 
+statement_t *deep_copy_stmt_list(statement_t *head) {
+    statement_t *curr = head;
+    statement_t *replica = NULL;
+
+    while (curr) {
+        statement_t *new_s = deep_copy_stmt(curr);
+        replica = link_statements(new_s,replica);
+        curr = curr->next;
+    }
+
+    return replica;
+}
+
 void unroll_loop_body(statement_t *body, int times) {
     int i;
     statement_t *new_s;
-    statement_t *curr;
     statement_t *head;
     statement_t *new_head;
-    statement_t *replica;
 
     if (body->type != ST_For)
         die("INTERNAL_ERROR: loop_unroll: expected for_stmt");
 
+    int iter_start = body->_for.iter->start->ival;
+    int iter_stop = body->_for.iter->stop->ival;
+    int leftovers = (iter_stop - iter_start) % times;
+
+    if (leftovers) {
+        //update iter range
+        iter_stop -= leftovers;
+        body->_for.iter->stop.ival = iter_stop;
+
+        new_head = NULL;
+        for (i=1; i<=leftovers; i++) {
+            int known = iter_stop + i;
+            new_head = deep_copy_stmt_list(head);
+            shift_all_stmt_list_lvalues(new_head,known);
+        }
+
+        //link leftover iterations to epilogue
+        body->_for.epilogue = link_statements(new_head,body->_for.epilogue);
+    }
+
     //update iter, multiply step by times
     body->_for.iter->step->ival *= times;
-
-#warning consider leftovers //IMPLEMENT ME
 
     new_head = NULL;
     head = body->_for.loop->_comp.first_stmt;
 
     for (i=1; i<=times; i++) {
-        replica = NULL;
-        curr = head;
-
-        while (curr) {
-            new_s = deep_copy_stmt(curr);
-            shift_all_stmt_lvalues(new_s,i);
-            replica = link_statements(new_s,replica);
-            curr = curr->next;
-        }
-
-        new_head = link_statements(replica,new_head);
+        new_head = deep_copy_stmt_list(head);
+        shift_all_stmt_list_lvalues(new_head,i);
     }
 
-    //link all replicas to original body loop
+    //link all copys to original body loop
     new_head = link_statements(new_head,head);
 
     body->_for.loop->_comp.first_stmt = new_head;
