@@ -23,7 +23,10 @@ void simplify_loop(statement_t *stmt) {
 
     //must not remove any statement which contains variables written inside the loop //FIXME
     //maybe more checks to be discovered yet :)
-    die("UNSAFE_CALL: still missing basic checks for correct code generation");
+
+    //don't die, just return
+    //die("UNSAFE_CALL: still missing basic checks for correct code generation");
+    printf("debug: UNSAFE_CALL: ignore pass: simplify_loop():\t still missing basic checks for correct code generation\n");
 
     curr = stmt->_for.loop;
     if (curr->type != ST_Comp)
