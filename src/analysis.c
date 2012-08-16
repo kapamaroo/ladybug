@@ -353,10 +353,8 @@ void analyse_blocks() {
 
 int EXPR_CONTAINS_GUARD(var_t *guard, expr_t *l) {
 
-    if (!l) {
-        //some operators have only one child
+    if (!l)
         return 0;
-    }
 
     switch (l->expr_is) {
     case EXPR_RVAL:
@@ -366,13 +364,8 @@ int EXPR_CONTAINS_GUARD(var_t *guard, expr_t *l) {
             return 1;
         break;
     case EXPR_LVAL:
-        if (l->var->id_is==ID_RETURN) {
-            die("UNEXPECTED_ERROR: unrolling analysis of invalid for loop");
-        }
-
-        if (l->var==guard) {
+        if (l->var==guard)
             return 1;
-        }
         break;
     default:
         break;
@@ -625,12 +618,22 @@ dep_vector_t *do_dependence_analysis(dep_vector_t *dep, statement_t *stmt) {
 inline int EXPR_IS_SIMPLE_ENOUGH(expr_t *l) {
     //reminder: we convert OP_MINUS to OP_PLUS when l->l2 is HARDCODED_CONST
     if (l->expr_is == EXPR_RVAL && l->op == OP_PLUS) {
-        if (l->l1->expr_is != EXPR_LVAL ||
-            l->l2->expr_is != EXPR_HARDCODED_CONST)
-            return 0;
-    } else if (l->expr_is != EXPR_LVAL) {
-        return 0;
+        if (l->l1->expr_is == EXPR_HARDCODED_CONST &&
+            l->l2->expr_is == EXPR_LVAL) {
+            //change positions
+            expr_t *tmp = l->l1;
+            l->l1 = l->l2;
+            l->l2 = tmp;
+        }
+
+        if (l->l1->expr_is == EXPR_LVAL &&
+            l->l2->expr_is == EXPR_HARDCODED_CONST)
+            return 1;
+    } else if (l->expr_is == EXPR_LVAL) {
+        return 1;
     }
+
+    return 0;
 }
 
 int can_unroll_this_for_stmt(statement_t *block) {
@@ -649,21 +652,18 @@ int can_unroll_this_for_stmt(statement_t *block) {
         //for statement must not contain function calls
         for (i=0; i<current->io_vectors.read->all_var_num; i++) {
             var_t *v = current->io_vectors.read->var_list[i];
-            if (v->id_is==ID_RETURN) {
+            if (v->id_is==ID_RETURN)
                 return 0;
-            }
 
-            if (v->from_comp && v->from_comp->comp_type==TYPE_ARRAY) {
+            if (v->from_comp &&
+                v->from_comp->comp_type==TYPE_ARRAY) {
                 //no multiple dimension arrays
-                //if (v->from_comp->array->index->all_expr_num > 1) {
-                if (v->from_comp->array.base->datatype->field_num > 1) {
+                if (v->from_comp->array.base->datatype->field_num > 1)
                     return 0;
-                }
 
                 //no nested arrays in datatypes
-                if (v->from_comp->array.base->from_comp) {
+                if (v->from_comp->array.base->from_comp)
                     return 0;
-                }
 
                 //simple enough index expression
                 expr_t *l = v->from_comp->array.index->expr_list[0];
@@ -674,20 +674,18 @@ int can_unroll_this_for_stmt(statement_t *block) {
 
         for (i=0; i<current->io_vectors.write->all_var_num; i++) {
             var_t *v = current->io_vectors.write->var_list[i];
-            if (v->from_comp && v->from_comp->comp_type==TYPE_ARRAY) {
+            if (v->from_comp &&
+                v->from_comp->comp_type==TYPE_ARRAY) {
                 //no multiple dimension arrays
-                if (v->from_comp->array.index->all_expr_num > 1) {
+                if (v->from_comp->array.base->datatype->field_num > 1)
                     return 0;
-                }
 
                 //no nested arrays in datatypes
-                if (v->from_comp->array.base->from_comp) {
+                if (v->from_comp->array.base->from_comp)
                     return 0;
-                }
 
                 //simple enough index expression
                 expr_t *l = v->from_comp->array.index->expr_list[0];
-
                 if (!EXPR_IS_SIMPLE_ENOUGH(l))
                     return 0;
             }
