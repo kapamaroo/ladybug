@@ -3,7 +3,7 @@
 
 #define PROGRAM_NAME "ladybug"
 #define PROGRAM_MAJOR_VERSION 0
-#define PROGRAM_MINOR_VERSION 45
+#define PROGRAM_MINOR_VERSION 99
 
 #define LEX_DEBUG 0
 #define LEX_MAIN 0

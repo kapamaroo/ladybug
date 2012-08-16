@@ -8,9 +8,34 @@
 
 #if LEX_MAIN == 0
 
-void help() {
+void print_version() {
     printf("%s version %d.%d\n",PROGRAM_NAME,PROGRAM_MAJOR_VERSION,PROGRAM_MINOR_VERSION);
-    printf("Usage: The program takes one parameter, the source code file.\nexample: ladybug src.p\n");
+    printf("Latest version can be found at: https://github.com/kapamaroo/ladybug\n\n");
+}
+
+void print_author() {
+    printf("AUTHOR:\t Maroudas Manolis ");
+    printf("<kapamaroo@gmail.com>\n\n");
+}
+
+void print_extra() {
+    printf("See TODO for what is on the way.\n");
+    printf("Feel free to change whatever you like :)\n");
+    printf("\n");
+}
+
+void help() {
+    print_version();
+    print_author();
+
+    printf("Usage: ladybug [OPTIONS] SRC_FILE\n");
+    printf("\nOPTIONS\n");
+    printf("\t --lunroll-classic\t enable classic loop unrolling (copy the body multiple times)\n");
+    printf("\t --lunroll-symbolic\t enable software pipelining aka symbolic loop unroll\n");
+    printf("\t --lsimplify\t\t move independent statements out of loop UNSAFE (disabled for your safety)\n");
+    printf("\n");
+
+    print_extra();
 }
 
 int enable_opt_loop_unroll_classic = 0;
