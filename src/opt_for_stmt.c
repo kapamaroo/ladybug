@@ -163,6 +163,11 @@ statement_t *deep_copy_stmt(statement_t *s) {
     new_s->_assignment.var = deep_copy_var(s->_assignment.var);
     new_s->_assignment.expr = deep_copy_expr_tree(s->_assignment.expr);
 
+    //clean list pointers
+    new_s->prev = NULL;
+    new_s->next = NULL;
+    new_s->last = new_s;
+
     return new_s;
 }
 
@@ -182,12 +187,16 @@ statement_t *deep_copy_stmt_list(statement_t *head) {
 void unroll_loop_classic(statement_t *body) {
     int i;
     statement_t *new_s;
-    statement_t *head;
     statement_t *new_head;
+
+    statement_t *head = body->_for.loop->_comp.first_stmt;
 
     int iter_start = body->_for.iter->start->ival;
     int iter_stop = body->_for.iter->stop->ival;
     int leftovers = (iter_stop - iter_start) % unroll_factor;
+
+    //update iter, multiply step by unroll_factor
+    body->_for.iter->step->ival *= unroll_factor;
 
     if (leftovers) {
         //update iter range
@@ -195,25 +204,25 @@ void unroll_loop_classic(statement_t *body) {
         body->_for.iter->stop->ival = iter_stop;
 
         new_head = NULL;
+
         for (i=1; i<=leftovers; i++) {
             int known = iter_stop + i;
-            new_head = deep_copy_stmt_list(head);
-            shift_all_stmt_list_lvalues(new_head,known);
+            new_s = deep_copy_stmt_list(head);
+            shift_all_stmt_list_lvalues(new_s,known);
+            new_head = link_statements(new_s,new_head);
         }
 
         //link leftover iterations to epilogue
         body->_for.epilogue = link_statements(new_head,body->_for.epilogue);
     }
 
-    //update iter, multiply step by unroll_factor
-    body->_for.iter->step->ival *= unroll_factor;
-
+    //empty new_head for new usage
     new_head = NULL;
-    head = body->_for.loop->_comp.first_stmt;
 
     for (i=1; i<=unroll_factor; i++) {
-        new_head = deep_copy_stmt_list(head);
-        shift_all_stmt_list_lvalues(new_head,i);
+        new_s = deep_copy_stmt_list(head);
+        shift_all_stmt_list_lvalues(new_s,i);
+        new_head = link_statements(new_s,new_head);
     }
 
     //link all copys to original body loop
