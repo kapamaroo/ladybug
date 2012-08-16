@@ -16,6 +16,7 @@
 #include "ir.h"
 #include "statements.h"
 #include "analysis.h"
+#include "opt_for_stmt.h"
 #include "err_buff.h"
 #include "generator.h"
 #include "ir_parser.h"
@@ -408,6 +409,9 @@ int main(int argc, char *argv[]) {
             define_blocks();
             analyse_blocks();
 
+            //optimize_loops(OPT_LOOP_SIMPLIFY);  //unsafe
+            //optimize_loops(OPT_UNROLL_CLASSIC);
+            //optimize_loops(OPT_UNROLL_SYMBOLIC);
 
             /* high level optimizations go here */
 
