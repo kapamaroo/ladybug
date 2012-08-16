@@ -222,7 +222,7 @@ void unroll_loop_classic(statement_t *body) {
     //empty new_head for new usage
     new_head = NULL;
 
-    for (i=1; i<=unroll_factor; i++) {
+    for (i=1; i<unroll_factor; i++) {
         new_s = deep_copy_stmt_list(head);
         shift_all_stmt_list_lvalues(new_s,i);
         new_head = link_statements(new_s,new_head);
