@@ -208,11 +208,13 @@ void print_data_segment() {
             } else {
                 //print value
                 switch (var->datatype->is) {
-                case TYPE_INT:      printf("%d\n",var->dot_data.ival);    break;
-                case TYPE_REAL:     printf("%f\n",var->dot_data.fval);    break;
-                case TYPE_CHAR:     printf("'%c'\n",var->dot_data.cval);  break;
-                case TYPE_BOOLEAN:  printf("%d\n",var->dot_data.cval);    break;
+                case TYPE_INT:      printf("%d\t",var->dot_data.ival);    break;
+                case TYPE_REAL:     printf("%f\t",var->dot_data.fval);    break;
+                case TYPE_CHAR:     printf("'%c'\t",var->dot_data.cval);  break;
+                case TYPE_BOOLEAN:  printf("%d\t",var->dot_data.cval);    break;
                 }
+
+                printf("\t#known value at compile time\n");
             }
         }
     }
