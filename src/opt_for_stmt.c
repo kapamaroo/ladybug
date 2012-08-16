@@ -215,6 +215,8 @@ void unroll_loop_classic(statement_t *body) {
             new_head = link_statements(new_s,new_head);
         }
 
+        new_head = statement_comp(new_head);
+
         //link leftover iterations to epilogue
         body->_for.epilogue = link_statements(new_head,body->_for.epilogue);
     }
