@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "semantics.h"
 #include "symbol_table.h"
 #include "datatypes.h"

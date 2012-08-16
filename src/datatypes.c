@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>  //for memcpy()
 
+#include "build_flags.h"
 #include "datatypes.h"
 #include "identifiers.h"
 #include "mem.h"

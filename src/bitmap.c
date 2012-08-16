@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "bitmap.h"
 #include "expressions.h"
 #include "expr_toolbox.h"

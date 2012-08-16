@@ -1,5 +1,7 @@
 #include "instruction_set.h"
 
+#include "build_flags.h"
+
 //arithmetic
 mips_instr_t I_add   = {.name="add",   .fmt=FMT_RD_RS_RT,      .datatype=I_INT, .type=INSTR_ISA};
 mips_instr_t I_addi  = {.name="addi",  .fmt=FMT_RD_RS_IMM,     .datatype=I_INT, .type=INSTR_ISA};

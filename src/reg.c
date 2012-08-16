@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "build_flags.h"
 #include "reg.h"
 
 reg_t *arch[ARCH_REG_NUM];

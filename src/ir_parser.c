@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "build_flags.h"
 #include "ir.h"
 #include "final_code.h"
 #include "err_buff.h"

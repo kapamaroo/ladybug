@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "build_flags.h"
 #include "semantics.h"
 #include "symbol_table.h"
 #include "datatypes.h"

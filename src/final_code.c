@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "final_code.h"
 #include "scope.h"
 #include "symbol_table.h"

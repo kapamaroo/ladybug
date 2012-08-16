@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "identifiers.h"
 #include "datatypes.h"
 #include "err_buff.h"

@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "build_flags.h"
 #include "statements.h"
 #include "ir.h"
 

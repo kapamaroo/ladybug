@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "statements.h"
 #include "symbol_table.h" //ladybug's symbol table
 #include "datatypes.h"

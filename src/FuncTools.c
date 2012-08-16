@@ -6,6 +6,7 @@
 /*or integer value                                                 */
 /*******************************************************************/
 
+#include "build_flags.h"
 #include "FuncTools.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "build_flags.h"
 #include "subprograms_toolbox.h"
 #include "identifiers.h"
 #include "datatypes.h"
