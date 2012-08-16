@@ -21,10 +21,9 @@ void simplify_loop(statement_t *stmt) {
     statement_t *new_s;
     var_t *locked_var;
 
+    //must not remove any statement which contains variables written inside the loop //FIXME
+    //maybe more checks to be discovered yet :)
     die("UNSAFE_CALL: still missing basic checks for correct code generation");
-
-    if (stmt->type != ST_For)
-        die("INTERNAL_ERROR: expected for_stmt");
 
     curr = stmt->_for.loop;
     if (curr->type != ST_Comp)
@@ -57,7 +56,8 @@ void simplify_loop(statement_t *stmt) {
     stmt->_for.prologue = new_s;
 }
 
-//TODO
+//TODO, more aggressive loop optimization
+//must change dependence structures for easier handling
 //////////////////////////////////////////////////////////////////////
 
 void break_DEP_WAR(dep_vector_t *dep_vector, dep_t *dep) {}
