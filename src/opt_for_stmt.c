@@ -294,7 +294,7 @@ void unroll_loop_symbolic(statement_t *body) {
 #define GEN_EPILOGUE 0
 
     int i;
-    int bsize = body->size;
+    int bsize = body->_for.loop->size;
 
     //update iter to avoid out of bounds code generation
     //see the prologue/epilogue generator for more info
