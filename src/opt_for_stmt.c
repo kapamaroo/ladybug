@@ -316,11 +316,13 @@ void optimize_loops(enum opt_loop_type type) {
         statement_t *current = statement_root_module[i];
         while (current) {
             if (current->type == ST_For)
-                switch (type) {
-                case OPT_UNROLL_CLASSIC:   unroll_loop_classic(current);   break;
-                case OPT_UNROLL_SYMBOLIC:  unroll_loop_symbolic(current);  break;
-                case OPT_LOOP_SIMPLIFY:    simplify_loop(current);         break;
-                }
+                //optimize only good shaped loops, see can_unroll_this_for_stmt() at analysis.c
+                if (current->_for.unroll_me)
+                    switch (type) {
+                    case OPT_UNROLL_CLASSIC:   unroll_loop_classic(current);   break;
+                    case OPT_UNROLL_SYMBOLIC:  unroll_loop_symbolic(current);  break;
+                    case OPT_LOOP_SIMPLIFY:    simplify_loop(current);         break;
+                    }
 
             current = current->next;
         }
