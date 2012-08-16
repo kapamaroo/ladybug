@@ -378,13 +378,13 @@ inline int VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(var_t *guard, expr_list_t *ind
     int i;
 
     if (!guard)
-        return 0;
+        return -1;
 
     for (i=0; i<index->all_expr_num; i++)
         if (EXPR_CONTAINS_GUARD(guard,index->expr_list[i]))
-            return i+1;
+            return i;
 
-    return 0;
+    return -1;
 }
 
 inline info_comp_t *VAR_IS_GUARDED_ARRAY_ELEMENT(var_t *guard, var_t *v) {
@@ -395,7 +395,7 @@ inline info_comp_t *VAR_IS_GUARDED_ARRAY_ELEMENT(var_t *guard, var_t *v) {
     while (var_of) {
         if (var_of->comp_type==TYPE_ARRAY) {
             int conflict_pos = VAR_GUARD_CONTROLS_ARRAY_ELEMENT_INDEX(guard,var_of->array.index);
-            if (conflict_pos) {
+            if (conflict_pos >= 0) {
                 var_of->array.index_conflict_pos = conflict_pos;
                 return var_of;
             }
