@@ -6,9 +6,16 @@
 #include "statements.h"
 #include "expr_toolbox.h"
 
-void opt_for_init() {}
+#include "opt_for_stmt.h"
 
-void opt_move_independent_statements_out_of_loop(statement_t *stmt) {
+//default unroll factor for classic unrolling
+int unroll_factor = 4;
+
+void opt_for_init() {
+    //whatever init we may need in the future
+}
+
+void simplify_loop(statement_t *stmt) {
     statement_t *curr;
     statement_t *head;
     statement_t *new_s;
@@ -172,18 +179,15 @@ statement_t *deep_copy_stmt_list(statement_t *head) {
     return replica;
 }
 
-void unroll_loop_body(statement_t *body, int times) {
+void unroll_loop_classic(statement_t *body) {
     int i;
     statement_t *new_s;
     statement_t *head;
     statement_t *new_head;
 
-    if (body->type != ST_For)
-        die("INTERNAL_ERROR: loop_unroll: expected for_stmt");
-
     int iter_start = body->_for.iter->start->ival;
     int iter_stop = body->_for.iter->stop->ival;
-    int leftovers = (iter_stop - iter_start) % times;
+    int leftovers = (iter_stop - iter_start) % unroll_factor;
 
     if (leftovers) {
         //update iter range
@@ -201,13 +205,13 @@ void unroll_loop_body(statement_t *body, int times) {
         body->_for.epilogue = link_statements(new_head,body->_for.epilogue);
     }
 
-    //update iter, multiply step by times
-    body->_for.iter->step->ival *= times;
+    //update iter, multiply step by unroll_factor
+    body->_for.iter->step->ival *= unroll_factor;
 
     new_head = NULL;
     head = body->_for.loop->_comp.first_stmt;
 
-    for (i=1; i<=times; i++) {
+    for (i=1; i<=unroll_factor; i++) {
         new_head = deep_copy_stmt_list(head);
         shift_all_stmt_list_lvalues(new_head,i);
     }
@@ -277,9 +281,6 @@ void unroll_loop_symbolic(statement_t *body) {
 #define GEN_PROLOGUE 1
 #define GEN_EPILOGUE 0
 
-    if (body->type != ST_For)
-        die("INTERNAL_ERROR: symbolic_unroll: expected for_stmt");
-
     int i;
     int bsize = body->size;
 
@@ -304,4 +305,24 @@ void unroll_loop_symbolic(statement_t *body) {
     //prologue/epilogue may not be empty
     body->_for.prologue = link_statements(prologue,body->_for.prologue);
     body->_for.epilogue = link_statements(epilogue,body->_for.epilogue);
+}
+
+void optimize_loops(enum opt_loop_type type) {
+    //wrapper call
+
+    int i;
+
+    for (i=0; i<statement_root_module_current_free; i++) {
+        statement_t *current = statement_root_module[i];
+        while (current) {
+            if (current->type == ST_For)
+                switch (type) {
+                case OPT_UNROLL_CLASSIC:   unroll_loop_classic(current);   break;
+                case OPT_UNROLL_SYMBOLIC:  unroll_loop_symbolic(current);  break;
+                case OPT_LOOP_SIMPLIFY:    simplify_loop(current);         break;
+                }
+
+            current = current->next;
+        }
+    }
 }
