@@ -12,3 +12,4 @@ TODO list:
 > make code generator more clever, avoid duplicate code
 > implement prologue/epilogue for calls (save/restore registers)
 > add timing statistics to actually measure performance gain of optimizers
+> implement a refcount mechanism (LOTS OF memory leaks)

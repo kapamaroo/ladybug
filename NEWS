@@ -1,1 +1,7 @@
-working on register allocator
+This is a project I work on at my free time, its main purpose is for
+understanding from first hand a compiler's logic. It is started from
+scratch without any speciall compiler knowledge as an assignment for
+a university lesson.
+
+There is no plan of a full feature compiler for the real world needs
+however it will be updated more or less often.
