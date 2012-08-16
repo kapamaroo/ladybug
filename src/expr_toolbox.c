@@ -82,7 +82,7 @@ expr_t *expr_from_variable(var_t *v) {
 
     if (v->status_value == VALUE_GARBAGE) {
         //change this to error??
-        sprintf(str_err,"variable '%s' of datatype '%s' declared in '%s', maybe used 'uninitialized' in '%s'",
+        sprintf(str_err,"variable '%s' of datatype '%s' declared in '%s'maybe used 'uninitialized' in '%s'",
                 v->name,
                 v->datatype->name,
                 v->scope->name,

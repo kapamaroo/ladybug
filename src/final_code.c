@@ -194,6 +194,7 @@ void print_data_segment() {
 
     size = MAX_SYMBOLS - main_program->symbol_table.pool_empty;
 
+    printf("\n");
     printf(".data\n");
 
     for (i=0; i<size; i++) {
@@ -221,6 +222,7 @@ void print_text_segment() {
     int i;
     instr_t *instr;
 
+    printf("\n");
     printf(".text\n");
     printf(".global main\n");
 

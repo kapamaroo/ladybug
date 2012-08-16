@@ -8,7 +8,7 @@
 #define LEX_DEBUG 0
 #define LEX_MAIN 0
 
-#define BISON_DEBUG_LEVEL 1
+#define BISON_DEBUG_LEVEL 0
 #define SYMBOL_TABLE_DEBUG_LEVEL 0
 
 #define LOG_TO_FILE 1

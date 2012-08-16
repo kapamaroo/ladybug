@@ -330,7 +330,11 @@ void analyse_blocks() {
 
     for (i=0;i<statement_root_module_current_free;i++) {
         current = statement_root_module[i];
+
+#if (BISON_DEBUG_LEVEL >=1)
         printf("debug:\ndebug:\t*** MODULE %d ***\ndebug:\n",i);
+#endif
+
         while (current) {
             if (!NEW_STMT_BLOCK_STARTS_FROM(current)) {
                 die("UNEXPECTED_ERROR: expected block, bad block generator");
