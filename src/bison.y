@@ -381,65 +381,26 @@ int main(int argc, char *argv[]) {
     init_err_buff();
     init_symbol_table();
     init_statements();
+    init_opt_for();
     init_ir();
     init_final_code();
 
-    if (argc>1) {
-        if (argc!=2) {
-            printf("Ignoring multiple arguments\n"); //FIXME parse all the arguments
-        }
-        yyin = fopen(argv[argc-1],"r");
-        if (!yyin) {
-            perror(NULL);
-            exit(EXIT_FAILURE);
-        }
-        current_file = basename(argv[argc-1]);
-        status = yyparse();
-        fclose(yyin);
-    }
-    else {
-        help();
+    parse_args(argc,argv);
+
+    yyin = fopen(src_input,"r");
+    if (!yyin) {
+        perror(NULL);
         exit(EXIT_FAILURE);
     }
+
+    current_file = basename(src_input);
+    status = yyparse();
+    fclose(yyin);
 
     switch (status) {
     case 0:
         if (!err_num) {
-            /* Frontend @ statement_t *statement_root_module[MAX_NUM_OF_MODULES]; */
-            define_blocks();
-            analyse_blocks();
-
-            //optimize_loops(OPT_LOOP_SIMPLIFY);  //unsafe
-            //optimize_loops(OPT_UNROLL_CLASSIC);
-            //optimize_loops(OPT_UNROLL_SYMBOLIC);
-
-            /* high level optimizations go here */
-
-
-
-            /* EOF (end of frontend) :) */
-            generate_all_modules();
-            /* IR @ ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES]; */
-
-
-
-            /* IR optimizations go here */
-
-
-
-            /* End of IR */
-            parse_all_modules();
-            /* Backend @ instr_t *final_tree[MAX_NUM_OF_MODULES]; */
-
-
-
-            /* low level optimizations go here */
-
-
-
-            /* End of Backend, Emit final code */
-            print_assembly();
-
+            compile();
             exit(EXIT_SUCCESS);
         } else {
             printf("Please correct the errors.\n");
