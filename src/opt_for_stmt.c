@@ -188,7 +188,7 @@ void unroll_loop_body(statement_t *body, int times) {
     if (leftovers) {
         //update iter range
         iter_stop -= leftovers;
-        body->_for.iter->stop.ival = iter_stop;
+        body->_for.iter->stop->ival = iter_stop;
 
         new_head = NULL;
         for (i=1; i<=leftovers; i++) {
