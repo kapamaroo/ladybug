@@ -9,4 +9,6 @@ TODO list:
 
 > dependence analysis works only for very simple for statements
 
-> compete with gcc at next fosdem :)
+> make code generator more clever, avoid duplicate code
+> implement prologue/epilogue for calls (save/restore registers)
+> add timing statistics to actually measure performance gain of optimizers
