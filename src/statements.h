@@ -90,7 +90,7 @@ struct statement_write_t {
 };
 
 struct statement_comp_t {
-    struct statement_t *first_stmt;
+    struct statement_t *head;
 };
 
 typedef struct statement_t {
@@ -144,7 +144,7 @@ statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
 statement_t *statement_with(var_t *var, statement_t *body);
 statement_t *statement_read(var_list_t *var_list);
 statement_t *statement_write(expr_list_t *expr_list);
-statement_t *statement_comp(statement_t *first_stmt);
+statement_t *statement_comp(statement_t *head);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
 statement_t *unlink_statement(statement_t *s, statement_t *head);

@@ -535,17 +535,17 @@ statement_t *statement_write(expr_list_t *expr_list) {
     return new_write;
 }
 
-statement_t *statement_comp(statement_t *first_stmt) {
+statement_t *statement_comp(statement_t *head) {
     statement_t *new_comp;
 
-    if (!first_stmt) {
+    if (!head) {
         //ignore empty comp statement
         return NULL;
     }
 
     new_comp = new_statement_t(ST_Comp);
-    new_comp->_comp.first_stmt = first_stmt;
-    new_comp->return_point = first_stmt->last->return_point;
+    new_comp->_comp.head = head;
+    new_comp->return_point = head->last->return_point;
 
     return new_comp;
 }

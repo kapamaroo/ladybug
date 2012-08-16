@@ -11,7 +11,7 @@
 //default unroll factor for classic unrolling
 int unroll_factor = 4;
 
-void opt_for_init() {
+void init_opt_for() {
     //whatever init we may need in the future
 }
 
@@ -33,7 +33,7 @@ void simplify_loop(statement_t *stmt) {
         die("INTERNAL_ERROR: expected comp_stmt");
 
     new_s = NULL;
-    curr = curr->_comp.first_stmt;
+    curr = curr->_comp.head;
     head = curr;
     locked_var = stmt->_for.var;
 
@@ -51,7 +51,7 @@ void simplify_loop(statement_t *stmt) {
     }
 
     //update loop pointer
-    stmt->_for.loop->_comp.first_stmt = head;
+    stmt->_for.loop->_comp.head = head;
 
     //wrap prologue into comp_stmt
     new_s = statement_comp(new_s);
@@ -192,7 +192,7 @@ void unroll_loop_classic(statement_t *body) {
     statement_t *new_s;
     statement_t *new_head;
 
-    statement_t *head = body->_for.loop->_comp.first_stmt;
+    statement_t *head = body->_for.loop->_comp.head;
 
     int iter_start = body->_for.iter->start->ival;
     int iter_stop = body->_for.iter->stop->ival;
@@ -233,7 +233,7 @@ void unroll_loop_classic(statement_t *body) {
     //link all copys to original body loop
     new_head = link_statements(new_head,head);
 
-    body->_for.loop->_comp.first_stmt = new_head;
+    body->_for.loop->_comp.head = new_head;
 }
 
 void replace_var_with_hardcoded_int_in_stmt(statement_t *s, var_t *v, int known) {
@@ -302,7 +302,7 @@ void unroll_loop_symbolic(statement_t *body) {
     //see the prologue/epilogue generator for more info
     body->_for.iter->stop->ival -= bsize - 1;
 
-    statement_t *head = body->_for.loop->_comp.first_stmt;
+    statement_t *head = body->_for.loop->_comp.head;
     var_t *guard = body->_for.var;
     iter_t *iter = body->_for.iter;
 

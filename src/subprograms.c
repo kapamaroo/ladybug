@@ -28,7 +28,7 @@ void configure_formal_parameters(param_list_t *list,func_t *func) {
 void check_for_return_value(func_t *subprogram,statement_t *body) {
     //subprogram here is always a function
     //reminder: body is a comp statement
-    if (body->_comp.first_stmt->last->return_point==0) {
+    if (body->_comp.head->last->return_point==0) {
         sprintf(str_err,"control reaches end of function '%s' without return value",subprogram->name);
         yyerror(str_err);
     }

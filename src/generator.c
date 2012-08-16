@@ -91,7 +91,7 @@ ir_node_t *generate_ir_from_statement(statement_t *s) {
         break;
     case ST_Comp:
         ir_new = NULL;
-        s_tmp = s->_comp.first_stmt;
+        s_tmp = s->_comp.head;
         while (s_tmp) {
             ir_tmp = generate_ir_from_statement(s_tmp);
             ir_new = link_ir_to_ir(ir_tmp,ir_new);

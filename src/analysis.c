@@ -26,7 +26,7 @@ statement_t *do_blocks_in_module(statement_t *root) {
 
     //set initial start point
     //reminder: root statement of modules are comp_statements
-    pending = root->_comp.first_stmt;
+    pending = root->_comp.head;
     current = NULL;
 
     if (NEW_STMT_BLOCK_STARTS_FROM(pending)) {
@@ -311,7 +311,7 @@ void do_analyse_block(statement_t *block) {
         do_analyse_stmt(block->_for.loop,block);
         break;
     case ST_Comp:
-        do_analyse_stmt(block->_comp.first_stmt,block);
+        do_analyse_stmt(block->_comp.head,block);
         break;
     default:
         die("UNEXPECTED_ERROR: expected block for analysis");
@@ -583,7 +583,7 @@ dep_vector_t *do_dependence_analysis(dep_vector_t *dep, statement_t *stmt) {
     statement_t *to;
 
     if (stmt->type==ST_Comp)
-        from = stmt->_comp.first_stmt;
+        from = stmt->_comp.head;
     else
         from = stmt;
 
@@ -642,7 +642,7 @@ int can_unroll_this_for_stmt(statement_t *block) {
 
     //support only special cases of arrays of 1-dimension
 
-    current = block->_for.loop->_comp.first_stmt;
+    current = block->_for.loop->_comp.head;
 
     while (current) {
         //accept only primitive assignment statements

@@ -9,7 +9,7 @@ enum opt_loop_type {
     OPT_LOOP_SIMPLIFY,
 };
 
-void opt_for_init();
+void init_opt_for();
 
 //optimizations' wrapper, use this instead of direct optimizing
 void optimize_loops(enum opt_loop_type type);
