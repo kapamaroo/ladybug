@@ -650,46 +650,48 @@ int can_unroll_this_for_stmt(statement_t *block) {
             return 0;
 
         //for statement must not contain function calls
-        for (i=0; i<current->io_vectors.read->all_var_num; i++) {
-            var_t *v = current->io_vectors.read->var_list[i];
-            if (v->id_is==ID_RETURN)
-                return 0;
-
-            if (v->from_comp &&
-                v->from_comp->comp_type==TYPE_ARRAY) {
-                //no multiple dimension arrays
-                if (v->from_comp->array.base->datatype->field_num > 1)
+        if (current->io_vectors.read)
+            for (i=0; i<current->io_vectors.read->all_var_num; i++) {
+                var_t *v = current->io_vectors.read->var_list[i];
+                if (v->id_is==ID_RETURN)
                     return 0;
 
-                //no nested arrays in datatypes
-                if (v->from_comp->array.base->from_comp)
-                    return 0;
+                if (v->from_comp &&
+                    v->from_comp->comp_type==TYPE_ARRAY) {
+                    //no multiple dimension arrays
+                    if (v->from_comp->array.base->datatype->field_num > 1)
+                        return 0;
 
-                //simple enough index expression
-                expr_t *l = v->from_comp->array.index->expr_list[0];
-                if (!EXPR_IS_SIMPLE_ENOUGH(l))
-                    return 0;
+                    //no nested arrays in datatypes
+                    if (v->from_comp->array.base->from_comp)
+                        return 0;
+
+                    //simple enough index expression
+                    expr_t *l = v->from_comp->array.index->expr_list[0];
+                    if (!EXPR_IS_SIMPLE_ENOUGH(l))
+                        return 0;
+                }
             }
-        }
 
-        for (i=0; i<current->io_vectors.write->all_var_num; i++) {
-            var_t *v = current->io_vectors.write->var_list[i];
-            if (v->from_comp &&
-                v->from_comp->comp_type==TYPE_ARRAY) {
-                //no multiple dimension arrays
-                if (v->from_comp->array.base->datatype->field_num > 1)
-                    return 0;
+        if (current->io_vectors.write)
+            for (i=0; i<current->io_vectors.write->all_var_num; i++) {
+                var_t *v = current->io_vectors.write->var_list[i];
+                if (v->from_comp &&
+                    v->from_comp->comp_type==TYPE_ARRAY) {
+                    //no multiple dimension arrays
+                    if (v->from_comp->array.base->datatype->field_num > 1)
+                        return 0;
 
-                //no nested arrays in datatypes
-                if (v->from_comp->array.base->from_comp)
-                    return 0;
+                    //no nested arrays in datatypes
+                    if (v->from_comp->array.base->from_comp)
+                        return 0;
 
-                //simple enough index expression
-                expr_t *l = v->from_comp->array.index->expr_list[0];
-                if (!EXPR_IS_SIMPLE_ENOUGH(l))
-                    return 0;
+                    //simple enough index expression
+                    expr_t *l = v->from_comp->array.index->expr_list[0];
+                    if (!EXPR_IS_SIMPLE_ENOUGH(l))
+                        return 0;
+                }
             }
-        }
 
         current = current->next;
     }
