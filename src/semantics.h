@@ -160,7 +160,7 @@ typedef struct info_dot_data {
 struct info_array_t {
     struct var_t *base;         //array base
     struct expr_list_t *index;  //array index (list size must be equal to array dimensions)
-    int index_conflict_pos;     //positive if there is conflict (subtract one to find the conflict index)
+    int index_conflict_pos;     //positive or zero if there is conflict, else negative
     int confl_dep_offset;       //loop transformation, statement permutation offset
     int unroll_offset;          //add this to effective index when unrolling
 };
