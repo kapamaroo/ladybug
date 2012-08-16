@@ -585,7 +585,8 @@ expr_t *make_array_reference(struct info_comp_t *comp) {
         case EXPR_HARDCODED_CONST:
         case EXPR_LVAL:
         case EXPR_RVAL:
-            if (idx_confl && i == idx_confl - 1) {
+            //printf("debug: idx_confl = %d;\t i = %d;\t unroll_offset = %d;\n",idx_confl,i,comp->array.unroll_offset);
+            if (i == idx_confl) {
                 //if offsets have 0-value, the expression optimizer ignores them
                 //just write the general case here, and watch the magic!
 
