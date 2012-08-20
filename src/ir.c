@@ -316,7 +316,8 @@ ir_node_t *new_ir_for(var_t *var,iter_t *range,ir_node_t *true_stmt) {
     expr_guard = expr_from_variable(var);
     expr_step = expr_relop_equ_addop_mult(expr_guard,OP_PLUS,range->step);
 
-    if (range->step->ival==1)
+    //if loop optimizations are enabled, step may be different than 1
+    if (range->step->ival)
         total_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_LE,range->stop);
     else
         total_cond = expr_relop_equ_addop_mult(expr_guard,RELOP_BE,range->stop);
