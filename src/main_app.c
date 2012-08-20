@@ -33,6 +33,7 @@ void help() {
     printf("\t --lunroll-classic\t enable classic loop unrolling (copy the body multiple times)\n");
     printf("\t --lunroll-symbolic\t enable software pipelining aka symbolic loop unroll\n");
     printf("\t --lsimplify\t\t move independent statements out of loop UNSAFE (disabled for your safety)\n");
+    printf("\t --help\t\t print this help message and exit\n");
     printf("\n");
 
     print_extra();
@@ -50,14 +51,19 @@ void parse_args(int argc, char *argv[]) {
     src_input = NULL;
 
     for (i=1; i<argc; i++) {
-        if (!strncmp(argv[i],"--lunroll-classic",17))
+        if (!strcmp(argv[i],"--lunroll-classic"))
             enable_opt_loop_unroll_classic = 1;
 
-        else if (!strncmp(argv[i],"--lunroll-symbolic",18))
+        else if (!strcmp(argv[i],"--lunroll-symbolic"))
             enable_opt_loop_unroll_symbolic = 1;
 
-        else if (!strncmp(argv[i],"--lsimplify",11))
+        else if (!strcmp(argv[i],"--lsimplify"))
             enable_opt_loop_simplify = 1;
+
+        else if (!strcmp(argv[i],"--help")) {
+            help();
+            exit(EXIT_SUCCESS);
+        }
 
         else if (!src_input) {
             //ignore multiple input files
