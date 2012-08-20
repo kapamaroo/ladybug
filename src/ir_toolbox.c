@@ -14,6 +14,67 @@
 #include "err_buff.h"
 #include "reg.h"
 
+int pow2(int x) {
+    int pow = 0;
+
+    if (! (x & (x - 1)))
+        while (x > 1) {
+            pow++;
+            x /= 2;
+        }
+    return pow;
+}
+
+ir_node_t *optimize_math(ir_node_t *node) {
+    //recursive function, some children may not exist (e.g. OP_NOT has no ir_rval child)
+    if (!node)
+        return NULL;
+
+    if (node->node_type != NODE_RVAL)
+        return node;
+
+    node->ir_rval = optimize_math(node->ir_rval);
+    node->ir_rval2 = optimize_math(node->ir_rval2);
+
+    if (node->ir_rval &&
+        node->ir_rval->node_type == NODE_HARDCODED_RVAL &&
+        node->ir_rval2->node_type != NODE_HARDCODED_RVAL) {
+        //swap nodes
+        ir_node_t *tmp = node->ir_rval;
+        node->ir_rval = node->ir_rval2;
+        node->ir_rval2 = tmp;
+    }
+
+    if (node->ir_rval &&
+        node->ir_rval->node_type != NODE_HARDCODED_RVAL &&
+        node->ir_rval2->node_type == NODE_HARDCODED_RVAL) {
+
+        int ival = node->ir_rval2->ival;
+        int log_ival = pow2(ival);
+
+        //ignore optimization if ival is not power of 2
+        if (!log_ival)
+            return node;
+
+        switch (node->op_rval) {
+        case OP_MULT:
+            node->node_type = NODE_SHIFT_LEFT;
+            node->ir_rval2->ival = log_ival;
+            //printf("debug: mult converted to shift: log(%d) = %d\n",ival,log_ival);
+            break;
+        case OP_DIV:
+            node->node_type = NODE_SHIFT_RIGHT;
+            node->ir_rval2->ival = log_ival;
+            //printf("debug: div converted to shift: log(%d) = %d\n",ival,log_ival);
+            break;
+        default:
+            break;
+        }
+    }
+
+    return node;
+}
+
 op_t op_invert_cond(op_t op) {
     //invert the check
 
@@ -219,6 +280,8 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             }
 
             new_node->ir_rval2 = expr_tree_to_ir_tree(ltree->l2);
+
+            new_node = optimize_math(new_node);
 
             if (ltree->convert_to==SEM_INTEGER) {
                 convert_node = new_ir_node_t(NODE_CONVERT_TO_INT);

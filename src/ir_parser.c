@@ -270,10 +270,28 @@ void parse_ir_node(ir_node_t *ir_node) {
         final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_SHIFT_LEFT:
-        printf("__shiftL__");
+        parse_ir_node(ir_node->ir_rval);
+        //ir_rval2 is hardcoded const and we use it immediately inside shift instruction
+
+        new_instr = new_instruction(NULL,&I_sll);
+
+        new_instr->Rd = ir_node->reg;
+        new_instr->Rs = ir_node->ir_rval->reg;
+        new_instr->ival = ir_node->ir_rval2->ival;
+
+        final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_SHIFT_RIGHT:
-        printf("__shiftR__");
+        parse_ir_node(ir_node->ir_rval);
+        //ir_rval2 is hardcoded const and we use it immediately inside shift instruction
+
+        new_instr = new_instruction(NULL,&I_srl);
+
+        new_instr->Rd = ir_node->reg;
+        new_instr->Rs = ir_node->ir_rval->reg;
+        new_instr->ival = ir_node->ir_rval2->ival;
+
+        final_tree_current = link_instructions(new_instr,final_tree_current);
         return;
     case NODE_LVAL:
         parse_ir_node(ir_node->offset);
