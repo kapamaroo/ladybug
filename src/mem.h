@@ -11,7 +11,7 @@
 #define MEM_SIZEOF_BOOLEAN MEM_SIZEOF_CHAR
 
 //the stack size in the beggining of the call. NO RETURN VALUE, NO FORMAL PARAMETERS just the basic ABI
-#define STACK_INIT_SIZE 0
+#define STACK_INIT_SIZE 16  //mips default calling conversion
 #define STACK_RETURN_VALUE_OFFSET (STACK_INIT_SIZE)
 #define MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS 4
 
