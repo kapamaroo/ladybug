@@ -12,6 +12,11 @@ extern instr_t *final_tree_current;
 void init_final_code();
 void new_final_tree();
 
+#if (USE_PSEUDO_INSTR_LA==1)
+reg_t *base_addr_is_alive(ir_node_t *node);
+void mark_addr_alive(ir_node_t *node);
+#endif
+
 void print_assembly();
 
 #endif

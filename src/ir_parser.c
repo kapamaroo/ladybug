@@ -106,6 +106,10 @@ void parse_ir_node(ir_node_t *ir_node) {
     enum instr_req_t instr_req;
     mips_instr_t *new_mips_instr;
 
+#if (INSTR_PREFER_MOVE_TO_LA == 1)
+    reg_t *alive_base_addr;
+#endif
+
     if (ir_node->label) {
         new_instr = new_instruction(ir_node->label,&I_nop);
         final_tree_current = link_instructions(new_instr,final_tree_current);
@@ -244,10 +248,24 @@ void parse_ir_node(ir_node_t *ir_node) {
 
 #if (USE_PSEUDO_INSTR_LA==1)
     case NODE_LVAL_NAME:
-        new_instr = new_instruction(NULL,&I_la);
-        new_instr->Rd = ir_node->reg;
-        new_instr->lval_name = ir_node->lval_name;
+#if (INSTR_PREFER_MOVE_TO_LA == 1)
+        alive_base_addr = base_addr_is_alive(ir_node);
+        if (!alive_base_addr) {
+#endif
+            mark_addr_alive(ir_node);
 
+            new_instr = new_instruction(NULL,&I_la);
+            new_instr->Rd = ir_node->reg;
+            new_instr->lval_name = ir_node->lval_name;
+#if (INSTR_PREFER_MOVE_TO_LA == 1)
+        }
+        else {
+            update_addr_alive(ir_node);
+            new_instr = new_instruction(NULL,&I_move);
+            new_instr->Rd = ir_node->reg;
+            new_instr->Rs = alive_base_addr;
+        }
+#endif
         final_tree_current = link_instructions(new_instr,final_tree_current);
         break;
 #endif
@@ -255,12 +273,11 @@ void parse_ir_node(ir_node_t *ir_node) {
     case NODE_LOAD:
         parse_ir_node(ir_node->ir_lval);
 
-        if (ir_node->data_is==TYPE_REAL) {
+        if (ir_node->data_is==TYPE_REAL)
             //load directly to c1
             new_instr = new_instruction(NULL,&I_lwc1);
-        } else {
+        else
             new_instr = new_instruction(NULL,&I_lw);
-        }
 
         new_instr->Rd = ir_node->reg;
 

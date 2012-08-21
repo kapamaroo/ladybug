@@ -1,6 +1,8 @@
 #ifndef _INTERMEDIATE_REPRESENTATION_PARSER_H
 #define _INTERMEDIATE_REPRESENTATION_PARSER_H
 
+#define INSTR_PREFER_MOVE_TO_LA 0
+
 void parse_all_modules();
 
 #endif

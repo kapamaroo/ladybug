@@ -7,6 +7,7 @@
 #include "symbol_table.h"
 #include "instruction_set.h"
 #include "reg.h"
+#include "ir_parser.h"
 
 #define COMMA() printf(", ")
 
@@ -15,6 +16,12 @@ int final_tree_empty;
 
 instr_t *final_tree_current;
 
+#if (USE_PSEUDO_INSTR_LA==1)
+#define MAX_ALIVE_ADDR 4
+ir_node_t *alive_base_addr[MAX_ALIVE_ADDR];
+int alive_addr_empty = MAX_ALIVE_ADDR;
+#endif
+
 void init_final_code() {
     int i;
 
@@ -22,12 +29,59 @@ void init_final_code() {
 
     final_tree_empty = MAX_NUM_OF_MODULES;
 
-    for(i=0;i<MAX_NUM_OF_MODULES;i++) {
+    for(i=0;i<MAX_NUM_OF_MODULES;i++)
         final_tree[i] = NULL;
-    }
+
+#if (USE_PSEUDO_INSTR_LA==1)
+    for (i=0; i<MAX_ALIVE_ADDR; i++)
+        alive_base_addr[i] = NULL;
+#endif
 
     final_tree_current = NULL;
 }
+
+#if (USE_PSEUDO_INSTR_LA==1)
+reg_t *base_addr_is_alive(ir_node_t *node) {
+    int i;
+    int size = MAX_ALIVE_ADDR - alive_addr_empty;
+
+    if (node->node_type != NODE_LVAL_NAME)
+        die("INTERNAL_ERROR: expected NODE_LVAL_NAME");
+
+    for (i=0; i<size; i++)
+        if (alive_base_addr[i]->lval_name == node->lval_name)
+            return alive_base_addr[i]->reg;
+
+    return NULL;
+}
+
+void update_addr_alive(ir_node_t *node) {
+    int i;
+    int size = MAX_ALIVE_ADDR - alive_addr_empty;
+
+    if (node->node_type != NODE_LVAL_NAME)
+        die("INTERNAL_ERROR: expected NODE_LVAL_NAME");
+
+    for (i=0; i<size; i++)
+        if (alive_base_addr[i]->lval_name == node->lval_name) {
+            alive_base_addr[i] = node;
+            return;
+        }
+}
+
+void mark_addr_alive(ir_node_t *node) {
+    if (node->node_type != NODE_LVAL_NAME)
+        die("INTERNAL_ERROR: expected NODE_LVAL_NAME");
+
+    if (!alive_addr_empty)
+        //ignore more alive addresses
+        return;
+
+    int idx = MAX_ALIVE_ADDR - alive_addr_empty;
+    alive_addr_empty--;
+    alive_base_addr[idx] = node;
+}
+#endif
 
 void new_final_tree() {
     final_tree[MAX_NUM_OF_MODULES - final_tree_empty] = final_tree_current;
