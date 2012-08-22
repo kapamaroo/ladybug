@@ -344,3 +344,63 @@ void print_assembly() {
     print_data_segment();
     print_text_segment();
 }
+
+void reuse_and_rename(instr_t *instr) {
+    if (instr->mips_instr == &I_la) {
+        instr_t *curr = instr;
+        instr_t *next = instr->next;
+
+        if (next && next->mips_instr == &I_lw) {
+            //reminder:
+            //
+            //curr:     la Rd lval_name
+            //next:     lw Rd 0(Rs)
+
+            if (curr->Rd == next->Rs) {
+                reg_t *alive_reg = var_is_alive(curr->lval_name);
+                if (alive_reg) {
+                    //mark which reg holds the value from now on
+                    update_alive_var(curr->lval_name,next->Rd);
+
+                    //rename existing reg with data
+                    next->mips_instr = &I_move;
+                    next->Rs = alive_reg;
+                    curr->mips_instr = &I_nop;
+
+                    //free previously used registers (virtual regs)
+                    register_free(curr);
+                    register_free(next);
+
+                    //remove curr instr from list and call free() to it
+                    curr->prev->next = next;
+                    next->prev = curr->prev;
+
+                    free(curr);
+
+                    //reallocate regs for the new instr
+                    reg_liveness_analysis(next);
+                }
+                else {
+                    //remember first load for later use
+                    mark_var_alive(curr->lval_name,next->Rd);
+                }
+            }
+        }
+    }
+}
+
+void run_pass(pass_ptr_t do_pass) {
+    int i;
+    instr_t *instr;
+
+    for(i=0;i<MAX_NUM_OF_MODULES;i++) {
+        instr = final_tree[i];
+        if (!instr)
+            return;
+
+        while (instr) {
+            (*do_pass)(instr);
+            instr = instr->next;
+        }
+    }
+}

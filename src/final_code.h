@@ -19,4 +19,12 @@ void mark_addr_alive(ir_node_t *node);
 
 void print_assembly();
 
+typedef void (*pass_ptr_t)(instr_t *);
+
+//passes handler
+void run_pass(pass_ptr_t do_pass);
+
+//passes
+void reuse_and_rename(instr_t *instr);
+
 #endif
