@@ -22,6 +22,15 @@ ir_node_t *alive_base_addr[MAX_ALIVE_ADDR];
 int alive_addr_empty = MAX_ALIVE_ADDR;
 #endif
 
+struct alive_var {
+    char *name;
+    reg_t *reg;
+};
+
+#define MAX_ALIVE_VARS 4
+struct alive_var alive_vars[MAX_ALIVE_VARS];
+int alive_vars_empty = MAX_ALIVE_VARS;
+
 void init_final_code() {
     int i;
 
@@ -82,6 +91,38 @@ void mark_addr_alive(ir_node_t *node) {
     alive_base_addr[idx] = node;
 }
 #endif
+
+reg_t *var_is_alive(char *name) {
+    int i;
+    int size = MAX_ALIVE_VARS - alive_vars_empty;
+
+    for (i=0; i<size; i++)
+        if (alive_vars[i].name == name)
+            return alive_vars[i].reg;
+
+    return NULL;
+}
+
+void update_alive_var(char *name, reg_t *reg) {
+    int i;
+    int size = MAX_ALIVE_VARS - alive_vars_empty;
+
+    for (i=0; i<size; i++)
+        if (alive_vars[i].name == name) {
+            alive_vars[i].reg = reg;
+            return;
+        }
+}
+
+void mark_var_alive(char *name, reg_t *reg) {
+    if (!alive_vars_empty)
+        return;
+
+    int idx = MAX_ALIVE_VARS - alive_vars_empty;
+    alive_vars_empty--;
+    alive_vars[idx].name = name;
+    alive_vars[idx].reg = reg;
+}
 
 void new_final_tree() {
     final_tree[MAX_NUM_OF_MODULES - final_tree_empty] = final_tree_current;
