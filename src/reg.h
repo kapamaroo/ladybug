@@ -91,5 +91,6 @@ void init_reg();
 void free_all_registers();
 reg_t *get_available_reg(reg_type_t type);
 void release_reg(reg_t *reg);
+void reg_liveness_analysis(struct instr_t *pc);
 
 #endif

@@ -65,20 +65,6 @@ void set_register_files_for_virtual_regs(instr_t *instr) {
     }
 }
 
-void reg_liveness_analysis(instr_t *pc) {
-    /**  ATTENTION!
-     * we assume that the virtual registers appear in the final code tree
-     * in ascending order. we need a more sophisticated liveness analysis
-     * //FIXME
-     */
-
-    if (IS_REG_VIRT(pc->Rd) &&
-        !pc->Rd->live) { pc->Rd->live = pc; }        //first appearance of virtual register
-    if (IS_REG_VIRT(pc->Rs)) { pc->Rs->die = pc; }   //update last appearance
-    if (IS_REG_VIRT(pc->Rt)) { pc->Rt->die = pc; }   //update last appearance
-
-}
-
 instr_t *link_instructions(instr_t *child, instr_t *parent) {
     if (child && parent) {
         parent->last->next = child;
