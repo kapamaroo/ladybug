@@ -91,12 +91,15 @@ expr_t *expr_from_variable(var_t *v) {
         yywarning(str_err);
     }
 
-    //expr_from_function_call() calls this function, so consider ID_RETURN too, return values are of standard type
+    //expr_from_function_call() calls this function,
+    //so consider ID_RETURN too, return values are of standard type
     if (v->id_is==ID_VAR || v->id_is==ID_VAR_GUARDED || v->id_is==ID_RETURN) {
-        //reminder: arrays and record types are allowed only for asignments
+        //reminder: arrays and record types are
+        //allowed only for asignments
         //leave them from now
 
-        //reminder: we check bounds before we assign to char, subset or enumeration,
+        //reminder: we check bounds before we assign to char,
+        //subset or enumeration,
         //so we can use their __actual__ datatype
         if (v->datatype->is==TYPE_SUBSET || v->datatype->is==TYPE_ENUM) {
             sprintf(str_err,"expression with variable '%s' of subset/enum datatype '%s'",v->name,v->datatype->name);
