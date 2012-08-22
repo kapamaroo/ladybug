@@ -4,6 +4,7 @@
 
 #include "build_flags.h"
 #include "opt_for_stmt.h"
+#include "final_code.h"
 #include "main_app.h"
 
 #if LEX_MAIN == 0
@@ -113,7 +114,7 @@ void compile() {
     parse_all_modules();
     /* Backend @ instr_t *final_tree[MAX_NUM_OF_MODULES]; */
 
-
+    run_pass(&reuse_and_rename);
 
     /* low level optimizations go here */
 
