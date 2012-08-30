@@ -96,7 +96,7 @@
 
 
 9. expr_toolbox.c::expr_replace_var_with_hardcoded_int()
-   αντικατάσταση lvalue με την αποθηκεθμένη τιμή της, χρήσιμη για την δημιουργία
+   αντικατάσταση lvalue με την αποθηκευμένη τιμή της, χρήσιμη για την δημιουργία
    prologue/epilogue για symbolic loop unrolling (software pipelining) όπου
    η τιμή της μεταβλητής βρόχου έιναι γνωστή.
 
