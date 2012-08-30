@@ -4,15 +4,32 @@
 #include "semantics.h"
 #include "statistics.h"
 
+//High Level representation of source code (Front End)
+
 //module zero is the main program
 #define MAX_NUM_OF_MODULES 128
 
+//predefinition of struct
 struct statement_t;
 
-enum StatementType {
-    ST_BadStatement,
+//Global Front End Module Buffer
+extern struct statement_t *statement_root_module[MAX_NUM_OF_MODULES];
+extern int statement_root_module_current_free;
 
-    //blocks
+//sentinels for constant/known-value propagation handling
+//sometimes it is not safe to propagate values
+//play safe in these cases
+extern unsigned int inside_branch;  //has nonzero value when inside if statement body
+extern unsigned int inside_loop;    //has nonzero value when inside loop statement
+
+//possible types of statements
+enum StatementType {
+    ST_BadStatement,  //the parser generates this type of statement on errors
+                      //mostly for debugging. If there is at least 1 error,
+                      //we abord the compilation and the Front End colapses
+
+    //blocks (statements that define a new logical block),
+    //!!! these are NOT SSA blocks !!! we have different semantics
     ST_If,
     ST_While,
     ST_For,
@@ -32,9 +49,11 @@ enum StatementType {
     ST_Write,
 };
 
+//macro to recognize block entry points
+#warning make this an inline function  //FIXME
 #define NEW_STMT_BLOCK_STARTS_FROM(s) (s->type==ST_If || s->type==ST_While || \
                                        s->type==ST_For || s->type==ST_Comp)
-
+//for loop iteration range type
 enum IterSpaceType {
     FT_DownTo,
     FT_To
@@ -47,10 +66,13 @@ struct statement_if_t {
 };
 
 struct statement_while_t {
-    struct statement_t *prologue;
-    struct statement_t *loop;
-    struct statement_t *epilogue;
-    expr_t *condition;
+    //reminder: currently there is no optimization for while statements,
+    //          leaving the prologue/epiloge NULL
+
+    struct statement_t *prologue;  //used from loop optimizers
+    struct statement_t *loop;      //main loop body
+    struct statement_t *epilogue;  //used from loop optimizers
+    expr_t *condition;             //boolean condition
 };
 
 struct statement_assignment_t {
@@ -59,40 +81,42 @@ struct statement_assignment_t {
 };
 
 struct statement_for_t {
-    //enum IterSpaceType type;
-    //expr_t *from, *to;
+    int unroll_me;  //set to 1 for well defined, opt friendly loops
+                    //else set to 0
 
-    int unroll_me;
+    iter_t *iter;   //iter range
+    var_t *var;     //for loop iterator (guard var)
 
-    iter_t *iter;
-    var_t *var;
-    struct statement_t *prologue;
-    struct statement_t *loop;
-    struct statement_t *epilogue;
+    struct statement_t *prologue;  //used from loop optimizers
+    struct statement_t *loop;      //main loop body
+    struct statement_t *epilogue;  //used from loop optimizers
 };
 
 struct statement_call_t {
-    func_t *subprogram;
-    expr_list_t *expr_params;
+    func_t *subprogram;        //which subprogram to call
+    expr_list_t *expr_params;  //args of subprogram (if any)
 };
 
 struct statement_with_t {
-    struct statement_t *body;
-    var_t *var;
+    struct statement_t *body;  //main loop body
+    var_t *var;                //variable of type RECORD
 };
 
 struct statement_read_t {
-    var_list_t *var_list;
+    var_list_t *var_list;  //read statement's list
 };
 
 struct statement_write_t {
-    expr_list_t *expr_list;
+    expr_list_t *expr_list;  //write statement's list
 };
 
 struct statement_comp_t {
-    struct statement_t *head;
+    struct statement_t *head;  //comp statement entry indicator
 };
 
+//definition of statement_t, considering all possible statement types
+//the same struct is used as block container, this means that some
+//statements are interpreted internally as logical blocks, see above
 typedef struct statement_t {
     enum StatementType type;
     union {
@@ -107,28 +131,31 @@ typedef struct statement_t {
         struct statement_comp_t _comp;
     };
 
-    //statistics
+    //keep statistics (common in both statement and block instances)
     stat_vars_t io_vectors;
     dep_vector_t *dep;
 
-    unsigned int size; //num of statements (high level), only for block statements  //FIXME
-    unsigned int depth; //depth of nested loop, 0 for outermost loop, only for block statements  //FIXME
+    //only for block instances  //FIXME
+    unsigned int size;   //num of statements (high level)
+    unsigned int depth;  //depth of nested block, outermost loop has depth=0
 
-    int stat_id;
+    int stat_id;  //unique id of statement inside the parent block
+                  //implemented as simple position-in-the-list index
 
-    int return_point; //we check this to see if a function always returns a return value
+    int return_point;  //set to 1 if the parent block returns control
+                       //to the caller subprogram/module
+                       //else set to 0
 
+    //double linked list pointers
     struct statement_t *next;
     struct statement_t *prev;
-    struct statement_t *last;
-    struct statement_t *join;
+    struct statement_t *last;  //used to speed append/concatenation of lists
+                               //must be used ONLY from the head of the list
+                               //all other statements have undefined value
+
+    struct statement_t *join;  //similar to *last, but for if statement's
+                               //flow control manipulation
 } statement_t;
-
-extern statement_t *statement_root_module[MAX_NUM_OF_MODULES];
-extern int statement_root_module_current_free;
-
-extern unsigned int inside_branch;
-extern unsigned int inside_loop;
 
 void init_statements();
 

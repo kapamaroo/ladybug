@@ -9,15 +9,18 @@ extern func_t *main_program;
 extern func_t internal_scope;
 
 typedef struct with_stmt_scope_t {
-    data_t *type; //record type of with statement
-    //only if conflicts==0 it is allowed to close a with_scope, else conflicts--
-    int conflicts; //(non negative) remember how many with_scopes failed to open due to element name conflicts
+    data_t *type;  //record type of with statement
+
+    int conflicts;  //(non negative) counter of how many with_scopes failed to
+                    //open due to element name conflicts
+                    //only if conflicts==0 it is allowed to close a with_scope
+                    //else conflicts--
+
     struct with_stmt_scope_t *prev;
     struct with_stmt_scope_t *next;
 } with_stmt_scope_t;
 
 extern with_stmt_scope_t *root_scope_with;
-//extern with_stmt_scope_t *tail_scope_with;
 
 void init_scope();
 

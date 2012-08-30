@@ -1,6 +1,8 @@
 #ifndef _SERVICES_H
 #define _SERVICES_H
 
+//Target specific (MIPS)
+
 //we implement single float numbers
 
 typedef enum mips_service_t {

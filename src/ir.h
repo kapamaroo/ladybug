@@ -41,7 +41,7 @@ typedef enum ir_node_type_t {
 typedef struct ir_node_t {
     ir_node_type_t node_type;
     op_t op_rval;
-    //unsigned long virt_reg;
+
     reg_t *reg;
 
     char *label;               //the label of the node
