@@ -27,7 +27,7 @@ typedef enum reg_type_t {
                       //r24-r25         $t8-$t9,  more temps
     REG_CONTENT,      //r16-r23         $s0-$s7,  contents saved for use later
     REG_POINTER,      //r28,            $gp,      global pointer
-                      //r29,            $sp,      stac pointer
+                      //r29,            $sp,      stack pointer
                       //r30             $fp,      frame pointer
                       //r31,            $ra,      return address
     REG_ACC,          //hi,lo                     accumulator 64-bit
