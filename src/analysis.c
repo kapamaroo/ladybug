@@ -533,13 +533,17 @@ void find_dependencies(dep_vector_t *dep, statement_t *from, statement_t *to, en
                         //maybe we must swap the dependence according to index relation
                         expr_t *l;
 
-                        l = this_dep->conflict_info_from->array.index->expr_list[0];
+                        int confl_idx = this_dep->conflict_info_from->array.index_conflict_pos;
                         int from_iter = 0;
+
+                        l = this_dep->conflict_info_from->array.index->expr_list[confl_idx];
                         if (l->expr_is==EXPR_RVAL)
                             from_iter = l->l2->ival;
 
+                        confl_idx = this_dep->conflict_info_to->array.index_conflict_pos;
                         int to_iter = 0;
-                        l = this_dep->conflict_info_to->array.index->expr_list[0];
+
+                        l = this_dep->conflict_info_to->array.index->expr_list[confl_idx];
                         if (l->expr_is==EXPR_RVAL)
                             to_iter = l->l2->ival;
 
