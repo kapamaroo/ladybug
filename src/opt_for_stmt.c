@@ -298,6 +298,14 @@ void unroll_loop_symbolic(statement_t *body) {
     int i;
     int bsize = body->_for.loop->size;
 
+    int new_stop = body->_for.iter->stop->ival - (bsize - 1);
+
+    if (new_stop < 0) {
+        //not safe transformation
+        //printf("debug: skip symbolic unroll, very few iterations\n");
+        return;
+    }
+
     //update iter to avoid out of bounds code generation
     //see the prologue/epilogue generator for more info
     body->_for.iter->stop->ival -= bsize - 1;
@@ -312,8 +320,33 @@ void unroll_loop_symbolic(statement_t *body) {
     //now it is safe to change the original loop
     statement_t *curr = head;
     for (i=0; i<bsize-1; i++) {
-        shift_all_stmt_lvalues(curr,bsize-1-i);
+        int copy_num = bsize - 1 - i;
+        int known = iter->start->ival + bsize - 1 - i;
+        if (new_stop)
+            shift_all_stmt_lvalues(curr,copy_num);
+        else
+            //loop unrolled completely, replace known guard value
+            replace_var_with_hardcoded_int_in_stmt(curr,guard,known);
         curr = curr->next;
+    }
+
+    if (!new_stop) {
+        //loop unrolled completely, lower for_stmt to comp_stmt
+        //printf(debug: loop unrolled completely\n);
+
+        //replace last statement's guard var with known value
+        //head->last == curr
+        int known = 0;
+        replace_var_with_hardcoded_int_in_stmt(head->last,guard,known);
+
+        statement_t *new_head = NULL;
+
+        new_head = link_statements(prologue,new_head);
+        new_head = link_statements(head,new_head);
+        new_head = link_statements(epilogue,new_head);
+        body->type = ST_Comp;
+        body->_comp.head = new_head;
+        return;
     }
 
     //prologue/epilogue may not be empty
