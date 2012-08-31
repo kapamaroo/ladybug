@@ -34,7 +34,7 @@ void help() {
     printf("\t --lunroll-classic\t enable classic loop unrolling (copy the body multiple times)\n");
     printf("\t --lunroll-symbolic\t enable software pipelining aka symbolic loop unroll\n");
     printf("\t --lsimplify\t\t move independent statements out of loop UNSAFE (disabled for your safety)\n");
-    printf("\t --help\t\t print this help message and exit\n");
+    printf("\t --help\t\t\t print this help message and exit\n");
     printf("\n");
 
     print_extra();
