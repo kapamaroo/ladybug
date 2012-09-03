@@ -330,17 +330,30 @@ void unroll_loop_symbolic(statement_t *body) {
         curr = curr->next;
     }
 
+    //reverse linking of block, respecting memory access pattern
+    statement_t *new_head = NULL;
+    while (head) {
+        //curr statement is going to be unlinked
+        curr = head;
+        //unlink first statement
+        head = unlink_statement(curr,head);
+        //reverse linking to new_head
+        new_head = link_statements(new_head,curr);
+    }
+
+    //the original last statement of the block
+    //is now at the head of the block
+    head = new_head;
+
     if (!new_stop) {
         //loop unrolled completely, lower for_stmt to comp_stmt
         //printf(debug: loop unrolled completely\n);
 
         //replace last statement's guard var with known value
-        //head->last == curr
         int known = 0;
-        replace_var_with_hardcoded_int_in_stmt(head->last,guard,known);
+        replace_var_with_hardcoded_int_in_stmt(head,guard,known);
 
-        statement_t *new_head = NULL;
-
+        new_head = NULL;
         new_head = link_statements(prologue,new_head);
         new_head = link_statements(head,new_head);
         new_head = link_statements(epilogue,new_head);
@@ -349,6 +362,7 @@ void unroll_loop_symbolic(statement_t *body) {
         return;
     }
 
+    body->_for.loop->_comp.head = head;  //overwrite head
     //prologue/epilogue may not be empty
     body->_for.prologue = link_statements(prologue,body->_for.prologue);
     body->_for.epilogue = link_statements(epilogue,body->_for.epilogue);
