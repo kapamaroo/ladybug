@@ -24,7 +24,7 @@ void loop(int x) {
     printf("for (i=0; i<%d; i++) {\n",x);
 
     for (i=0; i<x; i++)
-        printf("\tS%d;  //iteration %d\n",i,x-i-1);
+        printf("\tS%d;  //iteration %d\n",x-i-1,i);
 
     printf("}\n\n");
 }
