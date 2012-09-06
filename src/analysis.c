@@ -419,7 +419,7 @@ inline int GUARDED_VARS_OF_THE_SAME_VAR_ARRAY(dep_vector_t *dep, var_t *var_from
     info_comp_t *var_of1;
     info_comp_t *var_of2;
 
-    if (var_from == var_to)
+    if (var_from == var_to && var_from->from_comp)
         return 1;
 
     var_of1 = VAR_IS_GUARDED_ARRAY_ELEMENT(dep->guard,var_from);
@@ -454,15 +454,20 @@ inline int VAR_IS_WRITTEN_MEANWHILE(statement_t *from, statement_t *to, var_t *v
     statement_t *tmp;
     var_list_t *var_list;
 
+    if (!from || !to)
+        return 0;
+
     tmp = from;
 
     while (tmp != to) {
         var_list = tmp->io_vectors.write;
 
-        //some statements do not have side effects (e.g. procedure calls)
+        //some statements do not have visible side effects (e.g. procedure calls)
         if (var_list)
             for (i=0; i<var_list->all_var_num; i++) {
                 var_t *v = var_list->var_list[i];
+
+                //consider only varaibles of non composite datatype  //FIXME
                 if (var_from == v)
                     return 1;
             }
