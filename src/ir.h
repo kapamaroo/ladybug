@@ -33,7 +33,9 @@ typedef enum ir_node_type_t {
     NODE_ADD_ELEM_TO_SET,       //checks first if bigger or equal to zero
     NODE_ADD_ELEM_RANGE_TO_SET, //only the values bigger or equal to zero
     NODE_CHECK_INOP_BITMAPPED,
-    NODE_ASSIGN,		//assign statement
+    NODE_ASSIGN,		//assign statement, has side effects
+    NODE_ASSIGN_REG,            //assign to register only, no side effects,
+                                //(not move instruction!!!, it calculates the result like a normal assignment)
     NODE_ASSIGN_SET,            //obsolete, the set exists in its own memory or in bitmap_factory
     NODE_ASSIGN_STRING,
 } ir_node_type_t;
@@ -78,6 +80,8 @@ typedef struct ir_node_t {
 extern ir_node_t *ir_root_tree[MAX_NUM_OF_MODULES];
 
 void init_ir();
+
+reg_t *new_virtual_register();
 
 void new_ir_tree(func_t *subprogram);
 

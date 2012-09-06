@@ -87,7 +87,7 @@ typedef enum func_status_t {
 typedef enum mem_seg_t {
     MEM_GLOBAL,    //heap allocated objects (for main module only)
     MEM_STACK,     //stack allocated objects (rest of modules)
-    MEM_REGISTER,  //for formal parameters only (UNIMPLEMENTED)
+    MEM_REGISTER,  //for formal parameters or variables on registers only
 } mem_seg_t;
 
 /** Dimension of array types
@@ -158,9 +158,16 @@ typedef enum pass_t {
     PASS_REF,  //by reference
 } pass_t;
 
+//make reg_t struct visible, we need this to put variables
+//directly in registers
+struct reg_t;
+
 //memory allocation information of object
 typedef struct mem_t {
     mem_seg_t segment;           //global (heap) / local (stack), scope relevant
+
+    struct reg_t *reg;           //if segment==MEM_REGISTER, the object lives on a
+                                 //register instead of a memory location
 
     int direct_register_number;  //UNIMPLEMENTED: use for passing arguments around
                                  //see mem.h:MAX_FORMAL_PARAMETERS_FOR_DIRECT_PASS
@@ -236,7 +243,7 @@ typedef struct var_t {
     //expression wrapper of variable
     struct expr_t *to_expr;
 
-    mem_t *Lvalue;  //memory info
+    mem_t *Lvalue;  //memory/register info of object
                     //special use for subprogram's formal  arguments:
                     //if Lvalue == NULL, the variable is passed by value,
                     //else by reference and we load it from here
@@ -250,6 +257,9 @@ typedef struct var_t {
     char cval;   //hardcoded char value
     char *cstr;  //hardcoded string
 } var_t;
+
+#define VAR_LIVES_IN_REGISTER(v) ( (v)->Lvalue && (v)->Lvalue->segment == MEM_REGISTER )
+#define VAR_LIVES_IN_MEMORY(v) ( (v)->Lvalue && (v)->Lvalue->segment != MEM_REGISTER )
 
 //list of variables
 typedef struct var_list_t {

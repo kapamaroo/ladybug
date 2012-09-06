@@ -453,6 +453,7 @@ void parse_ir_node(ir_node_t *ir_node) {
         printf("check_inop_bitmapped");
         return;
     case NODE_ASSIGN:
+    case NODE_ASSIGN_REG:
         switch (ir_node->ir_rval->node_type) {
         case NODE_HARDCODED_RVAL:
             new_instr = new_instruction(ir_node->ir_rval->label,&I_addi);
@@ -471,6 +472,19 @@ void parse_ir_node(ir_node_t *ir_node) {
             }
             break;
         }
+
+        if (ir_node->node_type == NODE_ASSIGN_REG) {
+            //soft assign
+
+            new_instr = new_instruction(NULL,&I_move);
+            new_instr->Rd = ir_node->reg;
+            new_instr->Rs = ir_node->ir_rval->last->reg;
+
+            final_tree_current = link_instructions(new_instr,final_tree_current);
+            return;
+        }
+
+        //default assign
 
         //parse the address first
         parse_ir_node(ir_node->ir_lval);

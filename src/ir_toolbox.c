@@ -463,7 +463,14 @@ ir_node_t *calculate_lvalue(var_t *v) {
     if (!v)
         die("UNEXPECTED_ERROR: 74-1");
 
-    consider_all_offsets(v);
+    if (VAR_LIVES_IN_REGISTER(v)) {
+        new_node = new_ir_node_t(NODE_RVAL_ARCH);
+        new_node->reg = v->Lvalue->reg;
+        return new_node;
+    }
+    else
+        //variable lives in memory, proceed as usual
+        consider_all_offsets(v);
 
     if (v->Lvalue->segment==MEM_GLOBAL) {
 #if (USE_PSEUDO_INSTR_LA==1)

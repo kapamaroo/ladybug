@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "build_flags.h"
 #include "statements.h"
@@ -377,6 +378,42 @@ statement_t *statement_assignment(var_t *v, expr_t *l) {
         //printf("debug: return name: %s\tknown:%d\n", v->name, v->status_known);
         new_assign->return_point = 1;
     }
+
+    return new_assign;
+}
+
+statement_t *statement_assignment_soft(var_t *v) {
+    statement_t *new_assign;
+    var_t *var_in_reg;
+    mem_t *reg_Lvalue;
+    expr_t *l;
+
+    if (!v)
+        die("INTERNAL_ERROR: creating soft assignment failed!");
+
+    if (v->from_comp)
+        die("INTERNAL_ERROR: soft assignment: unsupported action!");
+
+    var_in_reg = (var_t*)calloc(1,sizeof(var_t));
+    var_in_reg = memcpy(var_in_reg,v,sizeof(var_t));
+
+    reg_Lvalue = (mem_t*)calloc(1,sizeof(mem_t));
+    reg_Lvalue->segment = MEM_REGISTER;
+    reg_Lvalue->reg = new_virtual_register();
+
+    var_in_reg->name = "__internal_name_for_reg_only_variables";
+    var_in_reg->Lvalue = reg_Lvalue;
+
+    if (VAR_LIVES_IN_MEMORY(v))
+        //use already created expr
+        l = expr_from_variable(v);
+    else
+        //create new expr from variable
+        l = expr_version_of_variable(v);
+
+    new_assign = new_statement_t(ST_Assignment);
+    new_assign->_assignment.var = var_in_reg;
+    new_assign->_assignment.expr = l;
 
     return new_assign;
 }
