@@ -166,6 +166,7 @@ var_t *prepare_for_stmt(char *id);
 statement_t *statement_if(expr_t *cond, statement_t *_true, statement_t *_false);
 statement_t *statement_while(expr_t *cond, statement_t *loop);
 statement_t *statement_assignment(var_t *v, expr_t *l);
+statement_t *statement_assignment_soft(var_t *v);
 statement_t *statement_for(var_t *var, iter_t *iter_space, statement_t *loop);
 statement_t *statement_call(func_t *subprogram, expr_list_t *expr_params);
 statement_t *statement_with(var_t *var, statement_t *body);
@@ -175,6 +176,9 @@ statement_t *statement_comp(statement_t *head);
 
 statement_t *link_statements(statement_t *child, statement_t *parent);
 statement_t *unlink_statement(statement_t *s, statement_t *head);
+
+void inject_statement_after(statement_t *s, statement_t *parent);
+
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement);
 void new_statement_module(func_t *subprogram);
 

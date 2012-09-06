@@ -106,6 +106,24 @@ statement_t *unlink_statement(statement_t *s, statement_t *head) {
     return head;
 }
 
+void inject_statement_after(statement_t *s, statement_t *parent) {
+    if (!parent)
+        die("INTERNAL_ERROR: inject_statement_after(): no parent");
+
+    if (!s)
+        return;
+
+    if (s->next || s->prev)
+        die("INTERNAL_ERROR: inject_statement_after(): statement not unlinked");
+
+    s->prev = parent;
+    s->next = parent->next;
+    parent->next = s;
+    if (s->next)
+        s->next->prev = s;
+
+}
+
 void link_statement_to_module_and_return(func_t *subprogram, statement_t *new_statement) {
     close_scope(subprogram);
 
