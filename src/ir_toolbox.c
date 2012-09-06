@@ -359,8 +359,14 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
             new_node = link_ir_to_ir(new_node,new_func_call);
 
         } else {
+            ir_node_t *tmp = calculate_lvalue(ltree->var);
+            /*
+            if (VAR_LIVES_IN_REGISTER(ltree->var)) {
+                return tmp;
+            }
+            */
             new_node = new_ir_node_t(NODE_LOAD);
-            new_node->ir_lval = calculate_lvalue(ltree->var);
+            new_node->ir_lval = tmp;
             new_node->data_is = ltree->datatype->is;
             //new_node->lval_name = ltree->var->name;
         }
@@ -398,7 +404,7 @@ inline void consider_all_offsets(var_t *var) {
     expr_list_t *index;
 
     if (var->from_comp && var->Lvalue)
-        die("INTERNAL_ERROR: ir.c: Lvalue already?");
+        die("INTERNAL_ERROR: ir_toolbox.c: Lvalue already?");
 
     if (var->Lvalue)
         return;
