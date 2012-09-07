@@ -398,6 +398,65 @@ void unroll_loop_symbolic(statement_t *body) {
     var_t *guard = body->_for.var;
     iter_t *iter = body->_for.iter;
 
+    //prepare body, break dependencies due to non array variables
+    statement_t *curr = head;
+    for (i=0; i<bsize-1; i++,curr = curr->next) {
+        var_t *var_curr;
+        if (curr->type == ST_Assignment) {
+            var_curr = curr->_assignment.var;
+        }
+        else if (curr->type == ST_Comp) {
+            //the original statement is always last
+            var_curr = curr->_comp.head->last->_assignment.var;
+        }
+        else
+            die("INTERNAL_ERROR: expected assignment or composite statement");
+
+        //only copy variables which:
+        //    are of non composite datatype
+        //    live in memory
+        if (var_curr->from_comp || VAR_LIVES_IN_REGISTER(var_curr))
+            continue;
+
+        statement_t *read = FIND_READ_DEP_STMT(curr->next,head->last,var_curr);
+        if (read) {
+            //copy to new register variable and break the dependence
+            statement_t *soft = statement_assignment_soft(var_curr);
+            var_t *var_soft = soft->_assignment.var;
+
+            if (read->type == ST_Assignment) {
+                //must wrap single statement into comp_stmt
+
+                statement_t *target = read->prev;
+                statement_t *entry = target->prev;
+
+                //replace variable
+                stmt_replace_var_with_var(read,var_curr,var_soft);
+
+                head = unlink_statement(target,head);
+                target = link_statements(target,soft);
+                target = statement_comp(target);
+
+                if (entry)
+                    //head stays unchanged
+                    inject_statement_after(target,entry);
+                else
+                    //make target the new head
+                    head = link_statements(head,target);
+            }
+            else if (read->type = ST_Comp) {
+                //already wrapped
+                //just inject the new soft assignment
+                //original statement stays last
+
+                stmt_replace_var_with_var(read->_comp.head->last,var_curr,var_soft);
+                read->_comp.head = link_statements(read->_comp.head,soft);
+            }
+            else
+                die("INTERNAL_ERROR: expected assignment or composite statement");
+        }
+    }
+
     statement_t *prologue = gen_wrapper_for_sym_unroll(head,guard,bsize,iter,GEN_PROLOGUE);
     statement_t *epilogue = gen_wrapper_for_sym_unroll(head,guard,bsize,iter,GEN_EPILOGUE);
 
