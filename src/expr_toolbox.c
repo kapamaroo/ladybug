@@ -1074,3 +1074,16 @@ expr_t *expr_replace_var_with_hardcoded_int(expr_t *l_dest, var_t *v_target, int
         return l_dest;
     }
 }
+
+expr_t *expr_replace_var_with_var(expr_t *l,var_t *old_var,var_t *new_var) {
+    if (!l)
+        return NULL;
+
+    if (l->expr_is == EXPR_LVAL && l->var == old_var)
+        return new_var->to_expr;
+    else {
+        l->l1 = expr_replace_var_with_var(l->l1,old_var,new_var);
+        l->l2 = expr_replace_var_with_var(l->l2,old_var,new_var);
+        return l;
+    }
+}
