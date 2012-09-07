@@ -259,6 +259,15 @@ void parse_ir_node(ir_node_t *ir_node) {
     case NODE_LOAD:
         parse_ir_node(ir_node->ir_lval);
 
+        if (ir_node->ir_lval->node_type == NODE_RVAL_ARCH) {
+            new_instr = new_instruction(NULL,&I_move);
+            new_instr->Rd = ir_node->reg;
+            new_instr->Rs = ir_node->ir_lval->reg;
+
+            final_tree_current = link_instructions(new_instr,final_tree_current);
+            return;
+        }
+
         if (ir_node->data_is==TYPE_REAL)
             //load directly to c1
             new_instr = new_instruction(NULL,&I_lwc1);
@@ -477,7 +486,7 @@ void parse_ir_node(ir_node_t *ir_node) {
             //soft assign
 
             new_instr = new_instruction(NULL,&I_move);
-            new_instr->Rd = ir_node->reg;
+            new_instr->Rd = ir_node->ir_lval->reg;
             new_instr->Rs = ir_node->ir_rval->last->reg;
 
             final_tree_current = link_instructions(new_instr,final_tree_current);

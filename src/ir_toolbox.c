@@ -361,9 +361,8 @@ ir_node_t *expr_tree_to_ir_tree(expr_t *ltree) {
         } else {
             ir_node_t *tmp = calculate_lvalue(ltree->var);
             /*
-            if (VAR_LIVES_IN_REGISTER(ltree->var)) {
+            if (VAR_LIVES_IN_REGISTER(ltree->var))
                 return tmp;
-            }
             */
             new_node = new_ir_node_t(NODE_LOAD);
             new_node->ir_lval = tmp;
@@ -471,12 +470,23 @@ ir_node_t *calculate_lvalue(var_t *v) {
 
     if (VAR_LIVES_IN_REGISTER(v)) {
         new_node = new_ir_node_t(NODE_RVAL_ARCH);
-        new_node->reg = v->Lvalue->reg;
+
+        if (v->Lvalue->reg) {
+            //already given a register, use it
+            new_node->reg = v->Lvalue->reg;
+            //printf("debug: we meeet again!\n");
+        }
+        else {
+            //first reference of variable, get a virtual register
+            v->Lvalue->reg = new_node->reg;
+            //printf("debug: first reference of register only variable\n");
+        }
+
         return new_node;
     }
-    else
-        //variable lives in memory, proceed as usual
-        consider_all_offsets(v);
+
+    //variable lives in memory, proceed as usual
+    consider_all_offsets(v);
 
     if (v->Lvalue->segment==MEM_GLOBAL) {
 #if (USE_PSEUDO_INSTR_LA==1)

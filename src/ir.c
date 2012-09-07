@@ -219,7 +219,11 @@ ir_node_t *new_ir_assign_expr(var_t *v, expr_t *l) {
 
     /**** some common assign actions */
 
-    new_stmt = new_ir_node_t(NODE_ASSIGN);
+    if (VAR_LIVES_IN_REGISTER(v))
+        new_stmt = new_ir_node_t(NODE_ASSIGN_REG);
+    else
+        new_stmt = new_ir_node_t(NODE_ASSIGN);
+
     new_stmt->ir_lval = calculate_lvalue(v);
     new_stmt->ir_rval = expr_tree_to_ir_tree(l);
 
