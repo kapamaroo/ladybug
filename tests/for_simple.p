@@ -1,6 +1,6 @@
 program for_simple;
    type array_t = array[0..25] of integer;
-var a,b,c,d,e,k,x,z : integer;
+var a,b,c,d,e,k,x,y,z : integer;
    A,B,C,D          : array_t;
 
 {
@@ -31,10 +31,16 @@ begin
 
    for k := 0 to e do
    begin
-      A[k] := a;
+      {A[k] := a;
       B[k] := A[k];
-      C[k] := B[k];
-{      x := k;}
+      C[k] := B[k];}
+
+      x := A[k];
+      z := D[k];
+      B[k] := y;
+      C[k] := x + z + B[k];
+
+      {      x := k;}
 {      x := a + b * try_me(a,e) * c - d + e * 3;
       z := a + b * try_me(a,e) * z - d + e * 3;}
    end;
