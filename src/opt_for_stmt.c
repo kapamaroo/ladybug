@@ -402,15 +402,17 @@ void unroll_loop_symbolic(statement_t *body) {
     statement_t *epilogue = gen_wrapper_for_sym_unroll(head,guard,bsize,iter,GEN_EPILOGUE);
 
     //now it is safe to change the original loop
-    statement_t *curr = head;
+    curr = head;
     for (i=0; i<bsize-1; i++) {
-        int copy_num = bsize - 1 - i;
-        int known = iter->start->ival + bsize - 1 - i;
-        if (new_stop)
+        if (new_stop) {
+            int copy_num = bsize - 1 - i;
             shift_all_stmt_lvalues(curr,copy_num);
-        else
+        }
+        else {
             //loop unrolled completely, replace known guard value
-            replace_var_with_hardcoded_int_in_stmt(curr,guard,known);
+            int known = iter->start->ival + bsize - 1 - i;
+            stmt_replace_var_with_hardcoded_int(curr,guard,known);
+        }
         curr = curr->next;
     }
 
