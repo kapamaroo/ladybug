@@ -8,6 +8,9 @@
 
 #include "opt_for_stmt.h"
 
+void shift_all_stmt_list_lvalues(statement_t *head, int known);
+statement_t *deep_copy_stmt_list(statement_t *head);
+
 //default unroll factor for classic unrolling
 int unroll_factor = 4;
 
@@ -92,6 +95,11 @@ void shift_all_expr_lvalues(expr_t *ltree, int copy_num) {
 }
 
 void shift_all_stmt_lvalues(statement_t *s, int copy_num) {
+    if (s->type == ST_Comp) {
+        shift_all_stmt_list_lvalues(s->_comp.head,copy_num);
+        return;
+    }
+
     if (s->type != ST_Assignment)
         die("NOT_IMPLEMENTED: expected assignment");
 
@@ -117,6 +125,11 @@ var_t *deep_copy_var(var_t *v) {
 
     if (!v)
         return NULL;
+
+    if (!v->from_comp)
+        if (VAR_LIVES_IN_REGISTER(v))
+            //do not duplicate register only variables
+            return v;
 
     new_v = (var_t*)calloc(1,sizeof(var_t));
     new_v = memcpy(new_v,v,sizeof(var_t));
@@ -156,6 +169,14 @@ statement_t *deep_copy_stmt(statement_t *s) {
 
     if (!s)
         return NULL;
+
+    if (s->type == ST_Comp) {
+        statement_t *new_stmt;
+
+        new_stmt = deep_copy_stmt_list(s->_comp.head);
+        new_stmt = statement_comp(new_stmt);
+        return new_stmt;
+    }
 
     if (s->type != ST_Assignment)
         die("INTERNAL_ERROR: deep_copy_stmt(): expected assignment");
@@ -236,7 +257,18 @@ void unroll_loop_classic(statement_t *body) {
     body->_for.loop->_comp.head = new_head;
 }
 
-void replace_var_with_hardcoded_int_in_stmt(statement_t *s, var_t *v, int known) {
+void stmt_replace_var_with_hardcoded_int(statement_t *s, var_t *v, int known) {
+    if (s->type == ST_Comp) {
+        statement_t *curr = s->_comp.head;
+
+        while (curr) {
+            stmt_replace_var_with_hardcoded_int(curr,v,known);
+            curr = curr->next;
+        }
+
+        return;
+    }
+
     if (s->type != ST_Assignment)
         die("NOT_IMPLEMENTED: expected assignment");
 
@@ -244,6 +276,58 @@ void replace_var_with_hardcoded_int_in_stmt(statement_t *s, var_t *v, int known)
         die("UNEXPECTED_ERROR: replacing var in assignment with hardcoded value");
 
     s->_assignment.expr = expr_replace_var_with_hardcoded_int(s->_assignment.expr,v,known);
+}
+
+void stmt_replace_var_with_var(statement_t *s, var_t *old_var, var_t *new_var) {
+    if (s->type == ST_Comp) {
+        statement_t *curr = s->_comp.head;
+
+        while (curr) {
+            stmt_replace_var_with_var(curr,old_var,new_var);
+            curr = curr->next;
+        }
+
+        return;
+    }
+
+    if (s->type != ST_Assignment)
+        die("NOT_IMPLEMENTED: expected assignment");
+
+    s->_assignment.expr = expr_replace_var_with_var(s->_assignment.expr,old_var,new_var);
+}
+
+inline statement_t *FIND_READ_DEP_STMT(statement_t *from, statement_t *to, var_t *var_from) {
+    int i;
+    statement_t *tmp;
+    var_list_t *var_list;
+
+    if (!from || !to)
+        return NULL;
+
+    tmp = from;
+
+    while (tmp != to->next) {
+        if (tmp->type == ST_Assignment)
+            var_list = tmp->io_vectors.read;
+        else
+            //as soon as each block (comp_stmt) inside a for loop body
+            //contains only 1 original statement, we are ok with this code
+            var_list = tmp->_comp.head->last->io_vectors.read;
+
+        //some statements do not have visible side effects (e.g. procedure calls)
+        if (var_list)
+            for (i=0; i<var_list->all_var_num; i++) {
+                var_t *v = var_list->var_list[i];
+
+                //consider only varaibles of non composite datatype  //FIXME
+                if (var_from == v)
+                    return tmp;
+            }
+
+        tmp = tmp->next;
+    }
+
+    return NULL;
 }
 
 statement_t *gen_wrapper_for_sym_unroll(statement_t *head, var_t *guard, int bsize, iter_t *iter, int gen_prologue) {
@@ -270,7 +354,7 @@ statement_t *gen_wrapper_for_sym_unroll(statement_t *head, var_t *guard, int bsi
             tmp = deep_copy_stmt(curr);
             shift_all_stmt_lvalues(tmp,copy_num);
             //guard var is known, replace it
-            replace_var_with_hardcoded_int_in_stmt(tmp,guard,known);
+            stmt_replace_var_with_hardcoded_int(tmp,guard,known);
 
             new_p = link_statements(tmp,new_p);
             curr = curr->next;
@@ -351,7 +435,7 @@ void unroll_loop_symbolic(statement_t *body) {
 
         //replace last statement's guard var with known value
         int known = 0;
-        replace_var_with_hardcoded_int_in_stmt(head,guard,known);
+        stmt_replace_var_with_hardcoded_int(head,guard,known);
 
         new_head = NULL;
         new_head = link_statements(prologue,new_head);
