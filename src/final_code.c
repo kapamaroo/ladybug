@@ -345,48 +345,194 @@ void print_assembly() {
     print_text_segment();
 }
 
-void reuse_and_rename(instr_t *instr) {
-    if (instr->mips_instr == &I_la) {
-        instr_t *curr = instr;
-        instr_t *next = instr->next;
+void instr_replace_reg_with_reg(instr_t *instr, reg_t *old_reg, reg_t *new_reg) {
+    if (instr->Rd && instr->Rd == old_reg)
+        instr->Rd = new_reg;
+    if (instr->Rs && instr->Rs == old_reg)
+        instr->Rs = new_reg;
+    if (instr->Rt && instr->Rt == old_reg)
+        instr->Rt = new_reg;
+}
 
-        if (next && next->mips_instr == &I_lw) {
-            //reminder:
-            //
-            //curr:     la Rd lval_name
-            //next:     lw Rd 0(Rs)
+void global_replace_reg_with_reg(instr_t *head, reg_t *old_reg, reg_t *new_reg) {
+    instr_t *curr = head;
 
-            if (curr->Rd == next->Rs) {
-                reg_t *alive_reg = var_is_alive(curr->lval_name);
-                if (alive_reg) {
-                    //mark which reg holds the value from now on
-                    update_alive_var(curr->lval_name,next->Rd);
-
-                    //rename existing reg with data
-                    next->mips_instr = &I_move;
-                    next->Rs = alive_reg;
-                    curr->mips_instr = &I_nop;
-
-                    //free previously used registers (virtual regs)
-                    register_free(curr);
-                    register_free(next);
-
-                    //remove curr instr from list and call free() to it
-                    curr->prev->next = next;
-                    next->prev = curr->prev;
-
-                    free(curr);
-
-                    //reallocate regs for the new instr
-                    reg_liveness_analysis(next);
-                }
-                else {
-                    //remember first load for later use
-                    mark_var_alive(curr->lval_name,next->Rd);
-                }
-            }
-        }
+    while (curr) {
+        instr_replace_reg_with_reg(curr,old_reg,new_reg);
+        reg_liveness_analysis(curr);
+        curr = curr->next;
     }
+}
+
+void reuse_and_rename(instr_t *instr) {
+    //reminder: we search for these patterns:
+    //
+    //curr:     la Rd lval_name
+    //next:     lw Rd 0(Rs)
+    //
+    //OR
+    //
+    //curr:     la Rd lval_name
+    //next:     sw Rs 0(Rt)      //offset MUST be zero !!!
+
+    if (!instr)
+        die("INTERNAL_ERROR: reuse_and_rename(): NULL instr");
+
+    if (instr->mips_instr != &I_la)
+        return;
+
+    instr_t *curr = instr;
+    instr_t *next = instr->next;
+
+    int next_instr_is_load;
+
+    if (!next)
+        return;
+
+    if (next->mips_instr == &I_lw) {
+        if (curr->Rd == next->Rs)
+            next_instr_is_load = 1;
+    }
+    else if (next->mips_instr == &I_sw) {
+        if (curr->Rd == next->Rt && next->ival==0)
+            next_instr_is_load = 0;
+    }
+    else
+        //pattern not found
+        return;
+
+    reg_t *next_reg = (next_instr_is_load) ? next->Rd : next->Rs;
+
+    reg_t *alive_reg = var_is_alive(curr->lval_name);
+
+    if (!alive_reg) {
+        //remember first load for later use
+        mark_var_alive(curr->lval_name,next_reg);
+        return;
+    }
+
+    //mark which reg holds the value from now on
+    update_alive_var(curr->lval_name,next_reg);
+
+    if (!next_instr_is_load)
+        //just update alive register of value
+        return;
+
+    //rename existing reg with data
+    next->mips_instr = &I_move;
+    next->Rs = alive_reg;
+
+    //free previously used registers (virtual regs)
+    register_free(curr);
+    register_free(next);
+
+    //remove curr instr from list and call free() to it
+    curr->mips_instr = &I_nop;
+    curr->prev->next = next;
+    next->prev = curr->prev;
+
+    free(curr);
+
+    //reallocate regs for the new instr
+    reg_liveness_analysis(next);
+}
+
+void remove_move_chains(instr_t *instr) {
+    //reminder: we search for these patterns:
+    //
+    //curr:     move Rd Rs
+    //next:     move Rd Rs
+
+    if (!instr)
+        die("INTERNAL_ERROR: reuse_and_rename(): NULL instr");
+
+    if (instr->mips_instr != &I_move)
+        return;
+
+    instr_t *curr = instr;
+    instr_t *next = instr->next;
+
+    if (!next)
+        return;
+
+    if (next->mips_instr == &I_move)
+        if (curr->Rd != next->Rs)
+            //pattern not found
+            return;
+
+    //combine move instructions
+    next->Rs = curr->Rs;
+
+    global_replace_reg_with_reg(next->next,curr->Rd,next->Rd);
+
+    //free previously used registers (virtual regs)
+    register_free(curr);
+    register_free(next);
+
+    //remove curr instr from list and call free() to it
+    curr->mips_instr = &I_nop;
+    curr->prev->next = next;
+    next->prev = curr->prev;
+
+    free(curr);
+
+    //reallocate regs for the new instr
+    reg_liveness_analysis(next);
+}
+
+void combine_immediates(instr_t *instr) {
+    //reminder: we search for these patterns:
+    //
+    //curr:     addi Rd, Rs, imm    //Rs MUST be $s0 !!!
+    //next:     sll  Rd, Rs, shift
+
+    if (!instr)
+        die("INTERNAL_ERROR: reuse_and_rename(): NULL instr");
+
+    if (instr->mips_instr != &I_addi)
+        return;
+
+    instr_t *curr = instr;
+    instr_t *next = instr->next;
+
+    if (!next)
+        return;
+
+    if (curr->Rs != &R_zero)
+        return;
+
+    if (next->mips_instr != &I_sll)
+        return;
+
+    if (curr->Rd != next->Rs)
+        //pattern not found
+        return;
+
+    //update immediate
+    int i;
+    for (i=next->ival; i>0; i--)
+        curr->ival *= 2;
+
+    //keep the next instr
+    next->mips_instr = curr->mips_instr;
+    next->Rs = curr->Rs;
+    next->ival = curr->ival;
+
+    global_replace_reg_with_reg(next->next,curr->Rd,next->Rd);
+
+    //free previously used registers (virtual regs)
+    register_free(curr);
+    register_free(next);
+
+    //remove curr instr from list and call free() to it
+    curr->mips_instr = &I_nop;
+    curr->prev->next = next;
+    next->prev = curr->prev;
+
+    free(curr);
+
+    //reallocate regs for the new instr
+    reg_liveness_analysis(next);
 }
 
 void run_pass(pass_ptr_t do_pass) {

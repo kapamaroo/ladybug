@@ -23,6 +23,8 @@ typedef void (*pass_ptr_t)(instr_t *);
 
 //passes handler
 void run_pass(pass_ptr_t do_pass);
+void remove_move_chains(instr_t *instr);
+void combine_immediates(instr_t *instr);
 
 //passes
 void reuse_and_rename(instr_t *instr);
