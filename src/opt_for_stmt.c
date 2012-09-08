@@ -300,6 +300,7 @@ inline statement_t *FIND_READ_DEP_STMT(statement_t *from, statement_t *to, var_t
     int i;
     statement_t *tmp;
     var_list_t *var_list;
+    var_t *write_var;
 
     if (!from || !to)
         return NULL;
@@ -307,12 +308,18 @@ inline statement_t *FIND_READ_DEP_STMT(statement_t *from, statement_t *to, var_t
     tmp = from;
 
     while (tmp != to->next) {
-        if (tmp->type == ST_Assignment)
+        if (tmp->type == ST_Assignment) {
             var_list = tmp->io_vectors.read;
-        else
+            write_var = tmp->_assignment.var;
+        }
+        else if (tmp->type == ST_Comp) {
             //as soon as each block (comp_stmt) inside a for loop body
             //contains only 1 original statement, we are ok with this code
             var_list = tmp->_comp.head->last->io_vectors.read;
+            write_var = tmp->_comp.head->last->_assignment.var;
+        }
+        else
+            die("INTERNAL_ERROR: expected assignment or composite statement");
 
         //some statements do not have visible side effects (e.g. procedure calls)
         if (var_list)
@@ -323,6 +330,13 @@ inline statement_t *FIND_READ_DEP_STMT(statement_t *from, statement_t *to, var_t
                 if (var_from == v)
                     return tmp;
             }
+
+        if (write_var == var_from) {
+            printf("debug: kill existing soft assign for '%s'\n",var_from->name);
+            //terminate search
+            //we need a new soft assignment for the new value
+            return NULL;
+        }
 
         tmp = tmp->next;
     }
