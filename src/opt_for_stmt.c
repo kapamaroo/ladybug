@@ -332,7 +332,7 @@ inline statement_t *FIND_READ_DEP_STMT(statement_t *from, statement_t *to, var_t
             }
 
         if (write_var == var_from) {
-            printf("debug: kill existing soft assign for '%s'\n",var_from->name);
+            //printf("debug: kill existing soft assign for '%s'\n",var_from->name);
             //terminate search
             //we need a new soft assignment for the new value
             return NULL;
@@ -420,13 +420,13 @@ statement_t *break_non_array_data_dep(statement_t *head, statement_t *curr,
         //if so, we need a soft assignment of the new value
         //for the next dependencies
         if (write_var == var_curr) {
-            printf("debug: create-use-and-kill soft assign for '%s'\n",var_curr->name);
+            //printf("debug: create-use-and-kill soft assign for '%s'\n",var_curr->name);
 
             existing_soft_var = NULL;
             return NULL;
         }
 
-        printf("debug: reuse soft assign for '%s'\n",var_curr->name);
+        //printf("debug: reuse soft assign for '%s'\n",var_curr->name);
 
         return read;
     }
@@ -468,13 +468,13 @@ statement_t *break_non_array_data_dep(statement_t *head, statement_t *curr,
     //if so, we need a soft assignment of the new value
     //for the next dependencies
     if (write_var == var_curr) {
-        printf("debug: use-and-kill existing soft assign for '%s'\n",var_curr->name);
+        //printf("debug: use-and-kill existing soft assign for '%s'\n",var_curr->name);
 
         existing_soft_var = NULL;
         return NULL;
     }
 
-    printf("debug: create-and-use new soft assign for '%s'\n",var_curr->name);
+    //printf("debug: create-and-use new soft assign for '%s'\n",var_curr->name);
     return read;
 }
 
