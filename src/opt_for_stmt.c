@@ -389,6 +389,95 @@ statement_t *gen_wrapper_for_sym_unroll(statement_t *head, var_t *guard, int bsi
     return wrapper;
 }
 
+statement_t *break_non_array_data_dep(statement_t *head, statement_t *curr,
+                                      var_t *var_curr, var_t **existing_soft_var) {
+    statement_t *read;
+    var_t *write_var;
+
+    //if curr is the last statement, return
+    if (!curr->next)
+        return;
+
+    read = FIND_READ_DEP_STMT(curr->next,head->last,var_curr);
+
+    if (!read)
+        return NULL;
+
+    if (read->type == ST_Assignment)
+        write_var = read->_assignment.var;
+    else if (read->type == ST_Comp)
+        write_var = read->_comp.head->last->_assignment.var;
+    else
+        die("INTERNAL_ERROR: expected assignment or composite statement");
+
+    //copy to new register variable and break the dependence
+
+    if (*existing_soft_var) {
+        var_t *var_soft = *existing_soft_var;
+        stmt_replace_var_with_var(read,var_curr,var_soft);
+
+        //check if var_curr is rewritten by this statement
+        //if so, we need a soft assignment of the new value
+        //for the next dependencies
+        if (write_var == var_curr) {
+            printf("debug: create-use-and-kill soft assign for '%s'\n",var_curr->name);
+
+            existing_soft_var = NULL;
+            return NULL;
+        }
+
+        printf("debug: reuse soft assign for '%s'\n",var_curr->name);
+
+        return read;
+    }
+
+    statement_t *soft = statement_assignment_soft(var_curr);
+    var_t *var_soft = soft->_assignment.var;
+    *existing_soft_var = var_soft;
+
+    if (read->type == ST_Assignment) {
+        //must wrap single statement into comp_stmt
+
+        statement_t *target = read->prev;
+        statement_t *entry = target->prev;
+
+        //replace variable
+        stmt_replace_var_with_var(read,var_curr,var_soft);
+
+        head = unlink_statement(target,head);
+        target = link_statements(target,soft);
+        target = statement_comp(target);
+
+        if (entry)
+            //head stays unchanged
+            inject_statement_after(target,entry);
+        else
+            //make target the new head
+            head = link_statements(head,target);
+    }
+    else {
+        //already wrapped
+        //just inject the new soft assignment
+        //original statement stays last
+
+        stmt_replace_var_with_var(read->_comp.head->last,var_curr,var_soft);
+        read->_comp.head = link_statements(read->_comp.head,soft);
+    }
+
+    //check if var_curr is rewritten by this statement
+    //if so, we need a soft assignment of the new value
+    //for the next dependencies
+    if (write_var == var_curr) {
+        printf("debug: use-and-kill existing soft assign for '%s'\n",var_curr->name);
+
+        existing_soft_var = NULL;
+        return NULL;
+    }
+
+    printf("debug: create-and-use new soft assign for '%s'\n",var_curr->name);
+    return read;
+}
+
 void unroll_loop_symbolic(statement_t *body) {
 #define GEN_PROLOGUE 1
 #define GEN_EPILOGUE 0
@@ -416,13 +505,11 @@ void unroll_loop_symbolic(statement_t *body) {
     statement_t *curr = head;
     for (i=0; i<bsize-1; i++,curr = curr->next) {
         var_t *var_curr;
-        if (curr->type == ST_Assignment) {
+        if (curr->type == ST_Assignment)
             var_curr = curr->_assignment.var;
-        }
-        else if (curr->type == ST_Comp) {
+        else if (curr->type == ST_Comp)
             //the original statement is always last
             var_curr = curr->_comp.head->last->_assignment.var;
-        }
         else
             die("INTERNAL_ERROR: expected assignment or composite statement");
 
@@ -432,42 +519,12 @@ void unroll_loop_symbolic(statement_t *body) {
         if (var_curr->from_comp || VAR_LIVES_IN_REGISTER(var_curr))
             continue;
 
-        statement_t *read = FIND_READ_DEP_STMT(curr->next,head->last,var_curr);
-        if (read) {
-            //copy to new register variable and break the dependence
-            statement_t *soft = statement_assignment_soft(var_curr);
-            var_t *var_soft = soft->_assignment.var;
+        statement_t *read_curr = curr;
 
-            if (read->type == ST_Assignment) {
-                //must wrap single statement into comp_stmt
-
-                statement_t *target = read->prev;
-                statement_t *entry = target->prev;
-
-                //replace variable
-                stmt_replace_var_with_var(read,var_curr,var_soft);
-
-                head = unlink_statement(target,head);
-                target = link_statements(target,soft);
-                target = statement_comp(target);
-
-                if (entry)
-                    //head stays unchanged
-                    inject_statement_after(target,entry);
-                else
-                    //make target the new head
-                    head = link_statements(head,target);
-            }
-            else if (read->type = ST_Comp) {
-                //already wrapped
-                //just inject the new soft assignment
-                //original statement stays last
-
-                stmt_replace_var_with_var(read->_comp.head->last,var_curr,var_soft);
-                read->_comp.head = link_statements(read->_comp.head,soft);
-            }
-            else
-                die("INTERNAL_ERROR: expected assignment or composite statement");
+        //do not recreate soft assignment if we need it more than once
+        var_t *soft_var = NULL;
+        while (read_curr) {
+            read_curr = break_non_array_data_dep(head,read_curr,var_curr,&soft_var);
         }
     }
 
