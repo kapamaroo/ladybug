@@ -1,7 +1,7 @@
 program for_simple;
    type array_t = array[0..25] of integer;
 var a,b,c,d,e,k,x,y,z : integer;
-   A,B,C,D          : array_t;
+   A,B,C,D,E,F          : array_t;
 
 {
 function try_me(i,j : integer): integer;
@@ -35,10 +35,19 @@ begin
       B[k] := A[k];
       C[k] := B[k];}
 
+      {
       x := A[k];
       z := D[k];
       B[k] := y;
       C[k] := x + z + B[k];
+      }
+
+      x := A[k];
+      B[k] := y;
+      C[k] := x; { + B[k];}
+      x := D[k];
+      E[k] := y;
+      F[k] := x; { + C[k];}
 
       {      x := k;}
 {      x := a + b * try_me(a,e) * c - d + e * 3;
