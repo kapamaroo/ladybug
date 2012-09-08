@@ -115,6 +115,8 @@ void compile() {
     /* Backend @ instr_t *final_tree[MAX_NUM_OF_MODULES]; */
 
     run_pass(&reuse_and_rename);
+    run_pass(&remove_move_chains);
+    run_pass(&combine_immediates);
 
     /* low level optimizations go here */
 
